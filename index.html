@@ -34,114 +34,148 @@
             sans: ['"Schibsted Grotesk"', "system-ui", "sans-serif"],
             mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
           },
-          fontFeatureSettings: {
-            tnum: '"tnum","cv11"',
-          },
         },
       },
     };
   </script>
 
+  <!-- Chart.js (load before Alpine; app.js will use window.Chart) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
+
+  <!-- App logic (ES module) — must run before Alpine so x-data can find cdseApp -->
+  <script type="module" src="./public/app.js"></script>
+
   <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 
   <style>
-    html,
-    body {
+    html, body {
       background: #faf8f4;
       color: #1a1814;
       font-family: "Schibsted Grotesk", system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
-    html.dark,
-    html.dark body {
-      background: #161513;
-      color: #e8e4dc;
-    }
-    .font-serif-i {
-      font-family: "Instrument Serif", serif;
-      font-style: italic;
-      font-weight: 400;
-    }
-    .tnum {
-      font-variant-numeric: tabular-nums;
-      font-feature-settings: "tnum";
-    }
-    [x-cloak] {
-      display: none !important;
-    }
-    /* Scrollbar — discreet */
-    ::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.12);
-      border-radius: 999px;
-    }
-    html.dark ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.12);
-    }
-    /* Nav button base */
+    html.dark, html.dark body { background: #161513; color: #e8e4dc; }
+    .font-serif-i { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; }
+    .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+    [x-cloak] { display: none !important; }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 999px; }
+    html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+
     .nav-btn {
-      display: flex;
-      align-items: center;
-      gap: 0.625rem;
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      border-radius: 0.5rem;
-      text-align: left;
+      display: flex; align-items: center; gap: 0.625rem;
+      width: 100%; padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem; text-align: left;
       color: #1a1814;
       transition: background 120ms ease, color 120ms ease;
     }
-    .nav-btn:hover {
-      background: rgba(15, 61, 62, 0.06);
-    }
-    html.dark .nav-btn {
-      color: #e8e4dc;
-    }
-    html.dark .nav-btn:hover {
-      background: rgba(232, 228, 220, 0.06);
-    }
+    .nav-btn:hover { background: rgba(15,61,62,0.06); }
+    html.dark .nav-btn { color: #e8e4dc; }
+    html.dark .nav-btn:hover { background: rgba(232,228,220,0.06); }
     .nav-btn.active {
-      background: rgba(15, 61, 62, 0.1);
-      color: #0f3d3e;
+      background: rgba(15,61,62,0.1); color: #0f3d3e;
     }
     html.dark .nav-btn.active {
-      background: rgba(232, 228, 220, 0.1);
-      color: #e8e4dc;
+      background: rgba(232,228,220,0.1); color: #e8e4dc;
     }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.45rem 0.85rem; border-radius: 0.45rem;
+      font-size: 0.825rem; font-weight: 500;
+      transition: background 120ms ease, border-color 120ms ease;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .btn-primary { background: #0F3D3E; color: #FAF8F4; }
+    .btn-primary:hover { background: #143F40; }
+    .btn-ghost { color: #1a1814; border-color: #E5DFD2; background: transparent; }
+    .btn-ghost:hover { background: rgba(15,61,62,0.05); }
+    html.dark .btn-ghost { color: #E8E4DC; border-color: #2A2723; }
+    html.dark .btn-ghost:hover { background: rgba(232,228,220,0.05); }
+    .btn-danger { color: #B85C38; border: 1px solid #B85C38; background: transparent; }
+    .btn-danger:hover { background: rgba(184,92,56,0.08); }
+
+    .field-input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid #E5DFD2;
+      border-radius: 0.4rem;
+      padding: 0.45rem 0.65rem;
+      font-size: 0.875rem;
+      color: inherit;
+      transition: border-color 120ms ease;
+    }
+    .field-input:focus { outline: none; border-color: #0F3D3E; }
+    html.dark .field-input { border-color: #2A2723; }
+    html.dark .field-input:focus { border-color: #E8E4DC; }
+    .field-error { border-color: #B85C38 !important; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: rgba(15,61,62,0.08); color: #0F3D3E;
+      border-radius: 999px; padding: 0.2rem 0.55rem;
+      font-size: 0.75rem;
+    }
+    html.dark .chip { background: rgba(232,228,220,0.08); color: #E8E4DC; }
+    .chip button { color: inherit; opacity: 0.6; }
+    .chip button:hover { opacity: 1; }
+
+    .table-row:hover { background: rgba(15,61,62,0.03); }
+    html.dark .table-row:hover { background: rgba(232,228,220,0.03); }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60;
+      padding: 0.7rem 1rem; border-radius: 0.5rem;
+      border: 1px solid #0F3D3E; background: #FAF8F4; color: #0F3D3E;
+      font-size: 0.875rem; box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+    .toast.err { border-color: #B85C38; color: #B85C38; }
+    html.dark .toast { background: #1F1D1A; }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
   </style>
 </head>
 
-<body
-  class="h-full antialiased"
-  x-data="shell()"
-  x-init="init()"
-  x-cloak
->
+<body class="h-full antialiased" x-data="cdseApp()" x-init="init()" x-cloak>
+
+  <!-- User prompt overlay -->
+  <div x-show="showUserPrompt" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" style="display:none">
+    <div class="bg-paper dark:bg-paper-dark border border-line dark:border-line-dark rounded-xl p-8 max-w-md w-full mx-4">
+      <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">CDSE Luxembourg</div>
+      <h2 class="mt-2 text-2xl"><span class="font-serif-i">Bienvenue</span></h2>
+      <p class="mt-3 text-sm text-muted dark:text-muted-dark leading-relaxed">
+        Indiquez votre nom — il sera enregistré avec chaque action dans le
+        journal de traçabilité. Aucune authentification réelle dans ce
+        prototype ; les données restent stockées localement dans ce navigateur.
+      </p>
+      <input
+        type="text"
+        x-model="userPromptValue"
+        placeholder="Votre nom"
+        class="field-input mt-5"
+        @keydown.enter="saveUserPrompt()"
+      />
+      <div class="mt-4 flex justify-end">
+        <button class="btn btn-primary" @click="saveUserPrompt()">Commencer</button>
+      </div>
+    </div>
+  </div>
+
   <div class="flex min-h-screen">
     <!-- Sidebar -->
-    <aside
-      class="w-60 shrink-0 border-r border-line dark:border-line-dark
-             flex flex-col px-4 py-6 gap-6 bg-paper dark:bg-paper-dark"
-    >
+    <aside class="w-60 shrink-0 border-r border-line dark:border-line-dark flex flex-col px-4 py-6 gap-6 bg-paper dark:bg-paper-dark">
       <div class="px-2">
-        <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">
-          CDSE Luxembourg
-        </div>
-        <div class="mt-1 text-2xl">
-          <span class="font-serif-i">Statistiques</span>
-        </div>
+        <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">CDSE Luxembourg</div>
+        <div class="mt-1 text-2xl"><span class="font-serif-i">Statistiques</span></div>
       </div>
 
       <nav class="flex flex-col gap-0.5">
         <template x-for="item in nav" :key="item.id">
-          <button
-            class="nav-btn text-sm"
-            :class="{ active: view === item.id }"
-            @click="view = item.id"
-          >
+          <button class="nav-btn text-sm" :class="{ active: view === item.id || (item.id === 'cases' && (view === 'form' || view === 'detail')) }" @click="view = item.id">
             <span class="w-1.5 h-1.5 rounded-full bg-current opacity-40"></span>
             <span x-text="item.label"></span>
           </button>
@@ -149,115 +183,737 @@
       </nav>
 
       <div class="mt-auto flex flex-col gap-2 px-2">
-        <button
-          @click="toggleTheme()"
-          class="text-xs text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark text-left"
-        >
+        <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Session</div>
+        <div class="text-sm" x-text="user || '—'"></div>
+        <button @click="toggleTheme()" class="text-xs text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark text-left">
           <span x-show="theme === 'light'">→ Mode sombre</span>
           <span x-show="theme === 'dark'">→ Mode clair</span>
         </button>
-        <div class="text-[10px] tracking-wide text-muted dark:text-muted-dark font-mono">
-          v0.1 · prototype
-        </div>
+        <div class="text-[10px] tracking-wide text-muted dark:text-muted-dark font-mono">v0.2 · prototype</div>
       </div>
     </aside>
 
     <!-- Main -->
     <main class="flex-1 min-w-0">
-      <header
-        class="border-b border-line dark:border-line-dark px-10 py-6 flex items-baseline justify-between"
-      >
+      <header class="border-b border-line dark:border-line-dark px-10 py-6 flex items-baseline justify-between">
         <div>
-          <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">
-            <span x-text="currentNav?.kicker || ''"></span>
-          </div>
+          <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark" x-text="currentNav?.kicker || ''"></div>
           <h1 class="mt-1 text-3xl">
             <span x-text="currentNav?.title || ''"></span>
             <span class="font-serif-i text-accent" x-text="currentNav?.accent || ''"></span>
           </h1>
         </div>
-        <div class="text-xs tnum text-muted dark:text-muted-dark font-mono" x-text="now"></div>
+        <div class="flex items-center gap-3">
+          <div class="text-xs tnum text-muted dark:text-muted-dark font-mono" x-text="now"></div>
+          <button class="btn btn-primary" @click="startCreate()" x-show="view === 'cases' || view === 'dashboard'">+ Nouveau dossier</button>
+        </div>
       </header>
 
       <div class="px-10 py-8">
-        <!-- View slots — content arrives in later steps -->
-        <template x-if="view === 'dashboard'">
-          <section class="max-w-3xl">
-            <p class="text-muted dark:text-muted-dark leading-relaxed">
-              Bienvenue. Cet outil remplace la feuille Excel pour le suivi des dossiers
-              CDSE. Les sections sont en cours de construction — cette première étape
-              installe le squelette visuel, la typographie et la navigation.
-            </p>
-            <div class="mt-8 grid grid-cols-3 gap-4">
-              <template x-for="k in placeholders" :key="k">
+
+        <!-- ============================================================ -->
+        <!-- DASHBOARD                                                    -->
+        <!-- ============================================================ -->
+        <section x-show="view === 'dashboard'" style="display:none">
+          <template x-if="allCases.length === 0">
+            <div class="border border-dashed border-line dark:border-line-dark rounded-lg p-10 text-center">
+              <p class="font-serif-i text-2xl">Aucun dossier pour l'instant.</p>
+              <p class="mt-2 text-sm text-muted dark:text-muted-dark">Créez un dossier, importez un fichier, ou chargez des données fictives depuis les paramètres.</p>
+              <div class="mt-6 flex gap-2 justify-center">
+                <button class="btn btn-primary" @click="startCreate()">Nouveau dossier</button>
+                <button class="btn btn-ghost" @click="view = 'io'">Importer</button>
+                <button class="btn btn-ghost" @click="view = 'settings'">Données fictives</button>
+              </div>
+            </div>
+          </template>
+
+          <template x-if="allCases.length > 0">
+            <div class="space-y-8">
+              <!-- KPI tiles -->
+              <div class="grid grid-cols-4 gap-4">
                 <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark" x-text="k"></div>
-                  <div class="mt-3 text-3xl tnum font-mono">—</div>
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Dossiers actifs</div>
+                  <div class="mt-3 text-4xl tnum font-mono" x-text="kpi.n"></div>
+                </div>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Âge moyen</div>
+                  <div class="mt-3 text-4xl tnum font-mono">
+                    <span x-text="fmt(kpi.avgAge, 1)"></span>
+                    <span class="text-xs text-muted dark:text-muted-dark ml-1" x-text="'n=' + kpi.nAge"></span>
+                  </div>
+                </div>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">QI moyen</div>
+                  <div class="mt-3 text-4xl tnum font-mono">
+                    <span x-text="fmt(kpi.avgIq, 1)"></span>
+                    <span class="text-xs text-muted dark:text-muted-dark ml-1" x-text="'n=' + kpi.nIq"></span>
+                  </div>
+                </div>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Sexe</div>
+                  <div class="mt-3 space-y-1.5">
+                    <template x-for="[k, v] in kpi.sexe" :key="k">
+                      <div class="flex items-center justify-between text-sm">
+                        <span x-text="k"></span>
+                        <span class="tnum font-mono" x-text="v"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top lists -->
+              <div class="grid grid-cols-3 gap-6">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Top écoles / lycées</div>
+                  <template x-if="kpi.schools.length === 0">
+                    <div class="text-sm text-muted dark:text-muted-dark">—</div>
+                  </template>
+                  <ul class="space-y-1.5">
+                    <template x-for="[k, v] in kpi.schools" :key="k">
+                      <li class="flex justify-between text-sm border-b border-line dark:border-line-dark pb-1.5">
+                        <span x-text="k"></span>
+                        <span class="tnum font-mono text-muted dark:text-muted-dark" x-text="v"></span>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Mesures CDSE</div>
+                  <ul class="space-y-1.5">
+                    <template x-for="[k, v] in kpi.mesures" :key="k">
+                      <li class="flex justify-between text-sm border-b border-line dark:border-line-dark pb-1.5">
+                        <span x-text="k"></span>
+                        <span class="tnum font-mono text-muted dark:text-muted-dark" x-text="v"></span>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Diagnostics fréquents</div>
+                  <ul class="space-y-1.5">
+                    <template x-for="[k, v] in kpi.diagnostics" :key="k">
+                      <li class="flex justify-between text-sm border-b border-line dark:border-line-dark pb-1.5">
+                        <span x-text="k"></span>
+                        <span class="tnum font-mono text-muted dark:text-muted-dark" x-text="v"></span>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </template>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- CASES — LIST                                                 -->
+        <!-- ============================================================ -->
+        <section x-show="view === 'cases'" style="display:none">
+          <div class="flex items-center gap-3 mb-4">
+            <input
+              id="listSearch"
+              type="text"
+              x-model="search"
+              placeholder="Rechercher nom, prénom ou matricule…"
+              class="field-input max-w-md"
+            />
+            <div class="text-xs text-muted dark:text-muted-dark tnum font-mono">
+              <span x-text="filteredCases.length"></span> / <span x-text="allCases.length"></span> dossier(s)
+            </div>
+            <div class="ml-auto relative">
+              <button class="btn btn-ghost" @click="columnPickerOpen = !columnPickerOpen">Colonnes</button>
+              <div x-show="columnPickerOpen" @click.outside="columnPickerOpen = false" style="display:none"
+                   class="absolute right-0 mt-2 w-72 bg-paper dark:bg-paper-dark border border-line dark:border-line-dark rounded-lg shadow-lg p-3 max-h-80 overflow-auto z-20">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-xs uppercase tracking-widest text-muted dark:text-muted-dark">Colonnes visibles</div>
+                  <button class="text-xs underline" @click="resetColumns()">réinitialiser</button>
+                </div>
+                <template x-for="f in FIELD_DEFS.filter(x => x.type !== 'computed' || x.key === 'age')" :key="f.key">
+                  <label class="flex items-center gap-2 py-1 text-sm cursor-pointer">
+                    <input type="checkbox" :checked="visibleColumns.includes(f.key)" @change="toggleColumn(f.key)" />
+                    <span x-text="f.label"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick filters -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <template x-for="(opts, key) in distinctValues" :key="key">
+              <div class="flex items-center gap-1">
+                <span class="text-xs text-muted dark:text-muted-dark uppercase tracking-widest" x-text="labelOf(key)"></span>
+                <select x-model="quickFilters[key]" class="field-input text-xs py-1">
+                  <option value="">tous</option>
+                  <template x-for="o in opts" :key="o"><option :value="o" x-text="o"></option></template>
+                </select>
+              </div>
+            </template>
+            <button class="btn btn-ghost text-xs" @click="search=''; quickFilters={ dir:'', sexe:'', mesure_cdse_1:'', ecole_lycee:'' }">réinitialiser</button>
+          </div>
+
+          <!-- Empty -->
+          <template x-if="filteredCases.length === 0">
+            <div class="border border-dashed border-line dark:border-line-dark rounded-lg p-10 text-center text-muted dark:text-muted-dark">
+              Aucun dossier ne correspond.
+            </div>
+          </template>
+
+          <!-- Table -->
+          <template x-if="filteredCases.length > 0">
+            <div class="border border-line dark:border-line-dark rounded-lg overflow-hidden">
+              <div class="overflow-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-black/[0.03] dark:bg-white/[0.03]">
+                    <tr>
+                      <template x-for="col in visibleColumns" :key="col">
+                        <th class="text-left px-3 py-2.5 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark cursor-pointer whitespace-nowrap"
+                            @click="setSort(col)">
+                          <span x-text="labelOf(col)"></span>
+                          <span x-show="sortField === col" class="opacity-60" x-text="sortDir === 'asc' ? '↑' : '↓'"></span>
+                        </th>
+                      </template>
+                      <th class="px-3 py-2.5"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="c in filteredCases" :key="c.id">
+                      <tr class="table-row border-t border-line dark:border-line-dark">
+                        <template x-for="col in visibleColumns" :key="col">
+                          <td class="px-3 py-2.5 whitespace-nowrap" :class="fieldByKey(col)?.type === 'number' || col === 'age' ? 'font-mono tnum' : ''" x-text="cellValue(c, col)"></td>
+                        </template>
+                        <td class="px-3 py-2.5 whitespace-nowrap text-right">
+                          <button class="text-xs underline mr-3" @click="showDetail(c.id)">voir</button>
+                          <button class="text-xs underline mr-3" @click="startEdit(c.id)">modifier</button>
+                          <button class="text-xs underline text-accent" @click="deleteCase(c.id)">suppr.</button>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- CASE DETAIL                                                  -->
+        <!-- ============================================================ -->
+        <section x-show="view === 'detail'" style="display:none">
+          <template x-if="detailCase">
+            <div>
+              <div class="flex items-baseline justify-between mb-6">
+                <div>
+                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Dossier</div>
+                  <h2 class="mt-1 text-3xl">
+                    <span x-text="(detailCase.prenom || '') + ' ' + (detailCase.nom || '')"></span>
+                    <span class="font-serif-i text-accent ml-2 text-base" x-text="detailCase.matricule || ''"></span>
+                  </h2>
+                  <div class="mt-1 text-xs tnum font-mono text-muted dark:text-muted-dark">
+                    Créé <span x-text="formatTs(detailCase.created_at)"></span> · Modifié <span x-text="formatTs(detailCase.updated_at)"></span>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button class="btn btn-ghost" @click="backToList()">Retour</button>
+                  <button class="btn btn-ghost" @click="startEdit(detailCase.id)">Modifier</button>
+                  <button class="btn btn-danger" @click="deleteCase(detailCase.id)">Supprimer</button>
+                </div>
+              </div>
+
+              <template x-for="cat in CATEGORIES" :key="cat.key">
+                <div class="mb-6">
+                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2" x-text="cat.label"></div>
+                  <dl class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                    <template x-for="f in fieldsOf(cat.key)" :key="f.key">
+                      <div class="flex justify-between gap-4 border-b border-line dark:border-line-dark py-1.5">
+                        <dt class="text-muted dark:text-muted-dark" x-text="f.label"></dt>
+                        <dd class="text-right" :class="f.type === 'number' || f.key === 'age' ? 'font-mono tnum' : ''"
+                            x-text="cellValue(detailCase, f.key)"></dd>
+                      </div>
+                    </template>
+                  </dl>
                 </div>
               </template>
             </div>
-          </section>
-        </template>
+          </template>
+        </section>
 
-        <template x-if="view !== 'dashboard'">
-          <section class="text-muted dark:text-muted-dark">
-            <p class="font-serif-i text-2xl">À venir.</p>
-            <p class="mt-2 text-sm">
-              Cette vue (« <span x-text="currentNav?.title"></span> ») sera construite
-              dans une étape suivante.
-            </p>
-          </section>
-        </template>
+        <!-- ============================================================ -->
+        <!-- CASE FORM (create / edit)                                    -->
+        <!-- ============================================================ -->
+        <section x-show="view === 'form'" style="display:none">
+          <div class="flex items-baseline justify-between mb-6">
+            <h2 class="text-2xl">
+              <span x-show="formMode === 'create'"><span class="font-serif-i">Nouveau</span> dossier</span>
+              <span x-show="formMode === 'edit'"><span class="font-serif-i">Modifier</span> le dossier</span>
+            </h2>
+            <div class="flex gap-2">
+              <button class="btn btn-ghost" @click="cancelForm()">Annuler</button>
+              <button class="btn btn-primary" @click="submitForm()">
+                <span x-show="formMode === 'create'">Créer</span>
+                <span x-show="formMode === 'edit'">Enregistrer</span>
+              </button>
+            </div>
+          </div>
+
+          <template x-if="Object.keys(formErrors).length > 0">
+            <div class="mb-4 border border-accent rounded-lg p-3 text-sm text-accent">
+              Veuillez corriger les <span class="tnum font-mono" x-text="Object.keys(formErrors).length"></span> erreur(s) ci-dessous.
+            </div>
+          </template>
+
+          <template x-for="cat in CATEGORIES" :key="cat.key">
+            <details class="mb-3 border border-line dark:border-line-dark rounded-lg" :open="formCategoryOpen[cat.key]">
+              <summary class="px-4 py-3 flex items-center justify-between"
+                       @click.prevent="formCategoryOpen[cat.key] = !formCategoryOpen[cat.key]">
+                <span class="text-sm font-medium" x-text="cat.label"></span>
+                <span class="text-xs text-muted dark:text-muted-dark" x-text="formCategoryOpen[cat.key] ? '−' : '+'"></span>
+              </summary>
+              <div x-show="formCategoryOpen[cat.key]" class="px-4 pb-4 grid grid-cols-2 gap-4" style="display:none">
+                <template x-for="f in fieldsOf(cat.key)" :key="f.key">
+                  <div>
+                    <label class="block text-xs uppercase tracking-widest text-muted dark:text-muted-dark mb-1">
+                      <span x-text="f.label"></span>
+                      <span x-show="f.required" class="text-accent">*</span>
+                    </label>
+
+                    <!-- computed -->
+                    <template x-if="f.type === 'computed'">
+                      <div class="font-mono tnum text-sm py-1.5" x-text="f.key === 'age' ? (formAgePreview() ?? '—') : '—'"></div>
+                    </template>
+
+                    <!-- text / number / date -->
+                    <template x-if="['text','number','date'].includes(f.type)">
+                      <div>
+                        <input
+                          :type="f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'"
+                          :min="f.min"
+                          :max="f.max"
+                          x-model="formData[f.key]"
+                          :list="vocabFor(f.key).length ? 'autolist-' + f.key : null"
+                          class="field-input"
+                          :class="formErrors[f.key] ? 'field-error' : ''"
+                        />
+                        <template x-if="vocabFor(f.key).length">
+                          <datalist :id="'autolist-' + f.key">
+                            <template x-for="v in vocabFor(f.key)" :key="v"><option :value="v"></option></template>
+                          </datalist>
+                        </template>
+                      </div>
+                    </template>
+
+                    <!-- select -->
+                    <template x-if="f.type === 'select'">
+                      <select x-model="formData[f.key]" class="field-input" :class="formErrors[f.key] ? 'field-error' : ''">
+                        <option value="">—</option>
+                        <template x-for="o in f.options" :key="o"><option :value="o" x-text="o"></option></template>
+                      </select>
+                    </template>
+
+                    <!-- tags -->
+                    <template x-if="f.type === 'tags'">
+                      <div>
+                        <div class="flex flex-wrap gap-1.5 mb-1.5">
+                          <template x-for="(tag, idx) in (formData[f.key] || [])" :key="tag + idx">
+                            <span class="chip">
+                              <span x-text="tag"></span>
+                              <button type="button" @click="removeTag(f.key, idx)">×</button>
+                            </span>
+                          </template>
+                        </div>
+                        <input
+                          type="text"
+                          x-model="tagDraft[f.key]"
+                          @keydown.enter.prevent="addTag(f.key)"
+                          :list="vocabFor(f.key).length ? 'autolist-' + f.key : null"
+                          placeholder="Tapez puis Entrée pour ajouter"
+                          class="field-input"
+                        />
+                        <template x-if="vocabFor(f.key).length">
+                          <datalist :id="'autolist-' + f.key">
+                            <template x-for="v in vocabFor(f.key)" :key="v"><option :value="v"></option></template>
+                          </datalist>
+                        </template>
+                      </div>
+                    </template>
+
+                    <p class="mt-1 text-xs text-muted dark:text-muted-dark" x-show="f.helpText && !formErrors[f.key]" x-text="f.helpText"></p>
+                    <p class="mt-1 text-xs text-accent" x-show="formErrors[f.key]" x-text="formErrors[f.key]"></p>
+                  </div>
+                </template>
+              </div>
+            </details>
+          </template>
+
+          <div class="mt-6 flex gap-2 justify-end">
+            <button class="btn btn-ghost" @click="cancelForm()">Annuler</button>
+            <button class="btn btn-primary" @click="submitForm()">
+              <span x-show="formMode === 'create'">Créer</span>
+              <span x-show="formMode === 'edit'">Enregistrer</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- QUERY BUILDER                                                -->
+        <!-- ============================================================ -->
+        <section x-show="view === 'query'" style="display:none">
+          <p class="text-sm text-muted dark:text-muted-dark mb-6 max-w-2xl">
+            Combinez des filtres, des agrégations et un regroupement pour répondre à des questions du type
+            « <span class="font-serif-i">Quel est le QI moyen des filles au Lycée Junglinster ?</span> ».
+          </p>
+
+          <div class="grid grid-cols-3 gap-6 mb-6">
+            <!-- Aggregations -->
+            <div class="border border-line dark:border-line-dark rounded-lg p-4">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Que calculer ?</div>
+              <template x-for="(a, i) in query.aggregations" :key="i">
+                <div class="flex gap-2 mb-2">
+                  <select x-model="a.fn" @change="onAggFieldChange(i)" class="field-input text-sm">
+                    <template x-for="agg in AGGREGATIONS" :key="agg.key">
+                      <option :value="agg.key" x-text="agg.label"></option>
+                    </template>
+                  </select>
+                  <select x-model="a.field" class="field-input text-sm" :disabled="a.fn === 'count'">
+                    <option value="">—</option>
+                    <template x-for="nf in NUMERIC_FIELDS" :key="nf.key">
+                      <option :value="nf.key" x-text="nf.label"></option>
+                    </template>
+                  </select>
+                  <button class="btn btn-ghost text-xs px-2" @click="removeAggregation(i)">×</button>
+                </div>
+              </template>
+              <button class="btn btn-ghost text-xs" @click="addAggregation()">+ ajouter</button>
+            </div>
+
+            <!-- Filters -->
+            <div class="border border-line dark:border-line-dark rounded-lg p-4">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Filtrer (WHERE)</div>
+              <template x-if="query.filters.length === 0">
+                <div class="text-xs text-muted dark:text-muted-dark mb-2 italic">
+                  Ex: sexe = F · ecole_lycee = Lycée Junglinster
+                </div>
+              </template>
+              <template x-for="(f, i) in query.filters" :key="i">
+                <div class="space-y-1.5 mb-2 pb-2 border-b border-line dark:border-line-dark last:border-b-0">
+                  <div class="flex gap-2">
+                    <select x-model="f.field" @change="onFilterFieldChange(i)" class="field-input text-sm flex-1">
+                      <template x-for="ff in FILTERABLE_FIELDS" :key="ff.key">
+                        <option :value="ff.key" x-text="ff.label || labelOf(ff.key)"></option>
+                      </template>
+                    </select>
+                    <select x-model="f.op" class="field-input text-sm">
+                      <template x-for="op in operatorsForField(f.field)" :key="op.key">
+                        <option :value="op.key" x-text="op.label"></option>
+                      </template>
+                    </select>
+                    <button class="btn btn-ghost text-xs px-2" @click="removeFilter(i)">×</button>
+                  </div>
+                  <div class="flex gap-2" x-show="operatorsForField(f.field).find(o => o.key === f.op)?.needsValue">
+                    <template x-if="fieldByKey(f.field)?.type === 'select'">
+                      <select x-model="f.value" class="field-input text-sm flex-1">
+                        <option value="">—</option>
+                        <template x-for="o in optionsOf(f.field)" :key="o"><option :value="o" x-text="o"></option></template>
+                      </select>
+                    </template>
+                    <template x-if="!fieldByKey(f.field) || fieldByKey(f.field)?.type !== 'select'">
+                      <input
+                        :type="['number'].includes(fieldByKey(f.field)?.type) || f.field === 'age' ? 'number' : fieldByKey(f.field)?.type === 'date' ? 'date' : 'text'"
+                        x-model="f.value"
+                        class="field-input text-sm flex-1"
+                      />
+                    </template>
+                    <input
+                      x-show="operatorsForField(f.field).find(o => o.key === f.op)?.needsValue2"
+                      :type="['number'].includes(fieldByKey(f.field)?.type) || f.field === 'age' ? 'number' : fieldByKey(f.field)?.type === 'date' ? 'date' : 'text'"
+                      x-model="f.value2"
+                      placeholder="et"
+                      class="field-input text-sm flex-1"
+                    />
+                  </div>
+                </div>
+              </template>
+              <button class="btn btn-ghost text-xs" @click="addFilter()">+ ajouter un filtre</button>
+            </div>
+
+            <!-- Group by -->
+            <div class="border border-line dark:border-line-dark rounded-lg p-4">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Regrouper par (optionnel)</div>
+              <select x-model="query.groupBy" class="field-input text-sm">
+                <option value="">— aucun —</option>
+                <template x-for="gf in GROUPABLE_FIELDS" :key="gf.key">
+                  <option :value="gf.key" x-text="gf.label"></option>
+                </template>
+              </select>
+
+              <div class="mt-6">
+                <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Requêtes sauvegardées</div>
+                <template x-if="savedQueriesList.length === 0">
+                  <div class="text-xs text-muted dark:text-muted-dark italic">Aucune.</div>
+                </template>
+                <ul class="space-y-1">
+                  <template x-for="sq in savedQueriesList" :key="sq.id">
+                    <li class="flex justify-between text-sm">
+                      <button class="underline text-left" @click="loadSavedQuery(sq.id)" x-text="sq.name"></button>
+                      <button class="text-xs text-accent" @click="deleteSavedQuery(sq.id)">×</button>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 mb-6">
+            <button class="btn btn-primary" @click="runCurrentQuery()">Exécuter</button>
+            <button class="btn btn-ghost" @click="newQuery()">Nouvelle</button>
+            <div class="ml-auto flex items-center gap-2">
+              <input type="text" x-model="saveQueryName" placeholder="Nom de la requête…" class="field-input text-sm w-64" />
+              <button class="btn btn-ghost" @click="saveCurrentQuery()">Sauvegarder</button>
+              <button class="btn btn-ghost" @click="exportQueryCSV()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''">Exporter CSV</button>
+            </div>
+          </div>
+
+          <template x-if="queryResult">
+            <div>
+              <!-- Single metric (no group) -->
+              <template x-if="!queryResult.groupBy">
+                <div class="mb-6">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-2">Résultat</div>
+                  <div class="flex flex-wrap gap-6">
+                    <template x-for="(a, i) in (query.aggregations.length ? query.aggregations : [{ fn: 'count', field: null }])" :key="i">
+                      <div>
+                        <div class="text-xs text-muted dark:text-muted-dark" x-text="aggLabel(a)"></div>
+                        <div class="text-4xl tnum font-mono mt-1" x-text="fmt(queryResult.groups[0]?.values?.[i], 1)"></div>
+                      </div>
+                    </template>
+                    <div>
+                      <div class="text-xs text-muted dark:text-muted-dark">n</div>
+                      <div class="text-4xl tnum font-mono mt-1" x-text="queryResult.n"></div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Grouped table -->
+              <template x-if="queryResult.groupBy">
+                <div class="border border-line dark:border-line-dark rounded-lg overflow-hidden mb-6">
+                  <table class="w-full text-sm">
+                    <thead class="bg-black/[0.03] dark:bg-white/[0.03]">
+                      <tr>
+                        <th class="text-left px-3 py-2.5 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark" x-text="labelOf(queryResult.groupBy)"></th>
+                        <th class="text-right px-3 py-2.5 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark">n</th>
+                        <template x-for="(a, i) in query.aggregations" :key="i">
+                          <th class="text-right px-3 py-2.5 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark" x-text="aggLabel(a)"></th>
+                        </template>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="g in queryResult.groups" :key="g.key">
+                        <tr class="border-t border-line dark:border-line-dark">
+                          <td class="px-3 py-2 whitespace-nowrap" x-text="g.key"></td>
+                          <td class="px-3 py-2 text-right font-mono tnum" x-text="g.n"></td>
+                          <template x-for="(v, i) in g.values" :key="i">
+                            <td class="px-3 py-2 text-right font-mono tnum" x-text="fmt(v, 1)"></td>
+                          </template>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
+
+              <div class="border border-line dark:border-line-dark rounded-lg p-4">
+                <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Visualisation</div>
+                <div style="height: 320px; position: relative;">
+                  <canvas id="queryChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </template>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- IMPORT / EXPORT                                              -->
+        <!-- ============================================================ -->
+        <section x-show="view === 'io'" style="display:none">
+          <div class="grid grid-cols-2 gap-8">
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Exporter</div>
+              <p class="text-sm text-muted dark:text-muted-dark mb-4">
+                Sauvegarde locale ou partage de l'ensemble des dossiers.
+              </p>
+              <div class="flex flex-col gap-2 max-w-xs">
+                <button class="btn btn-primary" @click="exportAllJSON()">Tout exporter en JSON</button>
+                <button class="btn btn-ghost" @click="exportAllCSV()">Tout exporter en CSV</button>
+              </div>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Importer</div>
+              <p class="text-sm text-muted dark:text-muted-dark mb-4">
+                Fichier JSON (export précédent) ou CSV avec en-têtes correspondant aux clés du schéma.
+              </p>
+              <div class="flex flex-col gap-2 max-w-md">
+                <label class="text-xs text-muted dark:text-muted-dark">Mode</label>
+                <select x-model="importMode" class="field-input text-sm">
+                  <option value="merge">Fusion — n'écrase pas les dossiers existants (par matricule)</option>
+                  <option value="update">Mise à jour — met à jour si matricule connu, sinon ajoute</option>
+                  <option value="replace">Remplacement — supprime tout puis charge le fichier</option>
+                </select>
+                <input type="file" accept=".json,.csv,text/csv,application/json" @change="onImportFile($event)" class="text-sm mt-2" />
+              </div>
+
+              <template x-if="importError">
+                <div class="mt-3 border border-accent rounded p-2 text-sm text-accent" x-text="importError"></div>
+              </template>
+
+              <template x-if="importPreview">
+                <div class="mt-4 border border-line dark:border-line-dark rounded-lg p-4">
+                  <div class="text-sm">
+                    <span class="font-mono" x-text="importPreview.fileName"></span>
+                    · <span class="tnum font-mono" x-text="importPreview.records.length"></span> ligne(s)
+                  </div>
+                  <div class="text-xs text-muted dark:text-muted-dark mt-1">
+                    Nouveaux : <span class="tnum font-mono" x-text="importPreview.willAdd"></span> ·
+                    Matricules existants : <span class="tnum font-mono" x-text="importPreview.willConflict"></span>
+                  </div>
+                  <div class="flex gap-2 mt-3">
+                    <button class="btn btn-primary" @click="runImport()">Confirmer l'import</button>
+                    <button class="btn btn-ghost" @click="cancelImport()">Annuler</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- AUDIT LOG                                                    -->
+        <!-- ============================================================ -->
+        <section x-show="view === 'audit'" style="display:none">
+          <div class="flex flex-wrap gap-2 mb-4 items-center">
+            <input type="text" x-model="auditFilter.user" placeholder="Filtrer par utilisateur…" class="field-input text-sm max-w-xs" />
+            <select x-model="auditFilter.action" class="field-input text-sm">
+              <option value="">toutes actions</option>
+              <option value="create">create</option>
+              <option value="update">update</option>
+              <option value="delete">delete</option>
+              <option value="import">import</option>
+              <option value="export">export</option>
+            </select>
+            <div class="text-xs text-muted dark:text-muted-dark tnum font-mono">
+              <span x-text="filteredAudit.length"></span> entrée(s)
+            </div>
+          </div>
+
+          <template x-if="filteredAudit.length === 0">
+            <div class="border border-dashed border-line dark:border-line-dark rounded-lg p-8 text-center text-muted dark:text-muted-dark">
+              Aucune entrée.
+            </div>
+          </template>
+
+          <template x-if="filteredAudit.length > 0">
+            <div class="border border-line dark:border-line-dark rounded-lg overflow-hidden">
+              <table class="w-full text-sm">
+                <thead class="bg-black/[0.03] dark:bg-white/[0.03]">
+                  <tr>
+                    <th class="text-left px-3 py-2 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark">Quand</th>
+                    <th class="text-left px-3 py-2 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark">Utilisateur</th>
+                    <th class="text-left px-3 py-2 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark">Action</th>
+                    <th class="text-left px-3 py-2 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark">Détail</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="e in filteredAudit" :key="e.id">
+                    <tr class="border-t border-line dark:border-line-dark">
+                      <td class="px-3 py-2 font-mono tnum text-xs whitespace-nowrap" x-text="formatTs(e.timestamp)"></td>
+                      <td class="px-3 py-2 whitespace-nowrap" x-text="e.user"></td>
+                      <td class="px-3 py-2 whitespace-nowrap">
+                        <span class="chip" x-text="e.action"></span>
+                      </td>
+                      <td class="px-3 py-2" x-text="e.summary"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- SETTINGS                                                     -->
+        <!-- ============================================================ -->
+        <section x-show="view === 'settings'" style="display:none">
+          <div class="max-w-2xl space-y-8">
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Session</div>
+              <div class="flex items-center gap-3">
+                <div class="text-sm">
+                  Utilisateur actuel : <span class="font-mono" x-text="user || '—'"></span>
+                </div>
+                <button class="btn btn-ghost text-xs" @click="changeUser()">Changer</button>
+              </div>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Apparence</div>
+              <button class="btn btn-ghost" @click="toggleTheme()">
+                <span x-show="theme === 'light'">Passer en mode sombre</span>
+                <span x-show="theme === 'dark'">Passer en mode clair</span>
+              </button>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Données</div>
+              <p class="text-sm text-muted dark:text-muted-dark mb-3">
+                Les données du prototype sont stockées dans le localStorage de ce navigateur.
+                Exportez régulièrement un backup JSON.
+              </p>
+              <div class="flex gap-2 flex-wrap">
+                <button class="btn btn-ghost" @click="loadSample()">Charger des données fictives</button>
+                <button class="btn btn-danger" @click="wipeAll()">Tout effacer</button>
+              </div>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Raccourcis</div>
+              <ul class="text-sm space-y-1">
+                <li><span class="font-mono tnum text-xs bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">Ctrl/⌘ + K</span> — rechercher dans les dossiers</li>
+                <li><span class="font-mono tnum text-xs bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">Ctrl/⌘ + N</span> — nouveau dossier</li>
+              </ul>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">À propos</div>
+              <p class="text-sm text-muted dark:text-muted-dark leading-relaxed">
+                Prototype HTML — frontend pur, persistance dans le navigateur via la classe
+                <code class="font-mono">LocalStorageCaseRepository</code>. Le contrat
+                <code class="font-mono">CaseRepository</code> sera réimplémenté côté serveur
+                lors du passage au backend Node + SQLite (V2 — multi-utilisateurs réels).
+              </p>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
 
-  <script>
-    function shell() {
-      return {
-        view: "dashboard",
-        theme: "light",
-        now: "",
-        nav: [
-          { id: "dashboard", label: "Tableau de bord", kicker: "Vue d'ensemble", title: "Tableau de", accent: " bord" },
-          { id: "cases",     label: "Dossiers",        kicker: "Registre",        title: "Dossiers",   accent: "" },
-          { id: "query",     label: "Requêtes",        kicker: "Analyse",         title: "Requêtes",   accent: "" },
-          { id: "io",        label: "Import / Export", kicker: "Échange",         title: "Import",     accent: " / Export" },
-          { id: "audit",     label: "Journal",         kicker: "Traçabilité",     title: "Journal",    accent: "" },
-          { id: "settings",  label: "Paramètres",      kicker: "Configuration",   title: "Paramètres", accent: "" },
-        ],
-        placeholders: ["Dossiers actifs", "Âge moyen", "QI moyen"],
-        get currentNav() {
-          return this.nav.find((n) => n.id === this.view);
-        },
-        init() {
-          const stored = localStorage.getItem("cdse:theme");
-          const prefersDark =
-            window.matchMedia &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches;
-          this.theme = stored || (prefersDark ? "dark" : "light");
-          this.applyTheme();
-          this.tickClock();
-          setInterval(() => this.tickClock(), 30_000);
-        },
-        toggleTheme() {
-          this.theme = this.theme === "dark" ? "light" : "dark";
-          localStorage.setItem("cdse:theme", this.theme);
-          this.applyTheme();
-        },
-        applyTheme() {
-          document.documentElement.classList.toggle("dark", this.theme === "dark");
-        },
-        tickClock() {
-          const d = new Date();
-          this.now = d.toLocaleDateString("fr-LU", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          });
-        },
-      };
-    }
-  </script>
+  <!-- Confirm modal -->
+  <div x-show="confirm.show" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" style="display:none">
+    <div class="bg-paper dark:bg-paper-dark border border-line dark:border-line-dark rounded-xl p-6 max-w-md w-full mx-4">
+      <p class="text-sm" x-text="confirm.message"></p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button class="btn btn-ghost" @click="confirmNo()">Annuler</button>
+        <button class="btn btn-danger" @click="confirmYes()">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div x-show="toast.show" :class="toast.kind === 'err' ? 'toast err' : 'toast'" style="display:none">
+    <span x-text="toast.message"></span>
+  </div>
+
 </body>
 </html>
