@@ -507,6 +507,100 @@ function makeApp() {
       return String(v);
     },
 
+    // ====================================================================
+    // Measure status — derived from the date pairs (debut_*, fin_*)
+    // ====================================================================
+    /**
+     * Build the list of measures attached to a case, with computed status.
+     * status: 'upcoming' (start in future) | 'active' (started, not ended,
+     * or end in future) | 'ending' (active and ends within 30 days)
+     * | 'ended' (end in past) | 'open' (start known, no end yet) | null
+     */
+    measuresOf(c) {
+      const out = [];
+      const today = new Date().toISOString().slice(0, 10);
+      const spec = [
+        { key: 'ISA',         label: 'ISA',         start: c.debut_isa,         end: c.fin_isa,         who: c.isa_realise_par },
+        { key: 'CG',          label: 'C&G',         start: c.debut_cg,          end: c.fin_cg,          who: c.cg_realise_par },
+        { key: 'ScolSpe',     label: 'Scol. Spé.',  start: c.debut_scol_spe,    end: c.fin_scol_spe,    who: c.scolarisation_specialisee },
+        { key: 'Autre',       label: c.autre_mesure || 'Autre', start: c.debut_autre_mesure, end: c.fin_autre_mesure, who: null },
+        { key: 'DS',          label: 'DS',          start: c.date_ds,            end: c.date_ds,         who: c.ds_realise_par, singleDay: true },
+      ];
+      for (const m of spec) {
+        if (!m.start && !m.end) continue;
+        let status = null;
+        if (m.singleDay) {
+          status = m.start && m.start <= today ? 'ended' : 'upcoming';
+        } else if (m.start && !m.end) {
+          status = m.start > today ? 'upcoming' : 'open';
+        } else if (m.start && m.end) {
+          if (m.start > today) status = 'upcoming';
+          else if (m.end < today) status = 'ended';
+          else {
+            const days = (new Date(m.end) - new Date(today)) / 86400000;
+            status = days <= 30 ? 'ending' : 'active';
+          }
+        }
+        out.push({ ...m, status });
+      }
+      return out;
+    },
+
+    measureBadgeClass(status) {
+      switch (status) {
+        case 'active':   return 'bg-primary/10 text-primary';
+        case 'open':     return 'bg-primary/10 text-primary';
+        case 'ending':   return 'bg-accent/10 text-accent';
+        case 'ended':    return 'bg-black/[0.06] dark:bg-white/[0.06] text-muted dark:text-muted-dark';
+        case 'upcoming': return 'bg-black/[0.06] dark:bg-white/[0.06] text-ink dark:text-ink-dark';
+        default:         return 'bg-black/[0.06] dark:bg-white/[0.06] text-muted dark:text-muted-dark';
+      }
+    },
+
+    measureStatusLabel(status) {
+      return {
+        active:   'active',
+        open:     'en cours',
+        ending:   'fin imminente',
+        ended:    'terminée',
+        upcoming: 'à venir',
+      }[status] || '';
+    },
+
+    /** Timeline geometry: maps date ranges to 0..1 positions for SVG drawing. */
+    timelineFor(c) {
+      const ms = this.measuresOf(c);
+      const ranges = ms.filter((m) => m.start || m.end);
+      if (!ranges.length) return null;
+      const dates = [];
+      for (const r of ranges) { if (r.start) dates.push(r.start); if (r.end) dates.push(r.end); }
+      const min = dates.reduce((a, b) => a < b ? a : b);
+      const max = dates.reduce((a, b) => a > b ? a : b);
+      // Pad by 6 months on either side for breathing room
+      const minDate = new Date(min); minDate.setMonth(minDate.getMonth() - 6);
+      const maxDate = new Date(max); maxDate.setMonth(maxDate.getMonth() + 6);
+      const span = maxDate - minDate || 1;
+      const project = (iso) => ((new Date(iso) - minDate) / span);
+      const todayPct = project(new Date().toISOString().slice(0, 10));
+      const lanes = ranges.map((r) => {
+        const sIso = r.start || r.end;
+        const eIso = r.end || r.start;
+        return {
+          ...r,
+          xStart: Math.max(0, project(sIso)),
+          xEnd: Math.min(1, project(eIso)),
+          startLabel: r.start || '—',
+          endLabel: r.end || (r.start ? '…' : '—'),
+        };
+      });
+      // X-axis: year ticks
+      const years = [];
+      for (let y = minDate.getFullYear(); y <= maxDate.getFullYear(); y++) {
+        years.push({ label: y, x: project(`${y}-01-01`) });
+      }
+      return { lanes, years, todayPct };
+    },
+
     toggleColumn(key) {
       if (this.visibleColumns.includes(key)) {
         this.visibleColumns = this.visibleColumns.filter((k) => k !== key);

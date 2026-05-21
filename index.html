@@ -376,6 +376,7 @@
                           <span x-show="sortField === col" class="opacity-60" x-text="sortDir === 'asc' ? '↑' : '↓'"></span>
                         </th>
                       </template>
+                      <th class="text-left px-3 py-2.5 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark">Statut</th>
                       <th class="px-3 py-2.5"></th>
                     </tr>
                   </thead>
@@ -385,6 +386,16 @@
                         <template x-for="col in visibleColumns" :key="col">
                           <td class="px-3 py-2.5 whitespace-nowrap" :class="fieldByKey(col)?.type === 'number' || col === 'age' ? 'font-mono tnum' : ''" x-text="cellValue(c, col)"></td>
                         </template>
+                        <td class="px-3 py-2.5 whitespace-nowrap">
+                          <div class="flex gap-1 flex-wrap">
+                            <template x-for="m in measuresOf(c).filter(m => ['active','ending','open'].includes(m.status))" :key="m.key">
+                              <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="measureBadgeClass(m.status)" :title="measureStatusLabel(m.status)">
+                                <span x-text="m.label"></span>
+                                <span x-show="m.status === 'ending'" class="ml-1">⚠</span>
+                              </span>
+                            </template>
+                          </div>
+                        </td>
                         <td class="px-3 py-2.5 whitespace-nowrap text-right">
                           <button class="text-xs underline mr-3" @click="showDetail(c.id)">voir</button>
                           <button class="text-xs underline mr-3" @click="startEdit(c.id)">modifier</button>
@@ -422,6 +433,65 @@
                   <button class="btn btn-danger" @click="deleteCase(detailCase.id)">Supprimer</button>
                 </div>
               </div>
+
+              <!-- Active measure badges -->
+              <template x-if="measuresOf(detailCase).length > 0">
+                <div class="mb-8">
+                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Statut des mesures</div>
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="m in measuresOf(detailCase)" :key="m.key">
+                      <span class="text-xs px-2 py-1 rounded font-medium" :class="measureBadgeClass(m.status)">
+                        <span x-text="m.label"></span>
+                        <span class="ml-1.5 opacity-70" x-text="measureStatusLabel(m.status)"></span>
+                      </span>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Timeline (Gantt-style) -->
+              <template x-if="timelineFor(detailCase)">
+                <div class="mb-8">
+                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Chronologie</div>
+                  <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                    <div class="space-y-2" x-data="{ tl: timelineFor(detailCase) }">
+                      <template x-for="lane in tl.lanes" :key="lane.key">
+                        <div class="grid grid-cols-[7rem_1fr_auto] gap-3 items-center text-xs">
+                          <div class="font-medium" x-text="lane.label"></div>
+                          <div class="relative h-6 bg-black/[0.03] dark:bg-white/[0.03] rounded">
+                            <!-- year ticks -->
+                            <template x-for="y in tl.years" :key="y.label">
+                              <div class="absolute top-0 bottom-0 border-l border-line dark:border-line-dark" :style="`left: ${(y.x * 100).toFixed(2)}%`"></div>
+                            </template>
+                            <!-- today line -->
+                            <div class="absolute top-0 bottom-0 border-l-2 border-accent" :style="`left: ${(tl.todayPct * 100).toFixed(2)}%`" title="aujourd'hui"></div>
+                            <!-- the bar -->
+                            <div
+                              class="absolute top-1 bottom-1 rounded"
+                              :class="measureBadgeClass(lane.status)"
+                              :style="`left: ${(lane.xStart * 100).toFixed(2)}%; width: max(4px, ${((lane.xEnd - lane.xStart) * 100).toFixed(2)}%);`"
+                            ></div>
+                          </div>
+                          <div class="font-mono tnum text-muted dark:text-muted-dark whitespace-nowrap">
+                            <span x-text="lane.startLabel"></span>
+                            <span x-show="lane.startLabel !== lane.endLabel"> → <span x-text="lane.endLabel"></span></span>
+                          </div>
+                        </div>
+                      </template>
+                      <div class="grid grid-cols-[7rem_1fr_auto] gap-3 mt-2">
+                        <div></div>
+                        <div class="relative h-4">
+                          <template x-for="y in tl.years" :key="y.label">
+                            <div class="absolute top-0 text-[10px] text-muted dark:text-muted-dark font-mono tnum -translate-x-1/2"
+                                 :style="`left: ${(y.x * 100).toFixed(2)}%`" x-text="y.label"></div>
+                          </template>
+                        </div>
+                        <div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
 
               <template x-for="cat in CATEGORIES" :key="cat.key">
                 <div class="mb-6">
