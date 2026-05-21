@@ -333,20 +333,30 @@ function makeApp() {
       // open all form categories by default
       for (const c of CATEGORIES) this.formCategoryOpen[c.key] = c.key === 'identification';
 
-      // dashboard charts: render whenever we land on dashboard or data changes
+      // dashboard charts: render whenever we land on dashboard or data changes.
+      // Two ticks: Alpine first commits the DOM (x-show toggles display),
+      // then a requestAnimationFrame guarantees layout is final so Chart.js
+      // sees a real clientWidth/clientHeight on its parent container.
+      const scheduleDash = () => this.$nextTick(() => requestAnimationFrame(() => this.renderDashboardCharts()));
+      const scheduleQuery = () => this.$nextTick(() => requestAnimationFrame(() => this.renderQueryChart()));
+
       this.$watch('view', (v) => {
-        if (v === 'dashboard') this.$nextTick(() => this.renderDashboardCharts());
+        if (v === 'dashboard') scheduleDash();
+        if (v === 'query' && this.queryResult) scheduleQuery();
       });
       this.$watch('allCases', () => {
-        if (this.view === 'dashboard') this.$nextTick(() => this.renderDashboardCharts());
+        if (this.view === 'dashboard') scheduleDash();
       });
       this.$watch('theme', () => {
-        if (this.view === 'dashboard') this.$nextTick(() => this.renderDashboardCharts());
-        if (this.view === 'query' && this.queryResult) this.$nextTick(() => this.renderQueryChart());
+        if (this.view === 'dashboard') scheduleDash();
+        if (this.view === 'query' && this.queryResult) scheduleQuery();
       });
 
-      // first render — after the section becomes visible
-      this.$nextTick(() => this.renderDashboardCharts());
+      // first render
+      scheduleDash();
+
+      // expose for the internal $watch in runCurrentQuery
+      this._scheduleQuery = scheduleQuery;
 
       // keyboard shortcuts
       window.addEventListener('keydown', (e) => this.handleShortcut(e));
@@ -880,12 +890,17 @@ function makeApp() {
         groupBy: this.query.groupBy || null,
       };
       this.queryResult = runQuery(this.allCases, cfg);
-      this.$nextTick(() => this.renderQueryChart());
+      (this._scheduleQuery || (() => this.$nextTick(() => this.renderQueryChart())))();
     },
 
     renderQueryChart() {
       const ctx = document.getElementById('queryChart');
       if (!ctx) return;
+      // Retry next frame if the canvas parent hasn't laid out yet.
+      if (ctx.parentElement && !ctx.parentElement.clientWidth) {
+        requestAnimationFrame(() => this.renderQueryChart());
+        return;
+      }
       if (this._chart) { this._chart.destroy(); this._chart = null; }
 
       const r = this.queryResult;
@@ -945,6 +960,12 @@ function makeApp() {
       }
       this._dashCharts = [];
       if (!this.allCases.length || !window.Chart) return;
+      // If the parent containers aren't laid out yet, retry next frame.
+      const probe = document.getElementById('dashSexe');
+      if (probe && probe.parentElement && !probe.parentElement.clientWidth) {
+        requestAnimationFrame(() => this.renderDashboardCharts());
+        return;
+      }
 
       const opts = chartOptions(this.theme);
       const optsNoLegend = { ...opts, plugins: { ...opts.plugins, legend: { display: false } } };
@@ -997,10 +1018,19 @@ function makeApp() {
       make('dashSchools', {
         type: 'bar',
         data: {
-          labels: schoolEntries.map(([k]) => k),
+          labels: schoolEntries.map(([k]) => shortLabelOf(k)),
           datasets: [{ data: schoolEntries.map(([, v]) => v), backgroundColor: '#0F3D3E', borderColor: 'transparent' }],
         },
-        options: { ...optsNoLegend, indexAxis: 'y' },
+        options: {
+          ...optsNoLegend,
+          indexAxis: 'y',
+          plugins: {
+            ...optsNoLegend.plugins,
+            tooltip: {
+              callbacks: { title: (items) => schoolEntries[items[0].dataIndex][0] },
+            },
+          },
+        },
       });
 
       // 4. Top diagnoses horizontal bar (up to 10)
@@ -1012,10 +1042,19 @@ function makeApp() {
       make('dashDiag', {
         type: 'bar',
         data: {
-          labels: diagEntries.map(([k]) => k),
+          labels: diagEntries.map(([k]) => shortLabelOf(k)),
           datasets: [{ data: diagEntries.map(([, v]) => v), backgroundColor: '#B85C38', borderColor: 'transparent' }],
         },
-        options: { ...optsNoLegend, indexAxis: 'y' },
+        options: {
+          ...optsNoLegend,
+          indexAxis: 'y',
+          plugins: {
+            ...optsNoLegend.plugins,
+            tooltip: {
+              callbacks: { title: (items) => diagEntries[items[0].dataIndex][0] },
+            },
+          },
+        },
       });
 
       // 5. Age histogram
@@ -1392,6 +1431,21 @@ function chartOptions(theme) {
       y: { ticks: { color: text, font: { family: 'JetBrains Mono' } }, grid: { color: grid }, beginAtZero: true },
     },
   };
+}
+
+/** Shorten a label for narrow horizontal-bar axes — prefer the parenthesised
+ *  acronym if present (e.g. "Lycée Aline Mayrisch (LAML)" → "LAML"), then
+ *  fall back to the first ICD code in a diagnostic string, then to ellipsis. */
+function shortLabelOf(s) {
+  if (!s || typeof s !== 'string') return s;
+  // Diagnostic strings like "F90.0 — TDAH, type inattention" → keep the code
+  const codeMatch = s.match(/^([A-Z]\d{2}(?:\.\d)?)\s*[—-]/);
+  if (codeMatch) return codeMatch[1];
+  // Acronym in parens
+  const acro = s.match(/\(([^)]+)\)/);
+  if (acro) return acro[1];
+  if (s.length <= 22) return s;
+  return s.slice(0, 20) + '…';
 }
 
 function countBy(items, keyFn) {
