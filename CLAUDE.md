@@ -5,6 +5,13 @@ Social et Éducatif (CDSE)** in Luxemburg. Erfasst Fallakten von Jugendlichen
 (10–15 J.) mit sozio-emotionalen Schwierigkeiten und ersetzt eine bisherige
 Excel-Lösung.
 
+## Aktueller Stand: HTML-Prototyp
+
+Aktuell wird das Tool als **einzelne `index.html`-Datei** gebaut (Evaluations-Phase).
+Persistenz im Browser via `localStorage`, Backups via JSON-Export. Daten sind beim
+späteren Wechsel zu einem Node.js-Backend portierbar. Die Sektion „Architektur"
+unten beschreibt die geplante Multi-User-Endform.
+
 ## Architektur
 
 | Schicht   | Tech                                          |

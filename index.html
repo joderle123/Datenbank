@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>CDSE — Statistiques</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Tailwind (Play CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            paper: { DEFAULT: "#FAF8F4", dark: "#161513" },
+            ink: { DEFAULT: "#1A1814", dark: "#E8E4DC" },
+            muted: { DEFAULT: "#6B6358", dark: "#9C9489" },
+            line: { DEFAULT: "#E5DFD2", dark: "#2A2723" },
+            primary: { DEFAULT: "#0F3D3E", soft: "#143F40" },
+            accent: { DEFAULT: "#B85C38", soft: "#C16C48" },
+          },
+          fontFamily: {
+            serif: ['"Instrument Serif"', "ui-serif", "serif"],
+            sans: ['"Schibsted Grotesk"', "system-ui", "sans-serif"],
+            mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
+          },
+          fontFeatureSettings: {
+            tnum: '"tnum","cv11"',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+
+  <style>
+    html,
+    body {
+      background: #faf8f4;
+      color: #1a1814;
+      font-family: "Schibsted Grotesk", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    html.dark,
+    html.dark body {
+      background: #161513;
+      color: #e8e4dc;
+    }
+    .font-serif-i {
+      font-family: "Instrument Serif", serif;
+      font-style: italic;
+      font-weight: 400;
+    }
+    .tnum {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+    }
+    [x-cloak] {
+      display: none !important;
+    }
+    /* Scrollbar — discreet */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.12);
+      border-radius: 999px;
+    }
+    html.dark ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    /* Nav button base */
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      text-align: left;
+      color: #1a1814;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .nav-btn:hover {
+      background: rgba(15, 61, 62, 0.06);
+    }
+    html.dark .nav-btn {
+      color: #e8e4dc;
+    }
+    html.dark .nav-btn:hover {
+      background: rgba(232, 228, 220, 0.06);
+    }
+    .nav-btn.active {
+      background: rgba(15, 61, 62, 0.1);
+      color: #0f3d3e;
+    }
+    html.dark .nav-btn.active {
+      background: rgba(232, 228, 220, 0.1);
+      color: #e8e4dc;
+    }
+  </style>
+</head>
+
+<body
+  class="h-full antialiased"
+  x-data="shell()"
+  x-init="init()"
+  x-cloak
+>
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside
+      class="w-60 shrink-0 border-r border-line dark:border-line-dark
+             flex flex-col px-4 py-6 gap-6 bg-paper dark:bg-paper-dark"
+    >
+      <div class="px-2">
+        <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">
+          CDSE Luxembourg
+        </div>
+        <div class="mt-1 text-2xl">
+          <span class="font-serif-i">Statistiques</span>
+        </div>
+      </div>
+
+      <nav class="flex flex-col gap-0.5">
+        <template x-for="item in nav" :key="item.id">
+          <button
+            class="nav-btn text-sm"
+            :class="{ active: view === item.id }"
+            @click="view = item.id"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-current opacity-40"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+      </nav>
+
+      <div class="mt-auto flex flex-col gap-2 px-2">
+        <button
+          @click="toggleTheme()"
+          class="text-xs text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark text-left"
+        >
+          <span x-show="theme === 'light'">→ Mode sombre</span>
+          <span x-show="theme === 'dark'">→ Mode clair</span>
+        </button>
+        <div class="text-[10px] tracking-wide text-muted dark:text-muted-dark font-mono">
+          v0.1 · prototype
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 min-w-0">
+      <header
+        class="border-b border-line dark:border-line-dark px-10 py-6 flex items-baseline justify-between"
+      >
+        <div>
+          <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">
+            <span x-text="currentNav?.kicker || ''"></span>
+          </div>
+          <h1 class="mt-1 text-3xl">
+            <span x-text="currentNav?.title || ''"></span>
+            <span class="font-serif-i text-accent" x-text="currentNav?.accent || ''"></span>
+          </h1>
+        </div>
+        <div class="text-xs tnum text-muted dark:text-muted-dark font-mono" x-text="now"></div>
+      </header>
+
+      <div class="px-10 py-8">
+        <!-- View slots — content arrives in later steps -->
+        <template x-if="view === 'dashboard'">
+          <section class="max-w-3xl">
+            <p class="text-muted dark:text-muted-dark leading-relaxed">
+              Bienvenue. Cet outil remplace la feuille Excel pour le suivi des dossiers
+              CDSE. Les sections sont en cours de construction — cette première étape
+              installe le squelette visuel, la typographie et la navigation.
+            </p>
+            <div class="mt-8 grid grid-cols-3 gap-4">
+              <template x-for="k in placeholders" :key="k">
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark" x-text="k"></div>
+                  <div class="mt-3 text-3xl tnum font-mono">—</div>
+                </div>
+              </template>
+            </div>
+          </section>
+        </template>
+
+        <template x-if="view !== 'dashboard'">
+          <section class="text-muted dark:text-muted-dark">
+            <p class="font-serif-i text-2xl">À venir.</p>
+            <p class="mt-2 text-sm">
+              Cette vue (« <span x-text="currentNav?.title"></span> ») sera construite
+              dans une étape suivante.
+            </p>
+          </section>
+        </template>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function shell() {
+      return {
+        view: "dashboard",
+        theme: "light",
+        now: "",
+        nav: [
+          { id: "dashboard", label: "Tableau de bord", kicker: "Vue d'ensemble", title: "Tableau de", accent: " bord" },
+          { id: "cases",     label: "Dossiers",        kicker: "Registre",        title: "Dossiers",   accent: "" },
+          { id: "query",     label: "Requêtes",        kicker: "Analyse",         title: "Requêtes",   accent: "" },
+          { id: "io",        label: "Import / Export", kicker: "Échange",         title: "Import",     accent: " / Export" },
+          { id: "audit",     label: "Journal",         kicker: "Traçabilité",     title: "Journal",    accent: "" },
+          { id: "settings",  label: "Paramètres",      kicker: "Configuration",   title: "Paramètres", accent: "" },
+        ],
+        placeholders: ["Dossiers actifs", "Âge moyen", "QI moyen"],
+        get currentNav() {
+          return this.nav.find((n) => n.id === this.view);
+        },
+        init() {
+          const stored = localStorage.getItem("cdse:theme");
+          const prefersDark =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          this.theme = stored || (prefersDark ? "dark" : "light");
+          this.applyTheme();
+          this.tickClock();
+          setInterval(() => this.tickClock(), 30_000);
+        },
+        toggleTheme() {
+          this.theme = this.theme === "dark" ? "light" : "dark";
+          localStorage.setItem("cdse:theme", this.theme);
+          this.applyTheme();
+        },
+        applyTheme() {
+          document.documentElement.classList.toggle("dark", this.theme === "dark");
+        },
+        tickClock() {
+          const d = new Date();
+          this.now = d.toLocaleDateString("fr-LU", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          });
+        },
+      };
+    }
+  </script>
+</body>
+</html>
