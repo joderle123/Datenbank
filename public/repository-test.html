@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>CDSE — Repository sanity tests</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #faf8f4;
+      --ink: #1a1814;
+      --muted: #6b6358;
+      --line: #e5dfd2;
+      --ok: #0f3d3e;
+      --err: #b85c38;
+    }
+    html, body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Schibsted Grotesk", system-ui, sans-serif;
+      margin: 0;
+      padding: 2.5rem;
+      line-height: 1.4;
+    }
+    h1 { font-weight: 500; margin: 0 0 0.25rem; font-size: 1.5rem; }
+    .kicker { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); }
+    .summary {
+      margin: 1.5rem 0;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 0.5rem;
+      font-family: "JetBrains Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .summary.ok { border-color: var(--ok); color: var(--ok); }
+    .summary.err { border-color: var(--err); color: var(--err); }
+    ol { list-style: none; padding: 0; margin: 0; }
+    li {
+      display: grid;
+      grid-template-columns: 1.25rem 4rem 1fr;
+      gap: 0.75rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px dashed var(--line);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.825rem;
+    }
+    li.group {
+      grid-template-columns: 1fr;
+      border-bottom: none;
+      margin-top: 1.25rem;
+      font-family: "Schibsted Grotesk", system-ui, sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+    }
+    .badge-ok  { color: var(--ok);  font-weight: 600; }
+    .badge-err { color: var(--err); font-weight: 600; }
+    .name { color: var(--ink); }
+    .detail { color: var(--err); margin-left: 5.25rem; font-size: 0.8rem; }
+    button {
+      font: inherit;
+      background: var(--ink);
+      color: var(--paper);
+      border: none;
+      padding: 0.5rem 0.9rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+    }
+    button:hover { background: #2d2924; }
+    .toolbar { margin-top: 1.5rem; display: flex; gap: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="kicker">CDSE Stats</div>
+  <h1>Repository — sanity tests</h1>
+  <p style="color: var(--muted); max-width: 50ch;">
+    Exécute les contrats du schéma et du repository contre une instance
+    isolée (clé <code>cdse_cases_test_v1</code>). Vos données réelles ne sont
+    pas touchées.
+  </p>
+
+  <div id="summary" class="summary">En cours…</div>
+  <ol id="results"></ol>
+  <div class="toolbar">
+    <button id="rerun">Relancer</button>
+    <button id="wipe">Effacer la zone de test</button>
+  </div>
+
+  <script type="module">
+    import {
+      FIELD_DEFS,
+      CATEGORIES,
+      getField,
+      getFieldsByCategory,
+      getEditableFields,
+      validateField,
+      validateCase,
+      computeAge,
+    } from './fields.js';
+    import { LocalStorageCaseRepository } from './repository.js';
+
+    // Isolated storage adapter — same shape as localStorage, separate keyspace.
+    const TEST_KEY = 'cdse_cases_test_v1';
+    const isolatedStorage = {
+      getItem: (k) => localStorage.getItem(k === 'cdse_cases_v1' ? TEST_KEY : k),
+      setItem: (k, v) => localStorage.setItem(k === 'cdse_cases_v1' ? TEST_KEY : k, v),
+      removeItem: (k) => localStorage.removeItem(k === 'cdse_cases_v1' ? TEST_KEY : k),
+    };
+
+    const repo = new LocalStorageCaseRepository(isolatedStorage);
+    const results = [];
+    let currentGroup = null;
+
+    function group(name) { results.push({ kind: 'group', name }); currentGroup = name; }
+    function test(name, fn) { results.push({ kind: 'test', name, fn, group: currentGroup }); }
+
+    function assertEq(actual, expected, label) {
+      if (actual !== expected) {
+        throw new Error(`${label || 'assertEq'}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+      }
+    }
+    function assertOk(cond, label) {
+      if (!cond) throw new Error(label || 'assertion failed');
+    }
+
+    // ----- schema --------------------------------------------------------
+    group('Schema');
+
+    test('FIELD_DEFS has 38 fields', () => assertEq(FIELD_DEFS.length, 38));
+    test('CATEGORIES has 12 sections', () => assertEq(CATEGORIES.length, 12));
+    test('all field keys unique', () => {
+      const set = new Set(FIELD_DEFS.map((f) => f.key));
+      assertEq(set.size, FIELD_DEFS.length);
+    });
+    test('every field belongs to a known category', () => {
+      const cats = new Set(CATEGORIES.map((c) => c.key));
+      const orphan = FIELD_DEFS.find((f) => !cats.has(f.category));
+      assertOk(!orphan, orphan ? `orphan: ${orphan.key}` : '');
+    });
+    test('age is the only computed field', () => {
+      const computed = FIELD_DEFS.filter((f) => f.type === 'computed');
+      assertEq(computed.length, 1);
+      assertEq(computed[0].key, 'age');
+    });
+    test('getField("matricule") returns object', () => {
+      assertEq(getField('matricule')?.key, 'matricule');
+    });
+    test('getField unknown returns null', () => {
+      assertEq(getField('does_not_exist'), null);
+    });
+    test('getFieldsByCategory("identification") has 5 fields', () => {
+      assertEq(getFieldsByCategory('identification').length, 5);
+    });
+    test('getEditableFields excludes computed', () => {
+      assertEq(getEditableFields().length, 37);
+    });
+
+    // ----- validators ----------------------------------------------------
+    group('Validation');
+
+    test('matricule required (empty → error)', () =>
+      assertOk(validateField('matricule', '') !== null));
+    test('matricule filled (valid)', () =>
+      assertEq(validateField('matricule', '2010052012345'), null));
+    test('dito optional (empty OK)', () =>
+      assertEq(validateField('dito', ''), null));
+    test('iq 100 OK', () => assertEq(validateField('iq', 100), null));
+    test('iq 200 rejected', () => assertOk(validateField('iq', 200) !== null));
+    test('iq 30 rejected', () => assertOk(validateField('iq', 30) !== null));
+    test('iq non-numeric rejected', () => assertOk(validateField('iq', 'abc') !== null));
+    test('date ISO accepted', () => assertEq(validateField('date_naissance', '2012-04-15'), null));
+    test('date FR rejected', () => assertOk(validateField('date_naissance', '15/04/2012') !== null));
+    test('select known option OK', () => assertEq(validateField('sexe', 'F'), null));
+    test('select unknown option rejected', () => assertOk(validateField('sexe', 'X') !== null));
+    test('tags as array OK', () => assertEq(validateField('diagnostics', ['F90.0']), null));
+    test('tags as string rejected', () => assertOk(validateField('diagnostics', 'F90.0') !== null));
+
+    test('validateCase: minimal complete', () => {
+      const r = validateCase({ matricule: '1', nom: 'X', prenom: 'Y' });
+      assertEq(r.valid, true);
+    });
+    test('validateCase: missing required + bad iq', () => {
+      const r = validateCase({ iq: 999 });
+      assertOk(!r.valid && r.errors.matricule && r.errors.iq);
+    });
+
+    // ----- computeAge ----------------------------------------------------
+    group('computeAge');
+
+    test('empty input → null', () => assertEq(computeAge(''), null));
+    test('garbage → null', () => assertEq(computeAge('not-a-date'), null));
+    test('future date → null', () => assertEq(computeAge('3000-01-01'), null));
+    test('birthday already passed', () => {
+      assertEq(computeAge('2010-05-20', new Date('2026-05-21')), 16);
+    });
+    test('birthday not yet reached', () => {
+      assertEq(computeAge('2010-05-22', new Date('2026-05-21')), 15);
+    });
+
+    // ----- repository ---------------------------------------------------
+    group('Repository CRUD');
+
+    test('starts empty', async () => {
+      repo._wipeForTests();
+      assertEq((await repo.list()).length, 0);
+    });
+    let created;
+    test('create returns hydrated record', async () => {
+      created = await repo.create({ matricule: '1', nom: 'Alpha', prenom: 'A', date_naissance: '2010-01-01' });
+      assertOk(created.id);
+      assertOk(typeof created.age === 'number');
+      assertOk(created.created_at);
+    });
+    test('get(id) returns the record', async () => {
+      const got = await repo.get(created.id);
+      assertEq(got?.nom, 'Alpha');
+    });
+    test('get(unknown) returns null', async () => {
+      assertEq(await repo.get('nope'), null);
+    });
+    test('update merges and bumps updated_at', async () => {
+      const upd = await repo.update(created.id, { iq: 110 });
+      assertEq(upd.iq, 110);
+      assertEq(upd.id, created.id);
+      assertEq(upd.created_at, created.created_at);
+      assertOk(upd.updated_at !== created.updated_at);
+    });
+    test('update rejects id/computed/timestamp clobbering', async () => {
+      const sneaky = await repo.update(created.id, { id: 'evil', age: 999, created_at: '1970', unknown_field: 'x' });
+      assertEq(sneaky.id, created.id);
+      assertOk(sneaky.age !== 999);
+      assertEq(sneaky.unknown_field, undefined);
+    });
+    test('count works', async () => {
+      await repo.create({ matricule: '2', nom: 'Beta', prenom: 'B' });
+      await repo.create({ matricule: '3', nom: 'Charlie', prenom: 'C' });
+      assertEq(await repo.count(), 3);
+    });
+    test('search is case-insensitive', async () => {
+      const s = await repo.list({ search: 'beta' });
+      assertEq(s.length, 1);
+      assertEq(s[0].nom, 'Beta');
+    });
+    test('sort asc / desc', async () => {
+      const asc = await repo.list({ sort: { field: 'nom', dir: 'asc' } });
+      const desc = await repo.list({ sort: { field: 'nom', dir: 'desc' } });
+      assertEq(asc[0].nom, 'Alpha');
+      assertEq(desc[0].nom, 'Charlie');
+    });
+    test('delete removes record', async () => {
+      const all = await repo.list();
+      const target = all[0];
+      assertEq(await repo.delete(target.id), true);
+      assertEq(await repo.get(target.id), null);
+    });
+    test('delete unknown returns false', async () => {
+      assertEq(await repo.delete('nope'), false);
+    });
+
+    // ----- import / export ----------------------------------------------
+    group('Import / Export');
+
+    test('merge mode skips existing matricule', async () => {
+      repo._wipeForTests();
+      await repo.create({ matricule: 'M1', nom: 'Existing', prenom: 'X' });
+      const r = await repo.importAll([
+        { matricule: 'M1', nom: 'Other' },
+        { matricule: 'M2', nom: 'New' },
+      ], 'merge');
+      assertEq(r.skipped, 1);
+      assertEq(r.added, 1);
+      const e = await repo.list({ filter: { matricule: 'M1' } });
+      assertEq(e[0].nom, 'Existing');
+    });
+
+    test('update mode overwrites by matricule', async () => {
+      const r = await repo.importAll([{ matricule: 'M1', nom: 'Replaced' }], 'update');
+      assertEq(r.updated, 1);
+      const e = await repo.list({ filter: { matricule: 'M1' } });
+      assertEq(e[0].nom, 'Replaced');
+    });
+
+    test('replace mode wipes & loads', async () => {
+      const r = await repo.importAll([{ matricule: 'Z', nom: 'Only' }], 'replace');
+      assertEq(r.added, 1);
+      assertEq(await repo.count(), 1);
+    });
+
+    test('export → import → export is identical (tags preserved)', async () => {
+      repo._wipeForTests();
+      const payload = [
+        { matricule: 'A', nom: 'A', prenom: 'A', iq: 100, diagnostics: ['F90.0'] },
+        { matricule: 'B', nom: 'B', prenom: 'B', iq: 110, diagnostics: ['F84.0', 'F32.0'] },
+      ];
+      await repo.importAll(payload, 'replace');
+      const out = await repo.exportAll();
+      assertEq(out.length, 2);
+      const b = out.find((r) => r.matricule === 'B');
+      assertEq(JSON.stringify(b.diagnostics), '["F84.0","F32.0"]');
+    });
+
+    // ----- runner --------------------------------------------------------
+    async function runAll() {
+      const list = document.getElementById('results');
+      const summary = document.getElementById('summary');
+      list.innerHTML = '';
+      summary.className = 'summary';
+      summary.textContent = 'En cours…';
+
+      let pass = 0, fail = 0, idx = 0;
+      for (const entry of results) {
+        const li = document.createElement('li');
+        if (entry.kind === 'group') {
+          li.className = 'group';
+          li.textContent = entry.name;
+          list.appendChild(li);
+          continue;
+        }
+        idx++;
+        try {
+          await entry.fn();
+          pass++;
+          li.innerHTML = `
+            <span class="badge-ok">✓</span>
+            <span class="tnum">#${String(idx).padStart(2, '0')}</span>
+            <span class="name">${entry.name}</span>
+          `;
+        } catch (e) {
+          fail++;
+          li.innerHTML = `
+            <span class="badge-err">✕</span>
+            <span class="tnum">#${String(idx).padStart(2, '0')}</span>
+            <span class="name">${entry.name}</span>
+          `;
+          const detail = document.createElement('div');
+          detail.className = 'detail';
+          detail.textContent = String(e.message || e);
+          li.appendChild(detail);
+        }
+        list.appendChild(li);
+      }
+
+      const total = pass + fail;
+      summary.textContent = fail
+        ? `${pass} / ${total} OK · ${fail} ÉCHEC(S)`
+        : `${pass} / ${total} OK · tout vert`;
+      summary.classList.add(fail ? 'err' : 'ok');
+    }
+
+    document.getElementById('rerun').addEventListener('click', runAll);
+    document.getElementById('wipe').addEventListener('click', () => {
+      localStorage.removeItem(TEST_KEY);
+      runAll();
+    });
+    runAll();
+  </script>
+</body>
+</html>
