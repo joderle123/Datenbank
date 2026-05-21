@@ -900,6 +900,12 @@ function makeApp() {
     },
 
     runCurrentQuery() {
+      // Cancel any debounced re-run so we never have two renders racing
+      // (one from the direct call after a preset click, one from the
+      // query-mutation watcher's debounce). Without this the second
+      // render destroys the first chart while it's still drawing.
+      clearTimeout(this._runTimer);
+
       // Drop incomplete filters silently
       const clean = (this.query.filters || []).filter((f) => {
         const op = operatorsFor(f.field).find((o) => o.key === f.op);
@@ -926,54 +932,66 @@ function makeApp() {
         requestAnimationFrame(() => this.renderQueryChart());
         return;
       }
-      if (this._chart) { this._chart.destroy(); this._chart = null; }
+      if (this._chart) {
+        try { this._chart.destroy(); } catch (e) { /* canvas may be gone */ }
+        this._chart = null;
+      }
 
       const r = this.queryResult;
       if (!r) return;
       const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || !!a.field);
       const effectiveAggs = aggs.length ? aggs : [{ fn: 'count', field: null }];
+      const baseOpts = chartOptions(this.theme);
+      const doughnutOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: baseOpts.plugins,
+        cutout: '60%',
+      };
 
-      // 1. group-by → bar chart (or doughnut for count-only with few groups)
-      if (r.groupBy && r.groups.length) {
-        const labels = r.groups.map((g) => g.key);
-        const datasets = effectiveAggs.map((a, idx) => ({
-          label: this.aggLabel(a),
-          data: r.groups.map((g) => g.values[idx]),
-          backgroundColor: idx === 0 ? '#0F3D3E' : idx === 1 ? '#B85C38' : '#6B6358',
-        }));
-        const isCountOnly = effectiveAggs.length === 1 && effectiveAggs[0].fn === 'count';
-        const useDoughnut = isCountOnly && labels.length <= 8;
-        const baseOpts = chartOptions(this.theme);
-        this._chart = new window.Chart(ctx, {
-          type: useDoughnut ? 'doughnut' : 'bar',
-          data: useDoughnut
-            ? { labels, datasets: [{ data: datasets[0].data, backgroundColor: ['#0F3D3E', '#B85C38', '#6B6358', '#143F40', '#C16C48', '#8B7E6C', '#3F5F5E', '#A04A2A'], borderColor: 'transparent' }] }
-            : { labels, datasets },
-          options: useDoughnut
-            ? { responsive: true, maintainAspectRatio: false, plugins: baseOpts.plugins, cutout: '60%' }
-            : baseOpts,
-        });
-        return;
-      }
+      try {
+        // 1. group-by → bar chart (or doughnut for count-only with few groups)
+        if (r.groupBy && r.groups.length) {
+          const labels = r.groups.map((g) => g.key);
+          const datasets = effectiveAggs.map((a, idx) => ({
+            label: this.aggLabel(a),
+            data: r.groups.map((g) => g.values[idx]),
+            backgroundColor: idx === 0 ? '#0F3D3E' : idx === 1 ? '#B85C38' : '#6B6358',
+          }));
+          const isCountOnly = effectiveAggs.length === 1 && effectiveAggs[0].fn === 'count';
+          const useDoughnut = isCountOnly && labels.length <= 8;
+          this._chart = new window.Chart(ctx, {
+            type: useDoughnut ? 'doughnut' : 'bar',
+            data: useDoughnut
+              ? { labels, datasets: [{ data: datasets[0].data, backgroundColor: ['#0F3D3E', '#B85C38', '#6B6358', '#143F40', '#C16C48', '#8B7E6C', '#3F5F5E', '#A04A2A'], borderColor: 'transparent' }] }
+              : { labels, datasets },
+            options: useDoughnut ? doughnutOpts : baseOpts,
+          });
+          return;
+        }
 
-      // 2. single numeric aggregation without group-by → histogram
-      if (r.rawValues && r.rawValues.length) {
-        const bins = histogram(r.rawValues, 10);
-        this._chart = new window.Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: bins.map((b) => `${formatNumber(b.from, 0)}–${formatNumber(b.to, 0)}`),
-            datasets: [{
-              label: this.aggLabel(effectiveAggs[0]) + ' (distribution)',
-              data: bins.map((b) => b.count),
-              backgroundColor: '#0F3D3E',
-            }],
-          },
-          options: chartOptions(this.theme),
-        });
-        return;
+        // 2. single numeric aggregation without group-by → histogram
+        if (r.rawValues && r.rawValues.length) {
+          const bins = histogram(r.rawValues, 10);
+          this._chart = new window.Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: bins.map((b) => `${formatNumber(b.from, 0)}–${formatNumber(b.to, 0)}`),
+              datasets: [{
+                label: this.aggLabel(effectiveAggs[0]) + ' (distribution)',
+                data: bins.map((b) => b.count),
+                backgroundColor: '#0F3D3E',
+              }],
+            },
+            options: baseOpts,
+          });
+          return;
+        }
+        // 3. otherwise no chart, just metric text
+      } catch (e) {
+        console.error('CDSE: query chart creation failed', e);
       }
-      // 3. otherwise no chart, just metric text
     },
 
     // ====================================================================
@@ -1550,6 +1568,12 @@ function chartOptions(theme) {
   return {
     responsive: true,
     maintainAspectRatio: false,
+    // No animations — they run asynchronously and lose draw cycles when a
+    // chart is destroyed while still animating in (which happens whenever a
+    // user clicks two presets in succession in the Query Builder).
+    animation: false,
+    animations: { colors: false, x: false, y: false },
+    transitions: { active: { animation: { duration: 0 } } },
     plugins: {
       legend: { labels: { color: text, font: { family: 'Schibsted Grotesk' } } },
     },
