@@ -26,6 +26,7 @@ import {
 
 import {
   runQuery,
+  filterRecords,
   NUMERIC_FIELDS,
   GROUPABLE_FIELDS,
   FILTERABLE_FIELDS,
@@ -168,10 +169,12 @@ function makeApp() {
       groupBy: '',
     },
     queryResult: null,
+    queryMatches: null,
     savedQueriesList: [],
     saveQueryName: '',
     editingSavedQueryId: null,
     _chart: null,
+    _dashCharts: [],
 
     // -- import / export --------------------------------------------------
     importMode: 'merge',
@@ -224,6 +227,21 @@ function makeApp() {
 
       // open all form categories by default
       for (const c of CATEGORIES) this.formCategoryOpen[c.key] = c.key === 'identification';
+
+      // dashboard charts: render whenever we land on dashboard or data changes
+      this.$watch('view', (v) => {
+        if (v === 'dashboard') this.$nextTick(() => this.renderDashboardCharts());
+      });
+      this.$watch('allCases', () => {
+        if (this.view === 'dashboard') this.$nextTick(() => this.renderDashboardCharts());
+      });
+      this.$watch('theme', () => {
+        if (this.view === 'dashboard') this.$nextTick(() => this.renderDashboardCharts());
+        if (this.view === 'query' && this.queryResult) this.$nextTick(() => this.renderQueryChart());
+      });
+
+      // first render — after the section becomes visible
+      this.$nextTick(() => this.renderDashboardCharts());
 
       // keyboard shortcuts
       window.addEventListener('keydown', (e) => this.handleShortcut(e));
@@ -649,6 +667,127 @@ function makeApp() {
       // 3. otherwise no chart, just metric text
     },
 
+    // ====================================================================
+    // Dashboard charts
+    // ====================================================================
+    renderDashboardCharts() {
+      if (this._dashCharts && this._dashCharts.length) {
+        this._dashCharts.forEach((c) => c && c.destroy());
+      }
+      this._dashCharts = [];
+      if (!this.allCases.length || !window.Chart) return;
+
+      const opts = chartOptions(this.theme);
+      const optsNoLegend = { ...opts, plugins: { ...opts.plugins, legend: { display: false } } };
+      const palette = ['#0F3D3E', '#B85C38', '#6B6358', '#143F40', '#C16C48', '#8B7E6C', '#3F5F5E', '#A04A2A'];
+
+      const make = (id, config) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        this._dashCharts.push(new window.Chart(el, config));
+      };
+
+      // 1. Sexe doughnut
+      const sexeCounts = countBy(this.allCases, (c) => c.sexe);
+      make('dashSexe', {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(sexeCounts),
+          datasets: [{ data: Object.values(sexeCounts), backgroundColor: palette, borderColor: 'transparent' }],
+        },
+        options: { ...opts, cutout: '60%' },
+      });
+
+      // 2. Mesures doughnut (all three slots combined)
+      const mesureCounts = {};
+      for (const c of this.allCases) {
+        for (const k of ['mesure_cdse_1', 'mesure_cdse_2', 'mesure_cdse_3']) {
+          if (c[k]) mesureCounts[c[k]] = (mesureCounts[c[k]] || 0) + 1;
+        }
+      }
+      const mesureEntries = Object.entries(mesureCounts).sort((a, b) => b[1] - a[1]);
+      make('dashMesures', {
+        type: 'doughnut',
+        data: {
+          labels: mesureEntries.map(([k]) => k),
+          datasets: [{ data: mesureEntries.map(([, v]) => v), backgroundColor: palette, borderColor: 'transparent' }],
+        },
+        options: { ...opts, cutout: '60%' },
+      });
+
+      // 3. Top schools horizontal bar (up to 8)
+      const schoolEntries = topEntries(countBy(this.allCases, (c) => c.ecole_lycee), 8);
+      make('dashSchools', {
+        type: 'bar',
+        data: {
+          labels: schoolEntries.map(([k]) => k),
+          datasets: [{ data: schoolEntries.map(([, v]) => v), backgroundColor: '#0F3D3E', borderColor: 'transparent' }],
+        },
+        options: { ...optsNoLegend, indexAxis: 'y' },
+      });
+
+      // 4. Top diagnoses horizontal bar (up to 10)
+      const diagCounts = {};
+      for (const c of this.allCases) {
+        for (const d of c.diagnostics || []) diagCounts[d] = (diagCounts[d] || 0) + 1;
+      }
+      const diagEntries = topEntries(diagCounts, 10);
+      make('dashDiag', {
+        type: 'bar',
+        data: {
+          labels: diagEntries.map(([k]) => k),
+          datasets: [{ data: diagEntries.map(([, v]) => v), backgroundColor: '#B85C38', borderColor: 'transparent' }],
+        },
+        options: { ...optsNoLegend, indexAxis: 'y' },
+      });
+
+      // 5. Age histogram
+      const ages = this.allCases.map((c) => c.age).filter((v) => Number.isFinite(v));
+      if (ages.length) {
+        const bins = histogram(ages, Math.min(12, Math.max(4, Math.ceil(Math.sqrt(ages.length)))));
+        make('dashAge', {
+          type: 'bar',
+          data: {
+            labels: bins.map((b) => `${Math.round(b.from)}–${Math.round(b.to)}`),
+            datasets: [{ data: bins.map((b) => b.count), backgroundColor: '#0F3D3E', borderColor: 'transparent' }],
+          },
+          options: optsNoLegend,
+        });
+      }
+
+      // 6. IQ histogram
+      const iqs = this.allCases.map((c) => Number(c.iq)).filter((v) => Number.isFinite(v));
+      if (iqs.length) {
+        const bins = histogram(iqs, Math.min(12, Math.max(4, Math.ceil(Math.sqrt(iqs.length)))));
+        make('dashIq', {
+          type: 'bar',
+          data: {
+            labels: bins.map((b) => `${Math.round(b.from)}–${Math.round(b.to)}`),
+            datasets: [{ data: bins.map((b) => b.count), backgroundColor: '#B85C38', borderColor: 'transparent' }],
+          },
+          options: optsNoLegend,
+        });
+      }
+    },
+
+    // ====================================================================
+    // Query Builder: show matching cases
+    // ====================================================================
+    showMatchingCases() {
+      const clean = (this.query.filters || []).filter((f) => {
+        const op = operatorsFor(f.field).find((o) => o.key === f.op);
+        if (!op) return false;
+        if (op.needsValue && (f.value === '' || f.value === null || f.value === undefined)) return false;
+        if (op.needsValue2 && (f.value2 === '' || f.value2 === null || f.value2 === undefined)) return false;
+        return true;
+      });
+      this.queryMatches = filterRecords(this.allCases, clean);
+    },
+
+    hideMatchingCases() {
+      this.queryMatches = null;
+    },
+
     aggLabel(a) {
       const fn = AGGREGATIONS.find((x) => x.key === a.fn)?.label || a.fn;
       if (a.fn === 'count') return fn;
@@ -873,6 +1012,20 @@ function chartOptions(theme) {
       y: { ticks: { color: text, font: { family: 'JetBrains Mono' } }, grid: { color: grid }, beginAtZero: true },
     },
   };
+}
+
+function countBy(items, keyFn) {
+  const out = {};
+  for (const it of items) {
+    const k = keyFn(it);
+    if (!k) continue;
+    out[k] = (out[k] || 0) + 1;
+  }
+  return out;
+}
+
+function topEntries(obj, n) {
+  return Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n);
 }
 
 function histogram(values, nBins = 10) {

@@ -132,6 +132,12 @@ function evaluateFilter(record, filter) {
   }
 }
 
+/** Apply a list of filter rows to records (AND combine). Exported so the UI
+ *  can show "matching cases" without duplicating the operator logic. */
+export function filterRecords(records, filters) {
+  return records.filter((r) => (filters || []).every((f) => evaluateFilter(r, f)));
+}
+
 // ----- numeric helpers ------------------------------------------------------
 
 function toNumbers(values) {

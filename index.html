@@ -239,68 +239,63 @@
                   <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Âge moyen</div>
                   <div class="mt-3 text-4xl tnum font-mono">
                     <span x-text="fmt(kpi.avgAge, 1)"></span>
-                    <span class="text-xs text-muted dark:text-muted-dark ml-1" x-text="'n=' + kpi.nAge"></span>
                   </div>
+                  <div class="text-[11px] text-muted dark:text-muted-dark mt-1 tnum font-mono">n = <span x-text="kpi.nAge"></span></div>
                 </div>
                 <div class="border border-line dark:border-line-dark rounded-lg p-5">
                   <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">QI moyen</div>
                   <div class="mt-3 text-4xl tnum font-mono">
                     <span x-text="fmt(kpi.avgIq, 1)"></span>
-                    <span class="text-xs text-muted dark:text-muted-dark ml-1" x-text="'n=' + kpi.nIq"></span>
                   </div>
+                  <div class="text-[11px] text-muted dark:text-muted-dark mt-1 tnum font-mono">n = <span x-text="kpi.nIq"></span></div>
                 </div>
                 <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Sexe</div>
-                  <div class="mt-3 space-y-1.5">
-                    <template x-for="[k, v] in kpi.sexe" :key="k">
-                      <div class="flex items-center justify-between text-sm">
-                        <span x-text="k"></span>
-                        <span class="tnum font-mono" x-text="v"></span>
-                      </div>
-                    </template>
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Filles / Garçons</div>
+                  <div class="mt-3 text-4xl tnum font-mono">
+                    <span x-text="(kpi.sexe.find(s=>s[0]==='F')?.[1] ?? 0)"></span>
+                    <span class="text-muted dark:text-muted-dark mx-1 text-2xl">/</span>
+                    <span x-text="(kpi.sexe.find(s=>s[0]==='M')?.[1] ?? 0)"></span>
                   </div>
                 </div>
               </div>
 
-              <!-- Top lists -->
-              <div class="grid grid-cols-3 gap-6">
-                <div>
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Top écoles / lycées</div>
-                  <template x-if="kpi.schools.length === 0">
-                    <div class="text-sm text-muted dark:text-muted-dark">—</div>
-                  </template>
-                  <ul class="space-y-1.5">
-                    <template x-for="[k, v] in kpi.schools" :key="k">
-                      <li class="flex justify-between text-sm border-b border-line dark:border-line-dark pb-1.5">
-                        <span x-text="k"></span>
-                        <span class="tnum font-mono text-muted dark:text-muted-dark" x-text="v"></span>
-                      </li>
-                    </template>
-                  </ul>
+              <!-- Chart row 1 — distributions -->
+              <div class="grid grid-cols-3 gap-4">
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Répartition par sexe</div>
+                  <div style="height: 220px; position: relative;"><canvas id="dashSexe"></canvas></div>
                 </div>
-                <div>
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Mesures CDSE</div>
-                  <ul class="space-y-1.5">
-                    <template x-for="[k, v] in kpi.mesures" :key="k">
-                      <li class="flex justify-between text-sm border-b border-line dark:border-line-dark pb-1.5">
-                        <span x-text="k"></span>
-                        <span class="tnum font-mono text-muted dark:text-muted-dark" x-text="v"></span>
-                      </li>
-                    </template>
-                  </ul>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Mesures CDSE (cumulées)</div>
+                  <div style="height: 220px; position: relative;"><canvas id="dashMesures"></canvas></div>
                 </div>
-                <div>
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Diagnostics fréquents</div>
-                  <ul class="space-y-1.5">
-                    <template x-for="[k, v] in kpi.diagnostics" :key="k">
-                      <li class="flex justify-between text-sm border-b border-line dark:border-line-dark pb-1.5">
-                        <span x-text="k"></span>
-                        <span class="tnum font-mono text-muted dark:text-muted-dark" x-text="v"></span>
-                      </li>
-                    </template>
-                  </ul>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Distribution des âges</div>
+                  <div style="height: 220px; position: relative;"><canvas id="dashAge"></canvas></div>
                 </div>
               </div>
+
+              <!-- Chart row 2 — rankings & IQ -->
+              <div class="grid grid-cols-3 gap-4">
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Top écoles / lycées</div>
+                  <div style="height: 260px; position: relative;"><canvas id="dashSchools"></canvas></div>
+                </div>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Diagnostics fréquents</div>
+                  <div style="height: 260px; position: relative;"><canvas id="dashDiag"></canvas></div>
+                </div>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Distribution du QI</div>
+                  <div style="height: 260px; position: relative;"><canvas id="dashIq"></canvas></div>
+                </div>
+              </div>
+
+              <p class="text-xs text-muted dark:text-muted-dark italic max-w-2xl">
+                Pour des questions plus précises — ex. « QI moyen des filles au Lycée Junglinster » —
+                ouvrez <button class="underline" @click="view='query'">Requêtes</button>,
+                où chacune des 38 variables peut être combinée comme filtre.
+              </p>
             </div>
           </template>
         </section>
@@ -663,10 +658,11 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-2 mb-6">
+          <div class="flex items-center gap-2 mb-6 flex-wrap">
             <button class="btn btn-primary" @click="runCurrentQuery()">Exécuter</button>
+            <button class="btn btn-ghost" @click="showMatchingCases()">Voir les dossiers correspondants</button>
             <button class="btn btn-ghost" @click="newQuery()">Nouvelle</button>
-            <div class="ml-auto flex items-center gap-2">
+            <div class="ml-auto flex items-center gap-2 flex-wrap">
               <input type="text" x-model="saveQueryName" placeholder="Nom de la requête…" class="field-input text-sm w-64" />
               <button class="btn btn-ghost" @click="saveCurrentQuery()">Sauvegarder</button>
               <button class="btn btn-ghost" @click="exportQueryCSV()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''">Exporter CSV</button>
@@ -728,6 +724,48 @@
                   <canvas id="queryChart"></canvas>
                 </div>
               </div>
+            </div>
+          </template>
+
+          <!-- Matching cases drilldown -->
+          <template x-if="queryMatches">
+            <div class="mt-8 border border-line dark:border-line-dark rounded-lg">
+              <div class="px-4 py-3 flex items-center justify-between border-b border-line dark:border-line-dark">
+                <div>
+                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Dossiers correspondants</div>
+                  <div class="text-sm mt-1 tnum font-mono"><span x-text="queryMatches.length"></span> / <span x-text="allCases.length"></span></div>
+                </div>
+                <button class="btn btn-ghost text-xs" @click="hideMatchingCases()">Masquer</button>
+              </div>
+              <template x-if="queryMatches.length === 0">
+                <div class="p-6 text-center text-muted dark:text-muted-dark text-sm">Aucun dossier ne correspond à ces filtres.</div>
+              </template>
+              <template x-if="queryMatches.length > 0">
+                <div class="overflow-auto" style="max-height: 420px;">
+                  <table class="w-full text-sm">
+                    <thead class="bg-black/[0.03] dark:bg-white/[0.03] sticky top-0">
+                      <tr>
+                        <template x-for="col in visibleColumns" :key="col">
+                          <th class="text-left px-3 py-2 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark whitespace-nowrap" x-text="labelOf(col)"></th>
+                        </template>
+                        <th class="px-3 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="c in queryMatches" :key="c.id">
+                        <tr class="table-row border-t border-line dark:border-line-dark">
+                          <template x-for="col in visibleColumns" :key="col">
+                            <td class="px-3 py-2 whitespace-nowrap" :class="fieldByKey(col)?.type === 'number' || col === 'age' ? 'font-mono tnum' : ''" x-text="cellValue(c, col)"></td>
+                          </template>
+                          <td class="px-3 py-2 whitespace-nowrap text-right">
+                            <button class="text-xs underline" @click="showDetail(c.id)">voir</button>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
             </div>
           </template>
         </section>
