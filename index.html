@@ -123,6 +123,43 @@
     .chip button { color: inherit; opacity: 0.6; }
     .chip button:hover { opacity: 1; }
 
+    /* Clickable preset / select chip-toggle */
+    .chip-toggle {
+      display: inline-flex; align-items: center;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid #E5DFD2;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      line-height: 1.1;
+      color: inherit;
+      background: transparent;
+      cursor: pointer;
+      transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+      max-width: 100%;
+      white-space: normal;
+      text-align: left;
+    }
+    .chip-toggle:hover {
+      background: rgba(15,61,62,0.05);
+      border-color: #0F3D3E;
+    }
+    .chip-toggle-active {
+      background: #0F3D3E;
+      color: #FAF8F4;
+      border-color: #0F3D3E;
+    }
+    .chip-toggle-active:hover {
+      background: #143F40;
+      color: #FAF8F4;
+    }
+    .chip-toggle-err {
+      border-color: #B85C38;
+    }
+    html.dark .chip-toggle { border-color: #2A2723; }
+    html.dark .chip-toggle:hover { background: rgba(232,228,220,0.06); border-color: #E8E4DC; }
+    html.dark .chip-toggle-active { background: #E8E4DC; color: #161513; border-color: #E8E4DC; }
+    html.dark .chip-toggle-active:hover { background: #FAF8F4; color: #161513; }
+
     .table-row:hover { background: rgba(15,61,62,0.03); }
     html.dark .table-row:hover { background: rgba(232,228,220,0.03); }
 
@@ -601,21 +638,35 @@
                       <div class="font-mono tnum text-sm py-1.5" x-text="f.key === 'age' ? (formAgePreview() ?? '—') : '—'"></div>
                     </template>
 
-                    <!-- text / number / date -->
+                    <!-- text / number / date (with optional preset chips on top) -->
                     <template x-if="['text','number','date'].includes(f.type)">
                       <div>
+                        <template x-if="presetsFor(f.key).length">
+                          <div class="flex flex-wrap gap-1.5 mb-2">
+                            <template x-for="p in presetsFor(f.key)" :key="p">
+                              <button
+                                type="button"
+                                @click="pickPreset(f.key, p)"
+                                class="chip-toggle"
+                                :class="isPresetActive(f.key, p) ? 'chip-toggle-active' : ''"
+                                x-text="p"
+                              ></button>
+                            </template>
+                          </div>
+                        </template>
                         <input
                           :type="f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'"
                           :min="f.min"
                           :max="f.max"
                           x-model="formData[f.key]"
-                          :list="vocabFor(f.key).length ? 'autolist-' + f.key : null"
+                          :list="(vocabFor(f.key).length || presetsFor(f.key).length) ? 'autolist-' + f.key : null"
                           class="field-input"
                           :class="formErrors[f.key] ? 'field-error' : ''"
+                          :placeholder="presetsFor(f.key).length ? 'Ou saisissez une autre valeur…' : ''"
                         />
-                        <template x-if="vocabFor(f.key).length">
+                        <template x-if="vocabFor(f.key).length || presetsFor(f.key).length">
                           <datalist :id="'autolist-' + f.key">
-                            <template x-for="v in vocabFor(f.key)" :key="v"><option :value="v"></option></template>
+                            <template x-for="v in [...vocabFor(f.key), ...presetsFor(f.key)]" :key="v"><option :value="v"></option></template>
                           </datalist>
                         </template>
                       </div>
@@ -623,16 +674,42 @@
 
                     <!-- select -->
                     <template x-if="f.type === 'select'">
-                      <select x-model="formData[f.key]" class="field-input" :class="formErrors[f.key] ? 'field-error' : ''">
-                        <option value="">—</option>
-                        <template x-for="o in f.options" :key="o"><option :value="o" x-text="o"></option></template>
-                      </select>
+                      <div>
+                        <!-- chip-toggle for small option sets -->
+                        <template x-if="useChipsForSelect(f)">
+                          <div class="flex flex-wrap gap-1.5">
+                            <template x-for="o in f.options" :key="o">
+                              <button
+                                type="button"
+                                @click="formData[f.key] = (formData[f.key] === o ? '' : o)"
+                                class="chip-toggle"
+                                :class="formData[f.key] === o ? 'chip-toggle-active' : (formErrors[f.key] ? 'chip-toggle-err' : '')"
+                                x-text="o"
+                              ></button>
+                            </template>
+                            <button
+                              type="button"
+                              x-show="formData[f.key]"
+                              @click="formData[f.key] = ''"
+                              class="text-[11px] text-muted dark:text-muted-dark underline ml-1 self-center"
+                            >effacer</button>
+                          </div>
+                        </template>
+                        <!-- fallback dropdown for large option sets -->
+                        <template x-if="!useChipsForSelect(f)">
+                          <select x-model="formData[f.key]" class="field-input" :class="formErrors[f.key] ? 'field-error' : ''">
+                            <option value="">—</option>
+                            <template x-for="o in f.options" :key="o"><option :value="o" x-text="o"></option></template>
+                          </select>
+                        </template>
+                      </div>
                     </template>
 
-                    <!-- tags -->
+                    <!-- tags (with optional preset chips on top) -->
                     <template x-if="f.type === 'tags'">
                       <div>
-                        <div class="flex flex-wrap gap-1.5 mb-1.5">
+                        <!-- Selected tags -->
+                        <div class="flex flex-wrap gap-1.5 mb-1.5" x-show="(formData[f.key] || []).length">
                           <template x-for="(tag, idx) in (formData[f.key] || [])" :key="tag + idx">
                             <span class="chip">
                               <span x-text="tag"></span>
@@ -640,17 +717,31 @@
                             </span>
                           </template>
                         </div>
+                        <!-- Preset suggestions (active state if already in the list) -->
+                        <template x-if="presetsFor(f.key).length">
+                          <div class="flex flex-wrap gap-1.5 mb-2">
+                            <template x-for="p in presetsFor(f.key)" :key="p">
+                              <button
+                                type="button"
+                                @click="pickPreset(f.key, p)"
+                                class="chip-toggle"
+                                :class="isPresetActive(f.key, p) ? 'chip-toggle-active' : ''"
+                                x-text="p"
+                              ></button>
+                            </template>
+                          </div>
+                        </template>
                         <input
                           type="text"
                           x-model="tagDraft[f.key]"
                           @keydown.enter.prevent="addTag(f.key)"
-                          :list="vocabFor(f.key).length ? 'autolist-' + f.key : null"
-                          placeholder="Tapez puis Entrée pour ajouter"
+                          :list="(vocabFor(f.key).length || presetsFor(f.key).length) ? 'autolist-' + f.key : null"
+                          :placeholder="presetsFor(f.key).length ? 'Ou ajoutez une autre valeur…' : 'Tapez puis Entrée pour ajouter'"
                           class="field-input"
                         />
-                        <template x-if="vocabFor(f.key).length">
+                        <template x-if="vocabFor(f.key).length || presetsFor(f.key).length">
                           <datalist :id="'autolist-' + f.key">
-                            <template x-for="v in vocabFor(f.key)" :key="v"><option :value="v"></option></template>
+                            <template x-for="v in [...vocabFor(f.key), ...presetsFor(f.key)]" :key="v"><option :value="v"></option></template>
                           </datalist>
                         </template>
                       </div>

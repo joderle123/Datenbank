@@ -35,6 +35,8 @@ import {
   formatNumber,
 } from './query-engine.js';
 
+import { presetsForField } from './presets.js';
+
 // ----------------------------------------------------------------------------
 
 const VOCAB_HINT_BY_FIELD = {
@@ -418,6 +420,58 @@ function makeApp() {
       if (!cat) return [];
       const bucket = this.vocabByCat?.[cat] || {};
       return Object.entries(bucket).sort((a, b) => b[1] - a[1]).map(([v]) => v);
+    },
+
+    // ====================================================================
+    // Preset chips — closed-set values rendered as clickable buttons
+    // ====================================================================
+    /** Combined list of preset values + user-added vocabulary, deduplicated.
+     *  Vocabulary entries float to the top (frequently-used first). */
+    presetsFor(fieldKey) {
+      const presets = presetsForField(fieldKey);
+      if (!presets.length) return [];
+      const used = this.vocabFor(fieldKey);
+      const seen = new Set();
+      const out = [];
+      for (const v of [...used, ...presets]) {
+        const k = v.trim();
+        if (!k || seen.has(k)) continue;
+        seen.add(k);
+        out.push(k);
+      }
+      return out;
+    },
+
+    isPresetActive(fieldKey, value) {
+      const cur = this.formData[fieldKey];
+      if (Array.isArray(cur)) return cur.includes(value);
+      return cur === value;
+    },
+
+    /** Click on a chip: for text fields toggles the value (re-click clears),
+     *  for tag fields toggles membership in the array. */
+    pickPreset(fieldKey, value) {
+      const def = getField(fieldKey);
+      if (!def) return;
+      if (def.type === 'tags') {
+        const arr = Array.isArray(this.formData[fieldKey]) ? [...this.formData[fieldKey]] : [];
+        const idx = arr.indexOf(value);
+        if (idx === -1) arr.push(value);
+        else arr.splice(idx, 1);
+        this.formData[fieldKey] = arr;
+      } else {
+        this.formData[fieldKey] = this.formData[fieldKey] === value ? '' : value;
+      }
+    },
+
+    /** Select fields with few options render as chip-toggle instead of <select>. */
+    useChipsForSelect(field) {
+      return field?.type === 'select' && (field.options || []).length <= 8;
+    },
+    selectPickerLayout(field) {
+      // Two-option toggles (Oui/Non) get a compact 2-column grid;
+      // larger sets flow naturally and wrap.
+      return (field.options || []).length <= 2 ? 'compact' : 'flow';
     },
 
     // ====================================================================
