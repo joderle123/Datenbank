@@ -195,7 +195,7 @@
 
     <!-- Main -->
     <main class="flex-1 min-w-0">
-      <header class="border-b border-line dark:border-line-dark px-10 py-6 flex items-baseline justify-between">
+      <header class="border-b border-line dark:border-line-dark px-10 py-6 flex items-baseline justify-between gap-6">
         <div>
           <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark" x-text="currentNav?.kicker || ''"></div>
           <h1 class="mt-1 text-3xl">
@@ -203,7 +203,15 @@
             <span class="font-serif-i text-accent" x-text="currentNav?.accent || ''"></span>
           </h1>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 ml-auto">
+          <button
+            @click="openSpotlight()"
+            class="flex items-center gap-2 px-3 py-1.5 border border-line dark:border-line-dark rounded-md text-sm text-muted dark:text-muted-dark hover:border-primary dark:hover:border-ink-dark min-w-[16rem]"
+            title="Recherche globale (Ctrl/⌘ + K)"
+          >
+            <span>Rechercher un dossier…</span>
+            <span class="ml-auto text-[10px] font-mono tnum bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">⌘K</span>
+          </button>
           <div class="text-xs tnum text-muted dark:text-muted-dark font-mono" x-text="now"></div>
           <button class="btn btn-primary" @click="startCreate()" x-show="view === 'cases' || view === 'dashboard'">+ Nouveau dossier</button>
         </div>
@@ -982,6 +990,65 @@
   <!-- Toast -->
   <div x-show="toast.show" :class="toast.kind === 'err' ? 'toast err' : 'toast'" style="display:none">
     <span x-text="toast.message"></span>
+  </div>
+
+  <!-- Spotlight (global search) -->
+  <div x-show="spotlight.open" @click.self="closeSpotlight()"
+       class="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-[12vh] px-4"
+       style="display:none">
+    <div class="bg-paper dark:bg-paper-dark border border-line dark:border-line-dark rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden">
+      <div class="border-b border-line dark:border-line-dark px-4 py-3 flex items-center gap-3">
+        <span class="text-muted dark:text-muted-dark text-xs uppercase tracking-widest">Rechercher</span>
+        <input
+          id="spotlightInput"
+          type="text"
+          x-model="spotlight.query"
+          @input="onSpotlightInput()"
+          @keydown="onSpotlightKey($event)"
+          placeholder="Nom, prénom, matricule, école, diagnostic…"
+          class="flex-1 bg-transparent text-base outline-none placeholder:text-muted dark:placeholder:text-muted-dark"
+        />
+        <span class="text-[10px] font-mono tnum bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">Esc</span>
+      </div>
+
+      <div class="max-h-[55vh] overflow-auto">
+        <template x-if="spotlight.results.length === 0">
+          <div class="px-4 py-8 text-center text-muted dark:text-muted-dark text-sm">
+            <template x-if="!spotlight.query">Aucun dossier dans la base. Créez-en un ou chargez des données fictives.</template>
+            <template x-if="spotlight.query">Aucun résultat pour « <span x-text="spotlight.query"></span> ».</template>
+          </div>
+        </template>
+        <template x-for="(c, i) in spotlight.results" :key="c.id">
+          <button
+            @click="pickSpotlight(c)"
+            @mouseenter="spotlight.activeIdx = i"
+            class="w-full text-left px-4 py-3 border-b border-line dark:border-line-dark last:border-b-0 flex items-center gap-3"
+            :class="i === spotlight.activeIdx ? 'bg-black/[0.04] dark:bg-white/[0.04]' : ''"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">
+                <span x-text="(c.prenom || '') + ' ' + (c.nom || '—')"></span>
+              </div>
+              <div class="text-xs text-muted dark:text-muted-dark truncate font-mono tnum" x-text="c.matricule || '—'"></div>
+            </div>
+            <div class="text-xs text-muted dark:text-muted-dark text-right hidden sm:block">
+              <div x-text="c.ecole_lycee || ''"></div>
+              <div class="font-mono tnum" x-text="c.dir || ''"></div>
+            </div>
+            <div class="flex flex-col items-end text-[10px] gap-1 text-muted dark:text-muted-dark">
+              <span x-show="c.sexe" class="font-mono tnum" x-text="c.sexe"></span>
+              <span x-show="c.age != null" class="font-mono tnum" x-text="c.age + ' ans'"></span>
+            </div>
+          </button>
+        </template>
+      </div>
+
+      <div class="border-t border-line dark:border-line-dark px-4 py-2 text-[11px] text-muted dark:text-muted-dark flex items-center gap-4">
+        <span><span class="font-mono">↑↓</span> naviguer</span>
+        <span><span class="font-mono">↵</span> ouvrir</span>
+        <span class="ml-auto"><span x-text="spotlight.results.length"></span> résultat(s)</span>
+      </div>
+    </div>
   </div>
 
 </body>

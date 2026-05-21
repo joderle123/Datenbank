@@ -285,6 +285,9 @@ function makeApp() {
     auditEntries: [],
     auditFilter: { user: '', action: '' },
 
+    // -- global search (spotlight) ----------------------------------------
+    spotlight: { open: false, query: '', results: [], activeIdx: 0 },
+
     // -- modal / toast ----------------------------------------------------
     confirm: { show: false, message: '', onConfirm: null },
     toast: { show: false, message: '', kind: 'ok' },
@@ -1092,19 +1095,71 @@ function makeApp() {
     // Shortcuts
     // ====================================================================
     handleShortcut(e) {
+      // Esc closes spotlight regardless of modifier
+      if (e.key === 'Escape' && this.spotlight.open) {
+        e.preventDefault();
+        this.closeSpotlight();
+        return;
+      }
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const target = e.target;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
       if (mod && e.key === 'k') {
         e.preventDefault();
-        this.view = 'cases';
-        setTimeout(() => document.getElementById('listSearch')?.focus(), 50);
+        this.openSpotlight();
       }
       if (mod && e.key === 'n' && !isInput) {
         e.preventDefault();
         this.startCreate();
       }
+    },
+
+    // ====================================================================
+    // Global search (spotlight)
+    // ====================================================================
+    openSpotlight() {
+      this.spotlight = { open: true, query: '', results: this.computeSpotlight(''), activeIdx: 0 };
+      this.$nextTick(() => document.getElementById('spotlightInput')?.focus());
+    },
+    closeSpotlight() {
+      this.spotlight.open = false;
+    },
+    onSpotlightInput() {
+      this.spotlight.results = this.computeSpotlight(this.spotlight.query);
+      this.spotlight.activeIdx = 0;
+    },
+    onSpotlightKey(e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.spotlight.activeIdx = Math.min(this.spotlight.activeIdx + 1, this.spotlight.results.length - 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.spotlight.activeIdx = Math.max(this.spotlight.activeIdx - 1, 0);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const r = this.spotlight.results[this.spotlight.activeIdx];
+        if (r) this.pickSpotlight(r);
+      }
+    },
+    computeSpotlight(q) {
+      const needle = (q || '').trim().toLowerCase();
+      if (!needle) return this.allCases.slice(0, 12);
+      const scored = [];
+      for (const c of this.allCases) {
+        const hay = [
+          c.nom, c.prenom, c.matricule, c.dossier_mfile, c.ecole_lycee, c.dir,
+          ...(c.diagnostics || []), ...(c.verdachtsdiagnosen_profil || []),
+        ].filter(Boolean).join(' ').toLowerCase();
+        const idx = hay.indexOf(needle);
+        if (idx >= 0) scored.push({ c, score: idx });
+      }
+      scored.sort((a, b) => a.score - b.score);
+      return scored.slice(0, 20).map((s) => s.c);
+    },
+    pickSpotlight(c) {
+      this.closeSpotlight();
+      this.showDetail(c.id);
     },
   };
 }
