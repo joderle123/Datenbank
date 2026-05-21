@@ -127,6 +127,7 @@ function makeApp() {
     view: 'dashboard',
     theme: 'light',
     now: '',
+    buildTag: '__BUILD_TAG__',
 
     // -- session user (NOT auth, just for the audit log) ------------------
     user: '',

@@ -45,7 +45,12 @@ function readModule(filename) {
   return code.trim();
 }
 
-const bundle = ORDER.map((f) => `/* ===== public/${f} ===== */\n${readModule(f)}`).join('\n\n');
+// Build tag: short ISO timestamp, visible in the sidebar so users can
+// confirm at a glance which build is loaded.
+const buildTag = new Date().toISOString().replace(/[-:]/g, '').slice(2, 13); // YYMMDDTHHMM
+
+let bundle = ORDER.map((f) => `/* ===== public/${f} ===== */\n${readModule(f)}`).join('\n\n');
+bundle = bundle.replace(/__BUILD_TAG__/g, buildTag);
 
 const wrappedScript = `<script>\n(function () {\n"use strict";\n${bundle}\n})();\n</script>`;
 
@@ -72,4 +77,4 @@ const outPath = path.join(ROOT, 'cdse.html');
 fs.writeFileSync(outPath, out);
 
 const sizeKB = (Buffer.byteLength(out) / 1024).toFixed(1);
-console.log(`✓ cdse.html written (${sizeKB} KB)`);
+console.log(`✓ cdse.html written (${sizeKB} KB) · build ${buildTag}`);
