@@ -2014,7 +2014,7 @@ function makeApp() {
       const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || !!a.field);
       const effectiveAggs = aggs.length ? aggs : [{ fn: 'count', field: null }];
 
-      // 1. group-by → bar chart
+      // 1. group-by → bar chart (or doughnut for count-only with few groups)
       if (r.groupBy && r.groups.length) {
         const labels = r.groups.map((g) => g.key);
         const datasets = effectiveAggs.map((a, idx) => ({
@@ -2023,10 +2023,16 @@ function makeApp() {
           backgroundColor: idx === 0 ? '#0F3D3E' : idx === 1 ? '#B85C38' : '#6B6358',
         }));
         const isCountOnly = effectiveAggs.length === 1 && effectiveAggs[0].fn === 'count';
+        const useDoughnut = isCountOnly && labels.length <= 8;
+        const baseOpts = chartOptions(this.theme);
         this._chart = new window.Chart(ctx, {
-          type: isCountOnly && labels.length <= 8 ? 'doughnut' : 'bar',
-          data: { labels, datasets },
-          options: chartOptions(this.theme),
+          type: useDoughnut ? 'doughnut' : 'bar',
+          data: useDoughnut
+            ? { labels, datasets: [{ data: datasets[0].data, backgroundColor: ['#0F3D3E', '#B85C38', '#6B6358', '#143F40', '#C16C48', '#8B7E6C', '#3F5F5E', '#A04A2A'], borderColor: 'transparent' }] }
+            : { labels, datasets },
+          options: useDoughnut
+            ? { responsive: true, maintainAspectRatio: false, plugins: baseOpts.plugins, cutout: '60%' }
+            : baseOpts,
         });
         return;
       }
@@ -2063,6 +2069,14 @@ function makeApp() {
 
       const opts = chartOptions(this.theme);
       const optsNoLegend = { ...opts, plugins: { ...opts.plugins, legend: { display: false } } };
+      // Doughnut charts must NOT carry x/y scales — otherwise Chart.js
+      // draws an axis next to the ring (the "half-circle ruler" bug).
+      const optsDoughnut = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: opts.plugins,
+        cutout: '60%',
+      };
       const palette = ['#0F3D3E', '#B85C38', '#6B6358', '#143F40', '#C16C48', '#8B7E6C', '#3F5F5E', '#A04A2A'];
 
       const make = (id, config) => {
@@ -2079,7 +2093,7 @@ function makeApp() {
           labels: Object.keys(sexeCounts),
           datasets: [{ data: Object.values(sexeCounts), backgroundColor: palette, borderColor: 'transparent' }],
         },
-        options: { ...opts, cutout: '60%' },
+        options: optsDoughnut,
       });
 
       // 2. Mesures doughnut (all three slots combined)
@@ -2096,7 +2110,7 @@ function makeApp() {
           labels: mesureEntries.map(([k]) => k),
           datasets: [{ data: mesureEntries.map(([, v]) => v), backgroundColor: palette, borderColor: 'transparent' }],
         },
-        options: { ...opts, cutout: '60%' },
+        options: optsDoughnut,
       });
 
       // 3. Top schools horizontal bar (up to 8)
@@ -2349,20 +2363,57 @@ function makeApp() {
         localStorage.removeItem('cdse_vocab_v1');
         localStorage.removeItem('cdse_saved_queries_v1');
         localStorage.removeItem('cdse_audit_v1');
+        localStorage.removeItem('cdse_demo_ids_v1');
         await this.refreshAll();
         this.notify('Données effacées.', 'err');
       });
     },
 
+    /** Are there any demo records currently in the database? */
+    get hasDemoData() {
+      try {
+        const raw = localStorage.getItem('cdse_demo_ids_v1');
+        const ids = raw ? JSON.parse(raw) : [];
+        return Array.isArray(ids) && ids.length > 0;
+      } catch { return false; }
+    },
+
     async loadSample() {
-      this.ask('Charger des données fictives de démonstration ?', async () => {
+      if (this.hasDemoData) {
+        this.notify('Des dossiers de démo sont déjà chargés.', 'err');
+        return;
+      }
+      this.ask('Charger 20 dossiers fictifs de démonstration ?', async () => {
         const seed = sampleData();
-        await cases.importAll(seed, 'merge');
+        const ids = [];
+        // create one by one so we get the assigned ids back
         for (const s of seed) {
-          await audit.record({ action: 'create', user: this.user, caseId: null, summary: `[seed] ${s.prenom} ${s.nom}` });
+          const created = await cases.create(s);
+          ids.push(created.id);
+          await audit.record({ action: 'create', user: this.user, caseId: created.id, summary: `[démo] ${s.prenom} ${s.nom}` });
         }
+        localStorage.setItem('cdse_demo_ids_v1', JSON.stringify(ids));
         await this.refreshAll();
         this.notify(`${seed.length} dossiers fictifs chargés.`);
+      });
+    },
+
+    async removeSample() {
+      if (!this.hasDemoData) return;
+      this.ask('Retirer tous les dossiers de démonstration ? Vos dossiers réels ne sont pas touchés.', async () => {
+        let ids = [];
+        try { ids = JSON.parse(localStorage.getItem('cdse_demo_ids_v1') || '[]'); } catch {}
+        let removed = 0;
+        for (const id of ids) {
+          const ok = await cases.delete(id);
+          if (ok) {
+            removed++;
+            await audit.record({ action: 'delete', caseId: id, user: this.user, summary: `[démo retiré]` });
+          }
+        }
+        localStorage.removeItem('cdse_demo_ids_v1');
+        await this.refreshAll();
+        this.notify(`${removed} dossier(s) de démo retiré(s).`);
       });
     },
 
@@ -2501,38 +2552,96 @@ function histogram(values, nBins = 10) {
 // Sample data — clearly fictive
 // ----------------------------------------------------------------------------
 function sampleData() {
-  const ecoles = ['Lycée Junglinster', 'Lycée Echternach', 'Lycée Vauban', 'École fictive A'];
-  const dirs = ['DIR Centre', 'DIR Est', 'DIR Ouest', 'DIR Sud', 'DIR Nord'];
-  const mesures = ['DS', 'ISA', 'C&G', 'Scol. Spé.'];
-  const langs = ['LU', 'FR', 'DE', 'PT'];
-  const diags = [
-    ['F90.0'], ['F84.0'], ['F90.0', 'F32.0'], [], ['F32.0'], ['F84.0', 'F90.0'],
-    ['F41.1'], ['F90.1'], ['F84.5'], ['F90.0', 'F41.1'],
+  // Clearly-fictive demo set covering enough variation to make every chart
+  // and the query builder meaningful. Names obviously synthetic.
+  const ecoles = [
+    'Lycée Aline Mayrisch (LAML)',
+    'Lënster Lycée International School — Junglinster (LLIS)',
+    'Lycée Classique de Diekirch (LCD)',
+    'Lycée Hubert-Clément (LHCE) — Esch',
+    'Lycée Technique du Centre',
+    'Athénée de Luxembourg',
   ];
+  const dirs = ['DIR Centre', 'DIR Est', 'DIR Ouest', 'DIR Sud', 'DIR Nord'];
+  const mesures = ['DS', 'ISA', 'C&G', 'Scol. Spé.', 'Autre'];
+  const langs = ['LU', 'FR', 'DE', 'PT', 'EN'];
+  const diags = [
+    ['F90.0 — TDAH, type inattention'],
+    ['F84.0 — Autisme infantile'],
+    ['F90.1 — TDAH, type combiné', 'F32.0 — Épisode dépressif léger'],
+    [],
+    ['F32.1 — Épisode dépressif moyen'],
+    ['F84.5 — Syndrome d\'Asperger'],
+    ['F41.1 — Anxiété généralisée'],
+    ['F90.0 — TDAH, type inattention', 'F41.1 — Anxiété généralisée'],
+    ['F81.0 — Dyslexie'],
+    ['F43.2 — Troubles de l\'adaptation'],
+    ['F90.0 — TDAH, type inattention', 'F81.0 — Dyslexie'],
+    ['HPI — Haut potentiel intellectuel'],
+  ];
+  const profils = [
+    [], ['Profil mixte'], ['Suspicion TDAH'], [],
+    ['Profil attentionnel'], ['Refus scolaire / phobie scolaire'],
+  ];
+  const services = [
+    [], ['ONE — Office National de l\'Enfance'], [], ['SPOS — Service Psycho-Social et d\'Orientation Scolaire'],
+    ['ALUPSE — Aide aux victimes de maltraitance'], [],
+  ];
+
+  const today = new Date();
+  const isoOf = (d) => d.toISOString().slice(0, 10);
+  const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return isoOf(d); };
+  const daysAhead = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return isoOf(d); };
+  const yearOf = (y) => `${today.getFullYear() - y}-${String((y % 12) + 1).padStart(2, '0')}-${String((y * 3 % 27) + 1).padStart(2, '0')}`;
+
   const result = [];
-  const yearNow = new Date().getFullYear();
-  for (let i = 1; i <= 24; i++) {
+  for (let i = 1; i <= 20; i++) {
     const sexe = ['F', 'M', 'F', 'M', 'F'][i % 5];
-    const year = yearNow - (10 + (i % 6));
+    const ageTarget = 10 + (i % 6); // 10..15
+    const m1 = mesures[i % mesures.length];
+    const m2 = i % 3 === 0 ? mesures[(i + 2) % mesures.length] : '';
+
+    // sprinkle realistic-looking date pairs so the timeline and badges light up
+    const dates = {};
+    if (m1 === 'ISA' || m2 === 'ISA') {
+      dates.debut_isa = daysAgo(120 + i * 5);
+      dates.fin_isa = i % 4 === 0 ? daysAgo(10) : daysAhead(60 + i * 3);   // some ended, some active
+    }
+    if (m1 === 'C&G' || m2 === 'C&G') {
+      dates.debut_cg = daysAgo(200 + i * 4);
+      dates.fin_cg = i % 5 === 0 ? daysAhead(20) : daysAhead(180);  // a few "ending soon"
+    }
+    if (m1 === 'Scol. Spé.') {
+      dates.debut_scol_spe = daysAgo(365 + i * 7);
+      dates.fin_scol_spe = '';
+    }
+    if (i % 4 === 0) dates.date_ds = daysAgo(30 + i);
+
     result.push({
       matricule: String(2010000000000 + i),
       dossier_mfile: `MF-${1000 + i}`,
-      nom: `Test ${String.fromCharCode(64 + ((i - 1) % 26) + 1)}`,
+      nom: `Test ${String.fromCharCode(64 + (i % 26) + 1)}`,
       prenom: `Élève ${i}`,
       sexe,
-      date_naissance: `${year}-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 27) + 1).padStart(2, '0')}`,
+      date_naissance: yearOf(ageTarget),
       dir: dirs[i % dirs.length],
       ecole_lycee: ecoles[i % ecoles.length],
-      mesure_cdse_1: mesures[i % mesures.length],
-      iq: 70 + (i * 7 % 60),
+      mesure_cdse_1: m1,
+      mesure_cdse_2: m2,
+      mesure_cdse_3: '',
+      ...dates,
+      iq: 75 + ((i * 7) % 55),
       langue_1: langs[i % langs.length],
       parents: ['Ensemble', 'Séparés', 'Ensemble', 'Autre'][i % 4],
       scas: i % 3 === 0 ? 'Oui' : 'Non',
       tutelle: i % 5 === 0 ? 'Oui' : 'Non',
-      scol_etranger: 'Non',
+      scol_etranger: i % 7 === 0 ? 'Oui' : 'Non',
       diagnostics: diags[i % diags.length],
-      verdachtsdiagnosen_profil: i % 4 === 0 ? ['Profil mixte'] : [],
-      autres_services: [],
+      verdachtsdiagnosen_profil: profils[i % profils.length],
+      autres_services: services[i % services.length],
+      ds_realise_par: i % 4 === 0 ? 'Membre fictif A' : '',
+      isa_realise_par: dates.debut_isa ? 'Membre fictif B' : '',
+      cg_realise_par: dates.debut_cg ? 'Membre fictif C' : '',
     });
   }
   return result;
@@ -3648,14 +3757,31 @@ window.cdseApp = makeApp;
             </div>
 
             <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Données</div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Données de démonstration</div>
+              <p class="text-sm text-muted dark:text-muted-dark mb-3">
+                20 dossiers fictifs pour explorer toutes les fonctionnalités. Indépendants de vos données réelles.
+              </p>
+              <div class="flex gap-2 flex-wrap">
+                <button class="btn btn-primary" @click="loadSample()" :disabled="hasDemoData" :class="hasDemoData ? 'opacity-50 cursor-not-allowed' : ''">
+                  Charger 20 dossiers de démo
+                </button>
+                <button class="btn btn-ghost" @click="removeSample()" :disabled="!hasDemoData" :class="!hasDemoData ? 'opacity-50 cursor-not-allowed' : ''">
+                  Retirer les dossiers de démo
+                </button>
+              </div>
+              <p class="text-xs text-muted dark:text-muted-dark mt-2" x-show="hasDemoData">
+                Démo actuellement chargée. Le bouton « Retirer » ne touche que les 20 dossiers fictifs.
+              </p>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Données réelles</div>
               <p class="text-sm text-muted dark:text-muted-dark mb-3">
                 Les données du prototype sont stockées dans le localStorage de ce navigateur.
                 Exportez régulièrement un backup JSON.
               </p>
               <div class="flex gap-2 flex-wrap">
-                <button class="btn btn-ghost" @click="loadSample()">Charger des données fictives</button>
-                <button class="btn btn-danger" @click="wipeAll()">Tout effacer</button>
+                <button class="btn btn-danger" @click="wipeAll()">Tout effacer (démo + dossiers réels)</button>
               </div>
             </div>
 

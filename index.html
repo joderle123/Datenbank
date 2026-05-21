@@ -1148,14 +1148,31 @@
             </div>
 
             <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Données</div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Données de démonstration</div>
+              <p class="text-sm text-muted dark:text-muted-dark mb-3">
+                20 dossiers fictifs pour explorer toutes les fonctionnalités. Indépendants de vos données réelles.
+              </p>
+              <div class="flex gap-2 flex-wrap">
+                <button class="btn btn-primary" @click="loadSample()" :disabled="hasDemoData" :class="hasDemoData ? 'opacity-50 cursor-not-allowed' : ''">
+                  Charger 20 dossiers de démo
+                </button>
+                <button class="btn btn-ghost" @click="removeSample()" :disabled="!hasDemoData" :class="!hasDemoData ? 'opacity-50 cursor-not-allowed' : ''">
+                  Retirer les dossiers de démo
+                </button>
+              </div>
+              <p class="text-xs text-muted dark:text-muted-dark mt-2" x-show="hasDemoData">
+                Démo actuellement chargée. Le bouton « Retirer » ne touche que les 20 dossiers fictifs.
+              </p>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Données réelles</div>
               <p class="text-sm text-muted dark:text-muted-dark mb-3">
                 Les données du prototype sont stockées dans le localStorage de ce navigateur.
                 Exportez régulièrement un backup JSON.
               </p>
               <div class="flex gap-2 flex-wrap">
-                <button class="btn btn-ghost" @click="loadSample()">Charger des données fictives</button>
-                <button class="btn btn-danger" @click="wipeAll()">Tout effacer</button>
+                <button class="btn btn-danger" @click="wipeAll()">Tout effacer (démo + dossiers réels)</button>
               </div>
             </div>
 
