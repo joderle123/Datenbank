@@ -68,23 +68,35 @@ if (replaced === html) {
   process.exit(1);
 }
 
-// Inline Chart.js (CDN access can be blocked by corporate firewalls or by
-// the browser's file:// security context, leaving every chart silently
-// blank). Same for Alpine.js. Tailwind stays on CDN because the play-CDN
-// runtime is JIT-compiled in the browser.
-function inlineVendor(srcPath, label) {
+// Inline Chart.js, Alpine.js and a statically-compiled Tailwind stylesheet.
+// CDN access can be blocked by corporate firewalls or by the browser's
+// file:// security context, leaving the page unstyled or chartless with
+// no visible error. Everything important ships in the file now.
+function inlineScript(srcPath, label) {
   const code = fs.readFileSync(path.join(PUB, 'vendor', srcPath), 'utf-8');
   return `<script>/* ${label} (inlined) */\n${code}\n</script>`;
+}
+function inlineStyle(srcPath, label) {
+  const code = fs.readFileSync(path.join(PUB, 'vendor', srcPath), 'utf-8');
+  return `<style>/* ${label} (inlined) */\n${code}\n</style>`;
 }
 
 replaced = replaced.replace(
   /<script\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js[^"]+"\s*><\/script>/,
-  inlineVendor('chart.umd.js', 'Chart.js 4.4.4'),
+  inlineScript('chart.umd.js', 'Chart.js 4.4.4'),
 );
 
 replaced = replaced.replace(
   /<script\s+defer\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/alpinejs[^"]+"\s*><\/script>/,
-  inlineVendor('alpine.min.js', 'Alpine.js 3.14.1'),
+  inlineScript('alpine.min.js', 'Alpine.js 3.14.1'),
+);
+
+// Replace the Tailwind play CDN + inline config with the precompiled CSS.
+// One regex consumes both the loader and the tailwind.config script that
+// follows it, so the output HTML has neither.
+replaced = replaced.replace(
+  /<script\s+src="https:\/\/cdn\.tailwindcss\.com"\s*><\/script>\s*<script>[\s\S]*?tailwind\.config[\s\S]*?<\/script>/,
+  inlineStyle('tailwind.compiled.css', 'Tailwind CSS (compiled from tailwind.config.cjs)'),
 );
 
 // Add a small "generated, do not edit" banner at the top of the file

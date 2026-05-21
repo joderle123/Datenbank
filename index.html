@@ -39,14 +39,9 @@
     };
   </script>
 
-  <!-- Chart.js (load before Alpine; app.js will use window.Chart) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
-
-  <!-- App logic (ES module) — must run before Alpine so x-data can find cdseApp -->
-  <script type="module" src="./public/app.js"></script>
-
-  <!-- Alpine.js -->
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <!-- Inlined script tags (Chart.js, app.js, Alpine.js) live at the bottom
+       of <body>, so that when build.js inlines them they execute AFTER the
+       DOM is parsed — equivalent to the original `defer` attribute. -->
 
   <style>
     html, body {
@@ -206,7 +201,7 @@
   </style>
 </head>
 
-<body class="h-full antialiased" x-data="cdseApp()" x-init="init()" x-cloak>
+<body class="h-full antialiased" x-data="cdseApp" x-cloak>
 
   <!-- User prompt overlay -->
   <div x-show="showUserPrompt" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" style="display:none">
@@ -1253,6 +1248,12 @@
   <div x-show="toast.show" :class="toast.kind === 'err' ? 'toast err' : 'toast'" style="display:none">
     <span x-text="toast.message"></span>
   </div>
+
+  <!-- Scripts at the end of body so they execute AFTER the DOM is parsed.
+       Order matters: Chart.js + app.js define globals; Alpine reads them. -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
+  <script type="module" src="./public/app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 
   <!-- Spotlight (global search) -->
   <div x-show="spotlight.open" @click.self="closeSpotlight()"

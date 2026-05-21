@@ -291,6 +291,9 @@ function makeApp() {
     // -- global search (spotlight) ----------------------------------------
     spotlight: { open: false, query: '', results: [], activeIdx: 0 },
 
+    // -- chart-library state ----------------------------------------------
+    chartLibError: false,
+
     // -- modal / toast ----------------------------------------------------
     confirm: { show: false, message: '', onConfirm: null },
     toast: { show: false, message: '', kind: 'ok' },
@@ -310,9 +313,12 @@ function makeApp() {
     },
 
     // ====================================================================
-    // Init
+    // Init — synchronous so Alpine's `$watch` / `$nextTick` magics stay
+    // bound to `this`. Anything async goes through .then() instead of
+    // await — using await would resume in a context where Alpine has
+    // detached its proxy, and `this.$watch` becomes undefined.
     // ====================================================================
-    async init() {
+    init() {
       // theme
       const stored = localStorage.getItem('cdse:theme');
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -328,42 +334,53 @@ function makeApp() {
       if (!u) this.showUserPrompt = true;
       else this.user = u;
 
-      // initial data
-      await this.refreshAll();
-
-      // open all form categories by default
+      // Open identification category by default in the form
       for (const c of CATEGORIES) this.formCategoryOpen[c.key] = c.key === 'identification';
 
       // dashboard charts: render whenever we land on dashboard or data changes.
-      // Two ticks: Alpine first commits the DOM (x-show toggles display),
-      // then a requestAnimationFrame guarantees layout is final so Chart.js
-      // sees a real clientWidth/clientHeight on its parent container.
-      const scheduleDash = () => this.$nextTick(() => requestAnimationFrame(() => this.renderDashboardCharts()));
-      const scheduleQuery = () => this.$nextTick(() => requestAnimationFrame(() => this.renderQueryChart()));
+      // Use the GLOBAL Alpine.watch / Alpine.nextTick (not this.$watch / window.Alpine.nextTick).
+      // Alpine 3 exposes those as $-magics that are only resolvable in expressions,
+      // NOT on `this` inside object-literal methods registered via x-data.
+      const A = window.Alpine;
+      // Coalesce repeated calls — Alpine.watch + .then(scheduleDash) would otherwise
+      // both fire after refreshAll, leading to destroy-while-drawing in Chart.js.
+      let dashPending = false;
+      const scheduleDash = () => {
+        if (dashPending) return;
+        dashPending = true;
+        A.nextTick(() => requestAnimationFrame(() => {
+          dashPending = false;
+          this.renderDashboardCharts();
+        }));
+      };
+      let queryPending = false;
+      const scheduleQuery = () => {
+        if (queryPending) return;
+        queryPending = true;
+        A.nextTick(() => requestAnimationFrame(() => {
+          queryPending = false;
+          this.renderQueryChart();
+        }));
+      };
+      this._scheduleQuery = scheduleQuery;
+      this._scheduleDash = scheduleDash;
 
-      this.$watch('view', (v) => {
+      A.watch(() => this.view, (v) => {
         if (v === 'dashboard') scheduleDash();
         if (v === 'query' && this.queryResult) scheduleQuery();
       });
-      this.$watch('allCases', () => {
-        if (this.view === 'dashboard') scheduleDash();
-      });
-      this.$watch('theme', () => {
+      A.watch(() => this.theme, () => {
         if (this.view === 'dashboard') scheduleDash();
         if (this.view === 'query' && this.queryResult) scheduleQuery();
       });
-
-      // first render
-      scheduleDash();
-
-      // expose for the internal $watch in runCurrentQuery
-      this._scheduleQuery = scheduleQuery;
-
-      // Auto-run the Query Builder whenever the user edits anything.
-      // JSON-stringify keeps the watch shallow-safe even though `query`
-      // is a deep object — any meaningful change re-fires.
-      this.$watch(() => JSON.stringify(this.query), () => {
+      A.watch(() => JSON.stringify(this.query), () => {
         if (this.view === 'query') this.queueRun();
+      });
+
+      // Load data, THEN render — single source of truth for the first render
+      this.refreshAll().then(() => {
+        // Give the DOM + layout one extra frame to settle before drawing.
+        setTimeout(() => this.renderDashboardCharts(), 100);
       });
 
       // keyboard shortcuts
@@ -898,7 +915,7 @@ function makeApp() {
         groupBy: this.query.groupBy || null,
       };
       this.queryResult = runQuery(this.allCases, cfg);
-      (this._scheduleQuery || (() => this.$nextTick(() => this.renderQueryChart())))();
+      (this._scheduleQuery || (() => window.Alpine.nextTick(() => this.renderQueryChart())))();
     },
 
     renderQueryChart() {
@@ -1259,7 +1276,7 @@ function makeApp() {
       this.saveQueryName = '';
       this.queryMatches = null;
       this.runCurrentQuery();
-      this.$nextTick(() => {
+      window.Alpine.nextTick(() => {
         const el = document.getElementById('queryResultAnchor');
         if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
@@ -1480,7 +1497,7 @@ function makeApp() {
     // ====================================================================
     openSpotlight() {
       this.spotlight = { open: true, query: '', results: this.computeSpotlight(''), activeIdx: 0 };
-      this.$nextTick(() => document.getElementById('spotlightInput')?.focus());
+      window.Alpine.nextTick(() => document.getElementById('spotlightInput')?.focus());
     },
     closeSpotlight() {
       this.spotlight.open = false;
@@ -1691,6 +1708,18 @@ function sampleData() {
 }
 
 // ----------------------------------------------------------------------------
-// Expose
+// Register with Alpine. Going through Alpine.data() gives methods proper
+// access to magic accessors ($watch, $nextTick) via `this`. We register on
+// alpine:init if Alpine isn't loaded yet, or immediately if it is.
 // ----------------------------------------------------------------------------
-window.cdseApp = makeApp;
+function registerCdseApp() {
+  if (window.Alpine && window.Alpine.data) {
+    window.Alpine.data('cdseApp', makeApp);
+    console.log('CDSE: registered via Alpine.data()');
+  }
+}
+if (window.Alpine) {
+  registerCdseApp();
+} else {
+  document.addEventListener('alpine:init', registerCdseApp);
+}
