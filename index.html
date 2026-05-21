@@ -553,9 +553,40 @@
         <!-- QUERY BUILDER                                                -->
         <!-- ============================================================ -->
         <section x-show="view === 'query'" style="display:none">
+          <!-- Presets — typical state-asked questions -->
+          <div class="mb-10">
+            <div class="flex items-baseline justify-between mb-3">
+              <div>
+                <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Statistiques courantes</div>
+                <h2 class="mt-1 text-xl"><span class="font-serif-i">Réponses</span> en un clic</h2>
+              </div>
+              <div class="text-xs text-muted dark:text-muted-dark italic">Cliquez — la requête se charge ci-dessous, affinez si besoin.</div>
+            </div>
+            <div class="grid grid-cols-4 gap-3">
+              <template x-for="p in QUERY_PRESETS" :key="p.id">
+                <button
+                  @click="runPreset(p.id)"
+                  class="text-left border border-line dark:border-line-dark rounded-lg p-3 transition hover:border-primary dark:hover:border-ink-dark hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+                >
+                  <div class="text-sm font-medium" x-text="p.label"></div>
+                  <div class="text-xs text-muted dark:text-muted-dark mt-1 leading-snug" x-text="p.description"></div>
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <div id="queryResultAnchor"></div>
+
+          <div class="flex items-baseline justify-between mb-4">
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Construction libre</div>
+              <h2 class="mt-1 text-xl"><span class="font-serif-i">Affiner</span> ou créer une requête</h2>
+            </div>
+          </div>
+
           <p class="text-sm text-muted dark:text-muted-dark mb-6 max-w-2xl">
-            Combinez des filtres, des agrégations et un regroupement pour répondre à des questions du type
-            « <span class="font-serif-i">Quel est le QI moyen des filles au Lycée Junglinster ?</span> ».
+            Combinez des filtres, des agrégations et un regroupement — n'importe laquelle des 38 variables peut être combinée.
+            Exemple : « <span class="font-serif-i">QI moyen des filles au Lycée Junglinster</span> » → sexe = F · ecole_lycee = Lycée Junglinster · Moyenne(QI).
           </p>
 
           <div class="grid grid-cols-3 gap-6 mb-6">

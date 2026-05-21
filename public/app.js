@@ -170,6 +170,106 @@ function makeApp() {
     },
     queryResult: null,
     queryMatches: null,
+
+    // -- preset library — typical state-asked questions -------------------
+    QUERY_PRESETS: [
+      {
+        id: 'count_by_sexe',
+        label: 'Répartition par sexe',
+        description: 'Nombre de dossiers, filles vs garçons.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'sexe' },
+      },
+      {
+        id: 'count_by_dir',
+        label: 'Dossiers par DIR',
+        description: 'Combien de dossiers par direction régionale ?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir' },
+      },
+      {
+        id: 'avg_age',
+        label: 'Âge moyen global',
+        description: 'Moyenne d’âge de l’ensemble des dossiers.',
+        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: '' },
+      },
+      {
+        id: 'avg_age_by_sexe',
+        label: 'Âge moyen par sexe',
+        description: 'Moyenne d’âge selon le sexe.',
+        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'sexe' },
+      },
+      {
+        id: 'avg_age_by_dir',
+        label: 'Âge moyen par DIR',
+        description: 'Moyenne d’âge dans chaque direction.',
+        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'dir' },
+      },
+      {
+        id: 'avg_iq',
+        label: 'QI moyen global',
+        description: 'Moyenne du QI sur l’ensemble.',
+        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: '' },
+      },
+      {
+        id: 'avg_iq_by_sexe',
+        label: 'QI moyen par sexe',
+        description: 'Moyenne du QI selon le sexe.',
+        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'sexe' },
+      },
+      {
+        id: 'avg_iq_by_school',
+        label: 'QI moyen par école / lycée',
+        description: 'Moyenne du QI par établissement scolaire.',
+        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'ecole_lycee' },
+      },
+      {
+        id: 'mesures_distribution',
+        label: 'Répartition des Mesures CDSE',
+        description: 'Combien de dossiers par type de mesure principale ?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'mesure_cdse_1' },
+      },
+      {
+        id: 'mesures_by_dir',
+        label: 'Mesures par DIR',
+        description: 'Quelle mesure domine dans chaque direction ?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir' },
+      },
+      {
+        id: 'languages',
+        label: 'Langues parlées',
+        description: 'Répartition de la langue principale.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'langue_1' },
+      },
+      {
+        id: 'parents',
+        label: 'Structure parentale',
+        description: 'Ensemble / Séparés / Autre.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'parents' },
+      },
+      {
+        id: 'scas',
+        label: 'Dossiers avec SCAS',
+        description: 'Combien et par direction ?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'scas', op: 'eq', value: 'Oui' }], groupBy: 'dir' },
+      },
+      {
+        id: 'tutelle',
+        label: 'Dossiers sous tutelle',
+        description: 'Combien et par direction ?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'eq', value: 'Oui' }], groupBy: 'dir' },
+      },
+      {
+        id: 'iq_distribution',
+        label: 'Distribution du QI',
+        description: 'Histogramme du QI sur l’ensemble des dossiers.',
+        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: '' },
+      },
+      {
+        id: 'age_distribution',
+        label: 'Distribution des âges',
+        description: 'Histogramme d’âge sur l’ensemble.',
+        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: '' },
+      },
+    ],
     savedQueriesList: [],
     saveQueryName: '',
     editingSavedQueryId: null,
@@ -822,6 +922,20 @@ function makeApp() {
         this.savedQueriesList = await savedQueries.list();
         if (this.editingSavedQueryId === id) { this.editingSavedQueryId = null; this.saveQueryName = ''; }
         this.notify('Requête supprimée.');
+      });
+    },
+
+    runPreset(id) {
+      const p = this.QUERY_PRESETS.find((x) => x.id === id);
+      if (!p) return;
+      this.query = JSON.parse(JSON.stringify(p.config));
+      this.editingSavedQueryId = null;
+      this.saveQueryName = '';
+      this.queryMatches = null;
+      this.runCurrentQuery();
+      this.$nextTick(() => {
+        const el = document.getElementById('queryResultAnchor');
+        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     },
 
