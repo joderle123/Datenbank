@@ -358,6 +358,13 @@ function makeApp() {
       // expose for the internal $watch in runCurrentQuery
       this._scheduleQuery = scheduleQuery;
 
+      // Auto-run the Query Builder whenever the user edits anything.
+      // JSON-stringify keeps the watch shallow-safe even though `query`
+      // is a deep object — any meaningful change re-fires.
+      this.$watch(() => JSON.stringify(this.query), () => {
+        if (this.view === 'query') this.queueRun();
+      });
+
       // keyboard shortcuts
       window.addEventListener('keydown', (e) => this.handleShortcut(e));
     },
@@ -1139,6 +1146,91 @@ function makeApp() {
         if (this.editingSavedQueryId === id) { this.editingSavedQueryId = null; this.saveQueryName = ''; }
         this.notify('Requête supprimée.');
       });
+    },
+
+    // ====================================================================
+    // Query builder UX helpers
+    // ====================================================================
+    /** Variables exposed in filter / group-by selects, grouped by category
+     *  so the dropdowns are scannable instead of a wall of 38 options. */
+    get filterableByCategory() {
+      const out = [];
+      for (const cat of CATEGORIES) {
+        const fields = FIELD_DEFS.filter((f) => f.category === cat.key && f.type !== 'computed');
+        if (cat.key === 'demographics') fields.splice(fields.length, 0, { key: 'age', label: 'Âge (calculé)', type: 'number', category: 'demographics' });
+        if (fields.length) out.push({ ...cat, fields });
+      }
+      return out;
+    },
+
+    get groupableByCategory() {
+      const out = [];
+      for (const cat of CATEGORIES) {
+        const fields = FIELD_DEFS.filter((f) => f.category === cat.key && (f.type === 'select' || f.type === 'text'));
+        if (fields.length) out.push({ ...cat, fields });
+      }
+      return out;
+    },
+
+    /** Build the current query as a readable French sentence. */
+    get questionPreview() {
+      const FN_PHRASE = {
+        count:  'le nombre',
+        mean:   'la moyenne de',
+        median: 'la médiane de',
+        min:    'le minimum de',
+        max:    'le maximum de',
+        sum:    'la somme de',
+        stddev: "l'écart-type de",
+      };
+      // Keep all-caps abbreviations as-is, otherwise leave the label's case alone
+      // (so 'QI' stays QI, 'DIR' stays DIR, 'École / Lycée' stays as written).
+      const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || a.field);
+      const filters = (this.query.filters || []).filter((f) => {
+        const ops = operatorsFor(f.field);
+        const op = ops.find((o) => o.key === f.op);
+        if (!op) return false;
+        if (op.needsValue && (f.value === '' || f.value == null)) return false;
+        return true;
+      });
+
+      let measure;
+      if (!aggs.length) {
+        measure = 'le nombre';
+      } else {
+        const parts = aggs.map((a) => {
+          if (a.fn === 'count') return 'le nombre';
+          const phrase = FN_PHRASE[a.fn] || a.fn;
+          return `${phrase} ${this.labelOf(a.field)}`;
+        });
+        measure = parts.length === 1 ? parts[0] : parts.slice(0, -1).join(', ') + ' et ' + parts.slice(-1);
+      }
+
+      let body = `${measure} des dossiers`;
+
+      if (filters.length) {
+        const fp = filters.map((f) => {
+          const op = operatorsFor(f.field).find((o) => o.key === f.op);
+          const label = this.labelOf(f.field);
+          if (!op.needsValue) return `${label} ${op.label}`;
+          let val = f.value;
+          if (op.needsValue2) val = `${f.value} et ${f.value2}`;
+          return `${label} ${op.label} « ${val} »`;
+        });
+        body += ' où ' + fp.join(' et ');
+      }
+
+      if (this.query.groupBy) {
+        body += `, regroupés par ${this.labelOf(this.query.groupBy)}`;
+      }
+
+      return body + '.';
+    },
+
+    /** Auto-run (debounced) on any query mutation. */
+    queueRun() {
+      clearTimeout(this._runTimer);
+      this._runTimer = setTimeout(() => this.runCurrentQuery(), 250);
     },
 
     runPreset(id) {

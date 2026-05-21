@@ -40,7 +40,9 @@ export const AGGREGATIONS = [
   { key: 'stddev', label: 'Écart-type',       needsNumeric: true  },
 ];
 
-/** Operators available per field type. */
+/** Operators available per field type. Labels are intentionally written
+ *  as natural French ("est" rather than "égale", "supérieur à" rather than
+ *  ">") so the assembled query reads like a sentence in the preview. */
 export function operatorsFor(fieldKey) {
   const def = fieldKey === 'age'
     ? { type: 'number' }
@@ -49,48 +51,48 @@ export function operatorsFor(fieldKey) {
   switch (def.type) {
     case 'text':
       return [
-        { key: 'eq',       label: 'égale',       needsValue: true  },
-        { key: 'neq',      label: 'différent',   needsValue: true  },
-        { key: 'contains', label: 'contient',    needsValue: true  },
-        { key: 'empty',    label: 'est vide',    needsValue: false },
-        { key: 'notempty', label: 'non vide',    needsValue: false },
+        { key: 'eq',       label: 'est',              needsValue: true  },
+        { key: 'neq',      label: "n'est pas",        needsValue: true  },
+        { key: 'contains', label: 'contient',         needsValue: true  },
+        { key: 'empty',    label: 'est vide',         needsValue: false },
+        { key: 'notempty', label: 'est renseigné',    needsValue: false },
       ];
     case 'select':
       return [
-        { key: 'eq',       label: 'égale',     needsValue: true  },
-        { key: 'neq',      label: 'différent', needsValue: true  },
-        { key: 'empty',    label: 'est vide',  needsValue: false },
-        { key: 'notempty', label: 'non vide',  needsValue: false },
+        { key: 'eq',       label: 'est',              needsValue: true  },
+        { key: 'neq',      label: "n'est pas",        needsValue: true  },
+        { key: 'empty',    label: 'est vide',         needsValue: false },
+        { key: 'notempty', label: 'est renseigné',    needsValue: false },
       ];
     case 'number':
       return [
-        { key: 'eq',       label: '=',         needsValue: true  },
-        { key: 'neq',      label: '≠',         needsValue: true  },
-        { key: 'gt',       label: '>',         needsValue: true  },
-        { key: 'gte',      label: '≥',         needsValue: true  },
-        { key: 'lt',       label: '<',         needsValue: true  },
-        { key: 'lte',      label: '≤',         needsValue: true  },
-        { key: 'between',  label: 'entre',     needsValue: true, needsValue2: true },
-        { key: 'empty',    label: 'est vide',  needsValue: false },
-        { key: 'notempty', label: 'non vide',  needsValue: false },
+        { key: 'eq',       label: 'est égal à',           needsValue: true  },
+        { key: 'neq',      label: "n'est pas égal à",     needsValue: true  },
+        { key: 'gt',       label: 'est supérieur à',      needsValue: true  },
+        { key: 'gte',      label: 'est au moins',         needsValue: true  },
+        { key: 'lt',       label: 'est inférieur à',      needsValue: true  },
+        { key: 'lte',      label: 'est au maximum',       needsValue: true  },
+        { key: 'between',  label: 'est entre',            needsValue: true, needsValue2: true },
+        { key: 'empty',    label: 'est vide',             needsValue: false },
+        { key: 'notempty', label: 'est renseigné',        needsValue: false },
       ];
     case 'date':
       return [
-        { key: 'eq',       label: 'le',         needsValue: true  },
-        { key: 'gt',       label: 'après',      needsValue: true  },
-        { key: 'gte',      label: 'à partir de',needsValue: true  },
-        { key: 'lt',       label: 'avant',      needsValue: true  },
-        { key: 'lte',      label: "jusqu'à",    needsValue: true  },
-        { key: 'between',  label: 'entre',      needsValue: true, needsValue2: true },
-        { key: 'empty',    label: 'est vide',   needsValue: false },
-        { key: 'notempty', label: 'non vide',   needsValue: false },
+        { key: 'eq',       label: 'est le',              needsValue: true  },
+        { key: 'gt',       label: 'est après le',        needsValue: true  },
+        { key: 'gte',      label: 'est à partir du',     needsValue: true  },
+        { key: 'lt',       label: 'est avant le',        needsValue: true  },
+        { key: 'lte',      label: "est jusqu'au",        needsValue: true  },
+        { key: 'between',  label: 'est entre',           needsValue: true, needsValue2: true },
+        { key: 'empty',    label: 'est vide',            needsValue: false },
+        { key: 'notempty', label: 'est renseignée',      needsValue: false },
       ];
     case 'tags':
       return [
-        { key: 'has',      label: 'contient',         needsValue: true  },
-        { key: 'hasnot',   label: 'ne contient pas',  needsValue: true  },
-        { key: 'empty',    label: 'est vide',         needsValue: false },
-        { key: 'notempty', label: 'non vide',         needsValue: false },
+        { key: 'has',      label: 'comporte',                  needsValue: true  },
+        { key: 'hasnot',   label: 'ne comporte pas',           needsValue: true  },
+        { key: 'empty',    label: 'aucun',                     needsValue: false },
+        { key: 'notempty', label: 'au moins un',               needsValue: false },
       ];
     default:
       return [];

@@ -792,126 +792,149 @@
             </div>
           </div>
 
+          <!-- Saved queries (if any) -->
+          <template x-if="savedQueriesList.length > 0">
+            <div class="mb-10">
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Vos requêtes sauvegardées</div>
+              <div class="flex flex-wrap gap-2">
+                <template x-for="sq in savedQueriesList" :key="sq.id">
+                  <div class="flex items-center gap-1 border border-line dark:border-line-dark rounded-md">
+                    <button class="px-3 py-1.5 text-sm" @click="loadSavedQuery(sq.id)" x-text="sq.name"></button>
+                    <button class="px-2 py-1.5 text-xs text-accent" @click="deleteSavedQuery(sq.id)" title="Supprimer">×</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
           <div id="queryResultAnchor"></div>
 
-          <div class="flex items-baseline justify-between mb-4">
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Construction libre</div>
-              <h2 class="mt-1 text-xl"><span class="font-serif-i">Affiner</span> ou créer une requête</h2>
-            </div>
+          <div class="mb-6">
+            <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Construction libre</div>
+            <h2 class="mt-1 text-xl"><span class="font-serif-i">Composer</span> votre question</h2>
           </div>
 
-          <p class="text-sm text-muted dark:text-muted-dark mb-6 max-w-2xl">
-            Combinez des filtres, des agrégations et un regroupement — n'importe laquelle des 38 variables peut être combinée.
-            Exemple : « <span class="font-serif-i">QI moyen des filles au Lycée Junglinster</span> » → sexe = F · ecole_lycee = Lycée Junglinster · Moyenne(QI).
-          </p>
+          <!-- Natural-language preview -->
+          <div class="mb-6 border border-line dark:border-line-dark rounded-lg p-5 bg-black/[0.02] dark:bg-white/[0.02]">
+            <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Votre question</div>
+            <p class="text-lg leading-snug">
+              <span class="font-serif-i text-muted dark:text-muted-dark">Vous demandez</span>
+              <span x-text="questionPreview"></span>
+            </p>
+          </div>
 
-          <div class="grid grid-cols-3 gap-6 mb-6">
-            <!-- Aggregations -->
-            <div class="border border-line dark:border-line-dark rounded-lg p-4">
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Que calculer ?</div>
-              <template x-for="(a, i) in query.aggregations" :key="i">
-                <div class="flex gap-2 mb-2">
-                  <select x-model="a.fn" @change="onAggFieldChange(i)" class="field-input text-sm">
-                    <template x-for="agg in AGGREGATIONS" :key="agg.key">
-                      <option :value="agg.key" x-text="agg.label"></option>
-                    </template>
-                  </select>
-                  <select x-model="a.field" class="field-input text-sm" :disabled="a.fn === 'count'">
-                    <option value="">—</option>
-                    <template x-for="nf in NUMERIC_FIELDS" :key="nf.key">
-                      <option :value="nf.key" x-text="nf.label"></option>
-                    </template>
-                  </select>
-                  <button class="btn btn-ghost text-xs px-2" @click="removeAggregation(i)">×</button>
-                </div>
-              </template>
-              <button class="btn btn-ghost text-xs" @click="addAggregation()">+ ajouter</button>
-            </div>
-
-            <!-- Filters -->
-            <div class="border border-line dark:border-line-dark rounded-lg p-4">
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Filtrer (WHERE)</div>
-              <template x-if="query.filters.length === 0">
-                <div class="text-xs text-muted dark:text-muted-dark mb-2 italic">
-                  Ex: sexe = F · ecole_lycee = Lycée Junglinster
-                </div>
-              </template>
-              <template x-for="(f, i) in query.filters" :key="i">
-                <div class="space-y-1.5 mb-2 pb-2 border-b border-line dark:border-line-dark last:border-b-0">
-                  <div class="flex gap-2">
-                    <select x-model="f.field" @change="onFilterFieldChange(i)" class="field-input text-sm flex-1">
-                      <template x-for="ff in FILTERABLE_FIELDS" :key="ff.key">
-                        <option :value="ff.key" x-text="ff.label || labelOf(ff.key)"></option>
+          <!-- Builder rows (vertical flow) -->
+          <div class="space-y-5 mb-8">
+            <!-- Row 1: aggregations -->
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Que voulez-vous mesurer ?</div>
+              <div class="flex flex-wrap gap-2 items-center">
+                <template x-for="(a, i) in query.aggregations" :key="i">
+                  <div class="inline-flex items-center gap-1 border border-line dark:border-line-dark rounded-md bg-paper dark:bg-paper-dark">
+                    <select x-model="a.fn" @change="onAggFieldChange(i)" class="bg-transparent border-0 text-sm py-1.5 pl-2 pr-1 outline-none">
+                      <template x-for="agg in AGGREGATIONS" :key="agg.key">
+                        <option :value="agg.key" x-text="agg.label"></option>
                       </template>
                     </select>
-                    <select x-model="f.op" class="field-input text-sm">
+                    <template x-if="a.fn !== 'count'">
+                      <select x-model="a.field" class="bg-transparent border-0 text-sm py-1.5 pl-1 pr-1 outline-none border-l border-line dark:border-line-dark">
+                        <option value="">— variable —</option>
+                        <template x-for="nf in NUMERIC_FIELDS" :key="nf.key">
+                          <option :value="nf.key" x-text="nf.label"></option>
+                        </template>
+                      </select>
+                    </template>
+                    <button class="px-2 py-1.5 text-xs text-muted dark:text-muted-dark hover:text-accent" @click="removeAggregation(i)">×</button>
+                  </div>
+                </template>
+                <button class="text-xs underline text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark" @click="addAggregation()">+ ajouter une mesure</button>
+              </div>
+            </div>
+
+            <!-- Row 2: filters -->
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">
+                Pour quels dossiers <span class="normal-case text-muted dark:text-muted-dark italic">(filtres, combinés par ET)</span>
+              </div>
+              <template x-if="query.filters.length === 0">
+                <div class="text-xs text-muted dark:text-muted-dark mb-2 italic">Aucun filtre — la mesure porte sur tous les dossiers.</div>
+              </template>
+              <div class="flex flex-col gap-2">
+                <template x-for="(f, i) in query.filters" :key="i">
+                  <div class="inline-flex items-center gap-1 border border-line dark:border-line-dark rounded-md bg-paper dark:bg-paper-dark px-1 self-start max-w-full flex-wrap">
+                    <select x-model="f.field" @change="onFilterFieldChange(i)" class="bg-transparent border-0 text-sm py-1.5 pl-2 pr-1 outline-none">
+                      <template x-for="cat in filterableByCategory" :key="cat.key">
+                        <optgroup :label="cat.label">
+                          <template x-for="ff in cat.fields" :key="ff.key">
+                            <option :value="ff.key" x-text="ff.label"></option>
+                          </template>
+                        </optgroup>
+                      </template>
+                    </select>
+                    <select x-model="f.op" class="bg-transparent border-0 text-sm py-1.5 pl-1 pr-1 outline-none border-l border-line dark:border-line-dark">
                       <template x-for="op in operatorsForField(f.field)" :key="op.key">
                         <option :value="op.key" x-text="op.label"></option>
                       </template>
                     </select>
-                    <button class="btn btn-ghost text-xs px-2" @click="removeFilter(i)">×</button>
-                  </div>
-                  <div class="flex gap-2" x-show="operatorsForField(f.field).find(o => o.key === f.op)?.needsValue">
-                    <template x-if="fieldByKey(f.field)?.type === 'select'">
-                      <select x-model="f.value" class="field-input text-sm flex-1">
-                        <option value="">—</option>
-                        <template x-for="o in optionsOf(f.field)" :key="o"><option :value="o" x-text="o"></option></template>
-                      </select>
+                    <template x-if="operatorsForField(f.field).find(o => o.key === f.op)?.needsValue">
+                      <div class="flex items-center gap-1 border-l border-line dark:border-line-dark pl-2">
+                        <template x-if="fieldByKey(f.field)?.type === 'select'">
+                          <select x-model="f.value" class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none">
+                            <option value="">…</option>
+                            <template x-for="o in optionsOf(f.field)" :key="o"><option :value="o" x-text="o"></option></template>
+                          </select>
+                        </template>
+                        <template x-if="!fieldByKey(f.field) || fieldByKey(f.field)?.type !== 'select'">
+                          <input
+                            :type="(['number'].includes(fieldByKey(f.field)?.type) || f.field === 'age') ? 'number' : fieldByKey(f.field)?.type === 'date' ? 'date' : 'text'"
+                            x-model="f.value"
+                            placeholder="valeur"
+                            class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none w-36"
+                          />
+                        </template>
+                        <template x-if="operatorsForField(f.field).find(o => o.key === f.op)?.needsValue2">
+                          <span class="contents">
+                            <span class="text-sm text-muted dark:text-muted-dark">et</span>
+                            <input
+                              :type="(['number'].includes(fieldByKey(f.field)?.type) || f.field === 'age') ? 'number' : fieldByKey(f.field)?.type === 'date' ? 'date' : 'text'"
+                              x-model="f.value2"
+                              class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none w-36"
+                            />
+                          </span>
+                        </template>
+                      </div>
                     </template>
-                    <template x-if="!fieldByKey(f.field) || fieldByKey(f.field)?.type !== 'select'">
-                      <input
-                        :type="['number'].includes(fieldByKey(f.field)?.type) || f.field === 'age' ? 'number' : fieldByKey(f.field)?.type === 'date' ? 'date' : 'text'"
-                        x-model="f.value"
-                        class="field-input text-sm flex-1"
-                      />
-                    </template>
-                    <input
-                      x-show="operatorsForField(f.field).find(o => o.key === f.op)?.needsValue2"
-                      :type="['number'].includes(fieldByKey(f.field)?.type) || f.field === 'age' ? 'number' : fieldByKey(f.field)?.type === 'date' ? 'date' : 'text'"
-                      x-model="f.value2"
-                      placeholder="et"
-                      class="field-input text-sm flex-1"
-                    />
+                    <button class="px-2 py-1.5 text-xs text-muted dark:text-muted-dark hover:text-accent ml-auto" @click="removeFilter(i)">×</button>
                   </div>
-                </div>
-              </template>
-              <button class="btn btn-ghost text-xs" @click="addFilter()">+ ajouter un filtre</button>
+                </template>
+              </div>
+              <button class="mt-2 text-xs underline text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark" @click="addFilter()">+ ajouter un filtre</button>
             </div>
 
-            <!-- Group by -->
-            <div class="border border-line dark:border-line-dark rounded-lg p-4">
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Regrouper par (optionnel)</div>
-              <select x-model="query.groupBy" class="field-input text-sm">
-                <option value="">— aucun —</option>
-                <template x-for="gf in GROUPABLE_FIELDS" :key="gf.key">
-                  <option :value="gf.key" x-text="gf.label"></option>
-                </template>
-              </select>
-
-              <div class="mt-6">
-                <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Requêtes sauvegardées</div>
-                <template x-if="savedQueriesList.length === 0">
-                  <div class="text-xs text-muted dark:text-muted-dark italic">Aucune.</div>
-                </template>
-                <ul class="space-y-1">
-                  <template x-for="sq in savedQueriesList" :key="sq.id">
-                    <li class="flex justify-between text-sm">
-                      <button class="underline text-left" @click="loadSavedQuery(sq.id)" x-text="sq.name"></button>
-                      <button class="text-xs text-accent" @click="deleteSavedQuery(sq.id)">×</button>
-                    </li>
+            <!-- Row 3: group-by -->
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Regrouper le résultat par…</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <select x-model="query.groupBy" class="field-input text-sm" style="max-width: 22rem;">
+                  <option value="">— sans regroupement —</option>
+                  <template x-for="cat in groupableByCategory" :key="cat.key">
+                    <optgroup :label="cat.label">
+                      <template x-for="ff in cat.fields" :key="ff.key">
+                        <option :value="ff.key" x-text="ff.label"></option>
+                      </template>
+                    </optgroup>
                   </template>
-                </ul>
+                </select>
+                <button x-show="query.groupBy" class="text-xs underline text-muted dark:text-muted-dark hover:text-accent" @click="query.groupBy = ''">retirer</button>
               </div>
             </div>
           </div>
 
-          <div class="flex items-center gap-2 mb-6 flex-wrap">
-            <button class="btn btn-primary" @click="runCurrentQuery()">Exécuter</button>
-            <button class="btn btn-ghost" @click="showMatchingCases()">Voir les dossiers correspondants</button>
-            <button class="btn btn-ghost" @click="newQuery()">Nouvelle</button>
+          <!-- Action row -->
+          <div class="flex items-center gap-2 mb-6 flex-wrap border-t border-line dark:border-line-dark pt-4">
+            <button class="btn btn-ghost text-xs" @click="newQuery()">Repartir de zéro</button>
             <div class="ml-auto flex items-center gap-2 flex-wrap">
-              <input type="text" x-model="saveQueryName" placeholder="Nom de la requête…" class="field-input text-sm w-64" />
+              <input type="text" x-model="saveQueryName" placeholder="Nommer cette question…" class="field-input text-sm w-64" />
               <button class="btn btn-ghost" @click="saveCurrentQuery()">Sauvegarder</button>
               <button class="btn btn-ghost" @click="exportQueryCSV()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''">Exporter CSV</button>
             </div>
@@ -919,21 +942,26 @@
 
           <template x-if="queryResult">
             <div>
+              <div class="flex items-baseline justify-between mb-3">
+                <div>
+                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Résultat</div>
+                  <div class="text-xs text-muted dark:text-muted-dark mt-1">
+                    Sur <span class="font-mono tnum" x-text="queryResult.n"></span> dossier(s) correspondant(s)
+                    <button class="ml-2 underline hover:text-ink dark:hover:text-ink-dark" @click="showMatchingCases()">les voir</button>
+                  </div>
+                </div>
+              </div>
+
               <!-- Single metric (no group) -->
               <template x-if="!queryResult.groupBy">
                 <div class="mb-6">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-2">Résultat</div>
-                  <div class="flex flex-wrap gap-6">
+                  <div class="flex flex-wrap gap-8">
                     <template x-for="(a, i) in (query.aggregations.length ? query.aggregations : [{ fn: 'count', field: null }])" :key="i">
                       <div>
                         <div class="text-xs text-muted dark:text-muted-dark" x-text="aggLabel(a)"></div>
-                        <div class="text-4xl tnum font-mono mt-1" x-text="fmt(queryResult.groups[0]?.values?.[i], 1)"></div>
+                        <div class="text-5xl tnum font-mono mt-1" x-text="fmt(queryResult.groups[0]?.values?.[i], 1)"></div>
                       </div>
                     </template>
-                    <div>
-                      <div class="text-xs text-muted dark:text-muted-dark">n</div>
-                      <div class="text-4xl tnum font-mono mt-1" x-text="queryResult.n"></div>
-                    </div>
                   </div>
                 </div>
               </template>
