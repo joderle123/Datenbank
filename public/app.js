@@ -962,16 +962,29 @@ function makeApp() {
     // ====================================================================
     // Dashboard charts
     // ====================================================================
-    renderDashboardCharts() {
+    renderDashboardCharts(attempt = 0) {
       if (this._dashCharts && this._dashCharts.length) {
-        this._dashCharts.forEach((c) => c && c.destroy());
+        this._dashCharts.forEach((c) => { try { c && c.destroy(); } catch {} });
       }
       this._dashCharts = [];
-      if (!this.allCases.length || !window.Chart) return;
-      // If the parent containers aren't laid out yet, retry next frame.
+      if (!this.allCases.length) return;
+      if (!window.Chart) {
+        console.error('CDSE: Chart.js is not loaded. Diagrammes désactivés.');
+        this.chartLibError = true;
+        return;
+      }
+      this.chartLibError = false;
+      // Retry if the canvas isn't in the DOM yet OR its parent has 0 width.
+      // Capped at 10 attempts to avoid infinite loops if the dashboard is
+      // hidden by an unexpected ancestor.
       const probe = document.getElementById('dashSexe');
-      if (probe && probe.parentElement && !probe.parentElement.clientWidth) {
-        requestAnimationFrame(() => this.renderDashboardCharts());
+      const needsRetry = !probe || (probe.parentElement && !probe.parentElement.clientWidth);
+      if (needsRetry) {
+        if (attempt >= 10) {
+          console.warn('CDSE: gave up rendering charts after 10 attempts; container has no size.');
+          return;
+        }
+        setTimeout(() => this.renderDashboardCharts(attempt + 1), 80);
         return;
       }
 
@@ -989,8 +1002,12 @@ function makeApp() {
 
       const make = (id, config) => {
         const el = document.getElementById(id);
-        if (!el) return;
-        this._dashCharts.push(new window.Chart(el, config));
+        if (!el) { console.warn('CDSE: canvas missing', id); return; }
+        try {
+          this._dashCharts.push(new window.Chart(el, config));
+        } catch (e) {
+          console.error('CDSE: chart creation failed for', id, e);
+        }
       };
 
       // 1. Sexe doughnut

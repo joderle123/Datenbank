@@ -334,15 +334,22 @@
                 </div>
               </div>
 
+              <!-- Chart-library-not-loaded fallback -->
+              <template x-if="chartLibError">
+                <div class="border border-accent rounded-lg p-4 text-sm text-accent mb-4">
+                  Les diagrammes nécessitent Chart.js qui n'a pas pu être chargé. Si vous utilisez la version <code>cdse.html</code>, Chart.js y est intégré — vérifiez que vous ouvrez bien la dernière version (build affiché en bas à gauche).
+                </div>
+              </template>
+
               <!-- Chart row 1 — distributions -->
               <div class="grid grid-cols-3 gap-4">
-                <div class="border border-line dark:border-line-dark rounded-lg p-5 flex flex-col">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Répartition par sexe</div>
-                  <div class="relative mx-auto w-full" style="max-width: 260px; aspect-ratio: 1 / 1;"><canvas id="dashSexe"></canvas></div>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5 flex flex-col items-center">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3 self-start">Répartition par sexe</div>
+                  <div class="relative" style="width: 240px; height: 240px;"><canvas id="dashSexe"></canvas></div>
                 </div>
-                <div class="border border-line dark:border-line-dark rounded-lg p-5 flex flex-col">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Mesures CDSE (cumulées)</div>
-                  <div class="relative mx-auto w-full" style="max-width: 260px; aspect-ratio: 1 / 1;"><canvas id="dashMesures"></canvas></div>
+                <div class="border border-line dark:border-line-dark rounded-lg p-5 flex flex-col items-center">
+                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3 self-start">Mesures CDSE (cumulées)</div>
+                  <div class="relative" style="width: 240px; height: 240px;"><canvas id="dashMesures"></canvas></div>
                 </div>
                 <div class="border border-line dark:border-line-dark rounded-lg p-5">
                   <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Distribution des âges</div>
