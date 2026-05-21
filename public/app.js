@@ -628,6 +628,18 @@ function makeApp() {
       this.view = 'cases';
     },
 
+    printDetail() {
+      // The print stylesheet hides everything but #printArea.
+      // Calling window.print() opens the browser's PDF / printer dialog.
+      document.body.classList.add('printing');
+      // give the browser a tick to render
+      setTimeout(() => {
+        window.print();
+        // remove the class after a short delay so users see the layout restore
+        setTimeout(() => document.body.classList.remove('printing'), 500);
+      }, 50);
+    },
+
     // ====================================================================
     // Form (create / edit)
     // ====================================================================

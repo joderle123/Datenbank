@@ -137,6 +137,35 @@
 
     details > summary { list-style: none; cursor: pointer; }
     details > summary::-webkit-details-marker { display: none; }
+
+    /* -- Print stylesheet -- */
+    @media print {
+      html, html.dark, body { background: white !important; color: black !important; }
+      aside, header, .no-print-actions, .toast, button { display: none !important; }
+      /* Show only the print area; expand it to full width */
+      body.printing main > .px-10 > section:not(.printing-this) { display: none !important; }
+      body { padding: 0; }
+      main { padding: 0 !important; }
+      main > .px-10 { padding: 0 !important; }
+      #printArea {
+        display: block !important;
+        max-width: 100% !important;
+        font-size: 11pt;
+        color: black !important;
+      }
+      #printArea .print-only { display: block !important; }
+      #printArea .print-header { display: block !important; border-bottom: 1px solid #999; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+      #printArea h2 { font-size: 18pt; }
+      #printArea .text-3xl, #printArea .text-2xl { font-size: 16pt; }
+      #printArea dl { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; row-gap: 0.25rem; }
+      #printArea .border-line, #printArea .dark\\:border-line-dark { border-color: #ccc !important; }
+      /* Keep the timeline visible */
+      #printArea canvas { display: none !important; }
+      a, button { color: black !important; }
+      /* Avoid splitting a section across pages where possible */
+      #printArea > div > div { page-break-inside: avoid; }
+      @page { margin: 1.5cm; size: A4; }
+    }
   </style>
 </head>
 
@@ -415,8 +444,13 @@
         <!-- ============================================================ -->
         <section x-show="view === 'detail'" style="display:none">
           <template x-if="detailCase">
-            <div>
-              <div class="flex items-baseline justify-between mb-6">
+            <div id="printArea">
+              <div class="print-header hidden mb-6">
+                <div class="text-[10px] uppercase tracking-widest">CDSE Luxembourg · Centre pour le Développement Social et Éducatif</div>
+                <div class="text-[10px] mt-1">Imprimé le <span x-text="formatTs(new Date().toISOString())"></span> par <span x-text="user || '—'"></span></div>
+              </div>
+
+              <div class="flex items-baseline justify-between mb-6 no-print-actions">
                 <div>
                   <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Dossier</div>
                   <h2 class="mt-1 text-3xl">
@@ -429,8 +463,20 @@
                 </div>
                 <div class="flex gap-2">
                   <button class="btn btn-ghost" @click="backToList()">Retour</button>
+                  <button class="btn btn-ghost" @click="printDetail()">Imprimer / PDF</button>
                   <button class="btn btn-ghost" @click="startEdit(detailCase.id)">Modifier</button>
                   <button class="btn btn-danger" @click="deleteCase(detailCase.id)">Supprimer</button>
+                </div>
+              </div>
+
+              <!-- Print-only header replicates the title without the buttons -->
+              <div class="print-only mb-4" style="display:none">
+                <h2 class="text-2xl">
+                  <span x-text="(detailCase.prenom || '') + ' ' + (detailCase.nom || '')"></span>
+                  <span class="ml-2 text-base text-muted dark:text-muted-dark" x-text="detailCase.matricule || ''"></span>
+                </h2>
+                <div class="mt-1 text-xs">
+                  Créé <span x-text="formatTs(detailCase.created_at)"></span> · Modifié <span x-text="formatTs(detailCase.updated_at)"></span>
                 </div>
               </div>
 
