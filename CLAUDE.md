@@ -64,15 +64,46 @@ Minderjährigen (IQ, Diagnosen, SCAS, Tutelle). Anforderungen:
 
 ## Wichtige Architektur-Entscheidungen
 
+### Disziplin (gilt JETZT, Prototyp-Phase)
+
+- **Repository-Pattern ist Pflicht.** UI-Code ruft NIEMALS `localStorage`
+  direkt auf. Alle Daten-Zugriffe laufen über `public/repository.js` →
+  Singleton `cases`. Wenn wir später auf Node + SQLite migrieren, tauschen
+  wir genau eine Zeile (`cases = new ApiCaseRepository()`) — der Rest der
+  App bleibt unverändert.
+- **`FIELD_DEFS` in `public/fields.js` ist Single Source of Truth.**
+  Form-Sektionen, Liste-Spalten, Validierung, Import/Export, Query-Builder
+  — alles liest von dort. Niemals Feldnamen hardcoden.
+- **Versionierte Storage-Keys.** Aktuell `cdse_cases_v1`. Schema-Änderungen,
+  die migrieren müssen, bekommen `_v2`, mit Migrations-Code, der `_v1`
+  ausliest und neu schreibt. So funktionieren auch Browser-Migrations
+  ohne Backend.
+- **Sanitize on write.** `id`, `created_at`, `updated_at` und computed
+  Felder (`age`) werden bei `create`/`update` aktiv aus dem Eingabeobjekt
+  entfernt — kein Vertrauen, dass der Aufrufer brav ist.
+
+### Endform-Entscheidungen (für spätere V2)
+
 - **Single HTML-Datei** (`public/index.html`) — bewusst, für Wartbarkeit ohne
   Build-Step. Alpine-Komponenten in `public/app.js`
 - **CSRF**: kein deprecated `csurf`. Session-gebundener Token, per
   `X-CSRF-Token`-Header bei mutierenden Requests
 - **CSV-Import**: niemals stilles Überschreiben — Duplikate per `matricule`
-  werden gemeldet, User wählt `skip | update | abort`
+  werden gemeldet, User wählt `skip | update | abort` (im LocalStorage-Repo
+  bereits als `merge | update | replace`-Modi vorhanden)
 - **Query Builder** ist das Kernfeature — Filter/Aggregation/Group-By
   server-side (parameterisierte SQL-Generierung mit Whitelist von Feldern und
   Operatoren), Charts client-side via Chart.js
+
+### Migration-Pfad: Browser → Node-Backend (V2)
+
+- Heutige `LocalStorageCaseRepository` exportiert/importiert JSON.
+- Node-Backend bekommt einen `/api/cases/import` Endpoint, der genau dieses
+  JSON akzeptiert.
+- Frontend tauscht `cases`-Singleton gegen `ApiCaseRepository`, der dieselbe
+  Contract-Schnittstelle implementiert (`list/get/create/update/delete/
+  count/exportAll/importAll`).
+- Keine Datenmigration nötig — JSON-Export ist das Migrations-Format.
 
 ## Projektstruktur
 
