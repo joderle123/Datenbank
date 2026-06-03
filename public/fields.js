@@ -21,81 +21,81 @@
 
 export const CATEGORIES = [
   { key: 'identification', label: 'Identification' },
-  { key: 'demographics',   label: 'Démographie' },
-  { key: 'structure',      label: 'Structure scolaire' },
-  { key: 'mesures_cdse',   label: 'Mesures CDSE' },
-  { key: 'ds',             label: 'DS — Diagnostic spécialisé' },
-  { key: 'isa',            label: 'ISA — Intervention socio-affective' },
+  { key: 'demographics',   label: 'Demographics' },
+  { key: 'structure',      label: 'School structure' },
+  { key: 'mesures_cdse',   label: 'CDSE Measures' },
+  { key: 'ds',             label: 'DS — Specialized Diagnostic' },
+  { key: 'isa',            label: 'ISA — Socio-emotional Intervention' },
   { key: 'cg',             label: 'C&G — Counseling & Guidance' },
-  { key: 'scol_spe',       label: 'Scolarisation spécialisée' },
-  { key: 'autre_mesure',   label: 'Autre mesure' },
-  { key: 'externe',        label: 'Services externes' },
-  { key: 'klinik',         label: 'Profil clinique' },
-  { key: 'background',     label: 'Contexte familial / linguistique' },
+  { key: 'scol_spe',       label: 'Specialized Schooling' },
+  { key: 'autre_mesure',   label: 'Other Measure' },
+  { key: 'externe',        label: 'External Services' },
+  { key: 'klinik',         label: 'Clinical Profile' },
+  { key: 'background',     label: 'Family / Language Background' },
 ];
 
 export const FIELD_DEFS = [
   // -- Identification -------------------------------------------------------
-  { key: 'matricule',       label: 'Matricule',           type: 'text', category: 'identification', required: true, unique: true, helpText: 'Matricule luxembourgeois (13 chiffres)' },
-  { key: 'dossier_mfile',   label: 'Dossier M-File',      type: 'text', category: 'identification' },
-  { key: 'nom',             label: 'Nom',                 type: 'text', category: 'identification', required: true },
-  { key: 'prenom',          label: 'Prénom',              type: 'text', category: 'identification', required: true },
-  { key: 'dito',            label: 'Dito',                type: 'text', category: 'identification' },
+  { key: 'matricule',       label: 'National ID',         type: 'text', category: 'identification', required: true, unique: true, helpText: 'Luxembourg national ID (13 digits)' },
+  { key: 'dossier_mfile',   label: 'M-File No.',          type: 'text', category: 'identification' },
+  { key: 'nom',             label: 'Last name',           type: 'text', category: 'identification', required: true },
+  { key: 'prenom',          label: 'First name',          type: 'text', category: 'identification', required: true },
+  { key: 'dito',            label: 'Alias',               type: 'text', category: 'identification' },
 
   // -- Demographics ---------------------------------------------------------
-  { key: 'sexe',            label: 'Sexe',                type: 'select', category: 'demographics', options: ['M', 'F', 'D'] },
-  { key: 'date_naissance',  label: 'Date de naissance',   type: 'date',   category: 'demographics' },
-  { key: 'age',             label: 'Âge',                 type: 'computed', category: 'demographics', helpText: 'Calculé à partir de la date de naissance' },
+  { key: 'sexe',            label: 'Sex',                 type: 'select', category: 'demographics', options: ['M', 'F', 'D'] },
+  { key: 'date_naissance',  label: 'Date of birth',       type: 'date',   category: 'demographics' },
+  { key: 'age',             label: 'Age',                 type: 'computed', category: 'demographics', helpText: 'Computed from the date of birth' },
 
-  // -- Structure scolaire ---------------------------------------------------
-  { key: 'dir',             label: 'DIR',                 type: 'select', category: 'structure', options: ['DIR Centre', 'DIR Est', 'DIR Ouest', 'DIR Sud', 'DIR Nord'] },
-  { key: 'ecole_lycee',     label: 'École / Lycée',       type: 'text',   category: 'structure', autocomplete: 'ecoles' },
+  // -- School structure -----------------------------------------------------
+  { key: 'dir',             label: 'DIR',                 type: 'select', category: 'structure', options: ['DIR Centre', 'DIR East', 'DIR West', 'DIR South', 'DIR North'] },
+  { key: 'ecole_lycee',     label: 'School',              type: 'text',   category: 'structure', autocomplete: 'ecoles' },
 
-  // -- Mesures CDSE ---------------------------------------------------------
-  { key: 'mesure_cdse_1',   label: 'Mesure CDSE 1',       type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Scol. Spé.', 'Autre'] },
-  { key: 'mesure_cdse_2',   label: 'Mesure CDSE 2',       type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Scol. Spé.', 'Autre'] },
-  { key: 'mesure_cdse_3',   label: 'Mesure CDSE 3',       type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Scol. Spé.', 'Autre'] },
-  { key: 'date_decision_cni', label: 'Date de décision CNI', type: 'date', category: 'mesures_cdse' },
+  // -- CDSE Measures --------------------------------------------------------
+  { key: 'mesure_cdse_1',   label: 'CDSE Measure 1',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'] },
+  { key: 'mesure_cdse_2',   label: 'CDSE Measure 2',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'] },
+  { key: 'mesure_cdse_3',   label: 'CDSE Measure 3',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'] },
+  { key: 'date_decision_cni', label: 'CNI decision date', type: 'date', category: 'mesures_cdse' },
 
   // -- DS -------------------------------------------------------------------
-  { key: 'ds_realise_par',  label: 'DS réalisé par',      type: 'text', category: 'ds', autocomplete: 'staff' },
-  { key: 'date_ds',         label: 'Date DS',             type: 'date', category: 'ds' },
+  { key: 'ds_realise_par',  label: 'DS performed by',     type: 'text', category: 'ds', autocomplete: 'staff' },
+  { key: 'date_ds',         label: 'DS date',             type: 'date', category: 'ds' },
 
   // -- ISA ------------------------------------------------------------------
-  { key: 'isa_realise_par', label: 'ISA réalisé par',     type: 'text', category: 'isa', autocomplete: 'staff' },
-  { key: 'debut_isa',       label: 'Début ISA',           type: 'date', category: 'isa' },
-  { key: 'fin_isa',         label: 'Fin ISA',             type: 'date', category: 'isa' },
+  { key: 'isa_realise_par', label: 'ISA performed by',    type: 'text', category: 'isa', autocomplete: 'staff' },
+  { key: 'debut_isa',       label: 'ISA start',           type: 'date', category: 'isa' },
+  { key: 'fin_isa',         label: 'ISA end',             type: 'date', category: 'isa' },
 
   // -- C&G ------------------------------------------------------------------
-  { key: 'cg_realise_par',  label: 'C&G réalisé par',     type: 'text', category: 'cg', autocomplete: 'staff' },
-  { key: 'debut_cg',        label: 'Début C&G',           type: 'date', category: 'cg' },
-  { key: 'fin_cg',          label: 'Fin C&G',             type: 'date', category: 'cg' },
+  { key: 'cg_realise_par',  label: 'C&G performed by',    type: 'text', category: 'cg', autocomplete: 'staff' },
+  { key: 'debut_cg',        label: 'C&G start',           type: 'date', category: 'cg' },
+  { key: 'fin_cg',          label: 'C&G end',             type: 'date', category: 'cg' },
 
-  // -- Scolarisation spécialisée -------------------------------------------
-  { key: 'scolarisation_specialisee', label: 'Établissement', type: 'text', category: 'scol_spe', autocomplete: 'institutions' },
-  { key: 'debut_scol_spe',  label: 'Début scolarisation spé.', type: 'date', category: 'scol_spe' },
-  { key: 'fin_scol_spe',    label: 'Fin scolarisation spé.',   type: 'date', category: 'scol_spe' },
+  // -- Specialized Schooling ------------------------------------------------
+  { key: 'scolarisation_specialisee', label: 'Institution', type: 'text', category: 'scol_spe', autocomplete: 'institutions' },
+  { key: 'debut_scol_spe',  label: 'Spec. schooling start', type: 'date', category: 'scol_spe' },
+  { key: 'fin_scol_spe',    label: 'Spec. schooling end',   type: 'date', category: 'scol_spe' },
 
-  // -- Autre mesure ---------------------------------------------------------
-  { key: 'autre_mesure',       label: 'Autre mesure',         type: 'text', category: 'autre_mesure' },
-  { key: 'debut_autre_mesure', label: 'Début autre mesure',   type: 'date', category: 'autre_mesure' },
-  { key: 'fin_autre_mesure',   label: 'Fin autre mesure',     type: 'date', category: 'autre_mesure' },
+  // -- Other Measure --------------------------------------------------------
+  { key: 'autre_mesure',       label: 'Other measure',        type: 'text', category: 'autre_mesure' },
+  { key: 'debut_autre_mesure', label: 'Other measure start',  type: 'date', category: 'autre_mesure' },
+  { key: 'fin_autre_mesure',   label: 'Other measure end',    type: 'date', category: 'autre_mesure' },
 
-  // -- Services externes ----------------------------------------------------
-  { key: 'autre_cc_implique', label: 'Autre C&C impliqué',  type: 'text',   category: 'externe' },
-  { key: 'autres_services',   label: 'Autres services',     type: 'tags',   category: 'externe', helpText: 'Plusieurs valeurs possibles (Enter pour ajouter)' },
-  { key: 'scol_etranger',     label: "Scolarisation à l'étranger", type: 'select', category: 'externe', options: ['Oui', 'Non'] },
+  // -- External Services ----------------------------------------------------
+  { key: 'autre_cc_implique', label: 'Other C&C involved',  type: 'text',   category: 'externe' },
+  { key: 'autres_services',   label: 'Other services',      type: 'tags',   category: 'externe', helpText: 'Multiple values allowed (Enter to add)' },
+  { key: 'scol_etranger',     label: 'Schooling abroad',    type: 'select', category: 'externe', options: ['Yes', 'No'] },
 
-  // -- Profil clinique ------------------------------------------------------
-  { key: 'diagnostics',              label: 'Diagnostics',              type: 'tags',   category: 'klinik', helpText: 'Codes ICD-10 / DSM-5 ou texte libre' },
-  { key: 'verdachtsdiagnosen_profil', label: 'Verdachtsdiagnosen / Profil', type: 'tags', category: 'klinik' },
-  { key: 'iq',                       label: 'QI',                       type: 'number', category: 'klinik', min: 40, max: 160 },
+  // -- Clinical Profile -----------------------------------------------------
+  { key: 'diagnostics',              label: 'Diagnoses',                type: 'tags',   category: 'klinik', helpText: 'ICD-10 / DSM-5 codes or free text' },
+  { key: 'verdachtsdiagnosen_profil', label: 'Suspected diagnoses / Profile', type: 'tags', category: 'klinik' },
+  { key: 'iq',                       label: 'IQ',                       type: 'number', category: 'klinik', min: 40, max: 160 },
 
-  // -- Contexte familial / linguistique ------------------------------------
-  { key: 'langue_1', label: 'Langue 1', type: 'select', category: 'background', options: ['LU', 'FR', 'DE', 'PT', 'EN', 'IT', 'ES', 'Autre'] },
-  { key: 'parents',  label: 'Parents',  type: 'select', category: 'background', options: ['Ensemble', 'Séparés', 'Autre'] },
-  { key: 'scas',     label: 'SCAS',     type: 'select', category: 'background', options: ['Oui', 'Non'] },
-  { key: 'tutelle',  label: 'Tutelle',  type: 'select', category: 'background', options: ['Oui', 'Non'] },
+  // -- Family / Language Background ------------------------------------------
+  { key: 'langue_1', label: 'First language', type: 'select', category: 'background', options: ['LU', 'FR', 'DE', 'PT', 'EN', 'IT', 'ES', 'Other'] },
+  { key: 'parents',  label: 'Parents',  type: 'select', category: 'background', options: ['Together', 'Separated', 'Other'] },
+  { key: 'scas',     label: 'SCAS',     type: 'select', category: 'background', options: ['Yes', 'No'] },
+  { key: 'tutelle',  label: 'Guardianship',  type: 'select', category: 'background', options: ['Yes', 'No'] },
 ];
 
 // ----------------------------------------------------------------------------
@@ -154,26 +154,26 @@ function isEmpty(v) {
 
 /**
  * Validate a single field value against its definition.
- * Returns null when valid, or a French error message string.
+ * Returns null when valid, or an English error message string.
  */
 export function validateField(key, value) {
   const def = getField(key);
-  if (!def) return `Champ inconnu: ${key}`;
+  if (!def) return `Unknown field: ${key}`;
   if (def.type === 'computed') return null;
 
   // Required check — empty + required = error; empty + optional = OK
   if (isEmpty(value)) {
-    return def.required ? 'Ce champ est obligatoire.' : null;
+    return def.required ? 'This field is required.' : null;
   }
 
   switch (def.type) {
     case 'text':
-      if (typeof value !== 'string') return 'Valeur textuelle attendue.';
+      if (typeof value !== 'string') return 'Text value expected.';
       return null;
 
     case 'number': {
       const n = typeof value === 'number' ? value : Number(value);
-      if (!Number.isFinite(n)) return 'Nombre invalide.';
+      if (!Number.isFinite(n)) return 'Invalid number.';
       if (def.min !== undefined && n < def.min) return `Minimum: ${def.min}.`;
       if (def.max !== undefined && n > def.max) return `Maximum: ${def.max}.`;
       return null;
@@ -181,22 +181,22 @@ export function validateField(key, value) {
 
     case 'date':
       if (typeof value !== 'string' || !ISO_DATE_RE.test(value)) {
-        return 'Date invalide (format AAAA-MM-JJ attendu).';
+        return 'Invalid date (format YYYY-MM-DD expected).';
       }
       if (Number.isNaN(new Date(value).getTime())) {
-        return 'Date invalide.';
+        return 'Invalid date.';
       }
       return null;
 
     case 'select':
       if (!def.options || !def.options.includes(value)) {
-        return `Valeur non autorisée. Choix: ${def.options.join(', ')}.`;
+        return `Value not allowed. Choices: ${def.options.join(', ')}.`;
       }
       return null;
 
     case 'tags':
-      if (!Array.isArray(value)) return 'Liste de valeurs attendue.';
-      if (value.some((t) => typeof t !== 'string')) return 'Chaque tag doit être une chaîne.';
+      if (!Array.isArray(value)) return 'List of values expected.';
+      if (value.some((t) => typeof t !== 'string')) return 'Each tag must be a string.';
       return null;
 
     default:
@@ -209,7 +209,7 @@ export function validateField(key, value) {
  *   { valid: boolean, errors: { [key]: 'message' } }
  *
  * Field-local only at this stage — cross-field rules (e.g. `fin_isa >= debut_isa`)
- * are layered on top in the form step (Step 7).
+ * are layered on top in the form step.
  */
 export function validateCase(caseObj) {
   const errors = {};
@@ -220,4 +220,3 @@ export function validateCase(caseObj) {
   }
   return { valid: Object.keys(errors).length === 0, errors };
 }
-

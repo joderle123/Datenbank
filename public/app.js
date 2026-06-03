@@ -178,98 +178,98 @@ function makeApp() {
     QUERY_PRESETS: [
       {
         id: 'count_by_sexe',
-        label: 'Répartition par sexe',
-        description: 'Nombre de dossiers, filles vs garçons.',
+        label: 'Distribution by sex',
+        description: 'Number of cases, girls vs boys.',
         config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'sexe' },
       },
       {
         id: 'count_by_dir',
-        label: 'Dossiers par DIR',
-        description: 'Combien de dossiers par direction régionale ?',
+        label: 'Cases by DIR',
+        description: 'How many cases per regional directorate?',
         config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir' },
       },
       {
         id: 'avg_age',
-        label: 'Âge moyen global',
-        description: 'Moyenne d’âge de l’ensemble des dossiers.',
+        label: 'Overall average age',
+        description: 'Average age across all cases.',
         config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: '' },
       },
       {
         id: 'avg_age_by_sexe',
-        label: 'Âge moyen par sexe',
-        description: 'Moyenne d’âge selon le sexe.',
+        label: 'Average age by sex',
+        description: 'Average age broken down by sex.',
         config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'sexe' },
       },
       {
         id: 'avg_age_by_dir',
-        label: 'Âge moyen par DIR',
-        description: 'Moyenne d’âge dans chaque direction.',
+        label: 'Average age by DIR',
+        description: 'Average age in each directorate.',
         config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'dir' },
       },
       {
         id: 'avg_iq',
-        label: 'QI moyen global',
-        description: 'Moyenne du QI sur l’ensemble.',
+        label: 'Overall average IQ',
+        description: 'Average IQ across all cases.',
         config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: '' },
       },
       {
         id: 'avg_iq_by_sexe',
-        label: 'QI moyen par sexe',
-        description: 'Moyenne du QI selon le sexe.',
+        label: 'Average IQ by sex',
+        description: 'Average IQ broken down by sex.',
         config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'sexe' },
       },
       {
         id: 'avg_iq_by_school',
-        label: 'QI moyen par école / lycée',
-        description: 'Moyenne du QI par établissement scolaire.',
+        label: 'Average IQ by school',
+        description: 'Average IQ per school.',
         config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'ecole_lycee' },
       },
       {
         id: 'mesures_distribution',
-        label: 'Répartition des Mesures CDSE',
-        description: 'Combien de dossiers par type de mesure principale ?',
+        label: 'CDSE Measures distribution',
+        description: 'How many cases per primary measure type?',
         config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'mesure_cdse_1' },
       },
       {
         id: 'mesures_by_dir',
-        label: 'Mesures par DIR',
-        description: 'Quelle mesure domine dans chaque direction ?',
+        label: 'Measures by DIR',
+        description: 'Which measure dominates in each directorate?',
         config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir' },
       },
       {
         id: 'languages',
-        label: 'Langues parlées',
-        description: 'Répartition de la langue principale.',
+        label: 'Languages spoken',
+        description: 'Distribution of the first language.',
         config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'langue_1' },
       },
       {
         id: 'parents',
-        label: 'Structure parentale',
-        description: 'Ensemble / Séparés / Autre.',
+        label: 'Parental structure',
+        description: 'Together / Separated / Other.',
         config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'parents' },
       },
       {
         id: 'scas',
-        label: 'Dossiers avec SCAS',
-        description: 'Combien et par direction ?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'scas', op: 'eq', value: 'Oui' }], groupBy: 'dir' },
+        label: 'Cases with SCAS',
+        description: 'How many and by directorate?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'scas', op: 'eq', value: 'Yes' }], groupBy: 'dir' },
       },
       {
         id: 'tutelle',
-        label: 'Dossiers sous tutelle',
-        description: 'Combien et par direction ?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'eq', value: 'Oui' }], groupBy: 'dir' },
+        label: 'Cases under guardianship',
+        description: 'How many and by directorate?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'eq', value: 'Yes' }], groupBy: 'dir' },
       },
       {
         id: 'iq_distribution',
-        label: 'Distribution du QI',
-        description: 'Histogramme du QI sur l’ensemble des dossiers.',
+        label: 'IQ distribution',
+        description: 'Histogram of IQ across all cases.',
         config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: '' },
       },
       {
         id: 'age_distribution',
-        label: 'Distribution des âges',
-        description: 'Histogramme d’âge sur l’ensemble.',
+        label: 'Age distribution',
+        description: 'Histogram of age across all cases.',
         config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: '' },
       },
     ],
@@ -300,12 +300,12 @@ function makeApp() {
 
     // -- nav meta ---------------------------------------------------------
     nav: [
-      { id: 'dashboard', label: 'Tableau de bord', kicker: "Vue d'ensemble", title: 'Tableau de', accent: ' bord' },
-      { id: 'cases',     label: 'Dossiers',        kicker: 'Registre',        title: 'Dossiers',   accent: '' },
-      { id: 'query',     label: 'Requêtes',        kicker: 'Analyse',         title: 'Requêtes',   accent: '' },
-      { id: 'io',        label: 'Import / Export', kicker: 'Échange',         title: 'Import',     accent: ' / Export' },
-      { id: 'audit',     label: 'Journal',         kicker: 'Traçabilité',     title: 'Journal',    accent: '' },
-      { id: 'settings',  label: 'Paramètres',      kicker: 'Configuration',   title: 'Paramètres', accent: '' },
+      { id: 'dashboard', label: 'Dashboard',       kicker: 'Overview',       title: 'Dash',       accent: 'board' },
+      { id: 'cases',     label: 'Cases',           kicker: 'Registry',       title: 'Cases',      accent: '' },
+      { id: 'query',     label: 'Queries',         kicker: 'Analysis',       title: 'Queries',    accent: '' },
+      { id: 'io',        label: 'Import / Export', kicker: 'Exchange',       title: 'Import',     accent: ' / Export' },
+      { id: 'audit',     label: 'Audit log',       kicker: 'Traceability',   title: 'Audit',      accent: ' log' },
+      { id: 'settings',  label: 'Settings',        kicker: 'Configuration',  title: 'Settings',   accent: '' },
     ],
 
     get currentNav() {
@@ -406,7 +406,7 @@ function makeApp() {
       this.applyTheme();
     },
     tickClock() {
-      this.now = new Date().toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' });
+      this.now = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
     },
 
     // ====================================================================
@@ -611,8 +611,8 @@ function makeApp() {
       const spec = [
         { key: 'ISA',         label: 'ISA',         start: c.debut_isa,         end: c.fin_isa,         who: c.isa_realise_par },
         { key: 'CG',          label: 'C&G',         start: c.debut_cg,          end: c.fin_cg,          who: c.cg_realise_par },
-        { key: 'ScolSpe',     label: 'Scol. Spé.',  start: c.debut_scol_spe,    end: c.fin_scol_spe,    who: c.scolarisation_specialisee },
-        { key: 'Autre',       label: c.autre_mesure || 'Autre', start: c.debut_autre_mesure, end: c.fin_autre_mesure, who: null },
+        { key: 'ScolSpe',     label: 'Spec. School.',  start: c.debut_scol_spe,    end: c.fin_scol_spe,    who: c.scolarisation_specialisee },
+        { key: 'Autre',       label: c.autre_mesure || 'Other', start: c.debut_autre_mesure, end: c.fin_autre_mesure, who: null },
         { key: 'DS',          label: 'DS',          start: c.date_ds,            end: c.date_ds,         who: c.ds_realise_par, singleDay: true },
       ];
       for (const m of spec) {
@@ -649,10 +649,10 @@ function makeApp() {
     measureStatusLabel(status) {
       return {
         active:   'active',
-        open:     'en cours',
-        ending:   'fin imminente',
-        ended:    'terminée',
-        upcoming: 'à venir',
+        open:     'ongoing',
+        ending:   'ending soon',
+        ended:    'ended',
+        upcoming: 'upcoming',
       }[status] || '';
     },
 
@@ -707,7 +707,7 @@ function makeApp() {
     // ====================================================================
     async showDetail(id) {
       const c = await cases.get(id);
-      if (!c) { this.notify('Dossier introuvable', 'err'); return; }
+      if (!c) { this.notify('Case not found', 'err'); return; }
       this.detailCase = c;
       this.view = 'detail';
     },
@@ -744,7 +744,7 @@ function makeApp() {
 
     async startEdit(id) {
       const c = await cases.get(id);
-      if (!c) { this.notify('Dossier introuvable', 'err'); return; }
+      if (!c) { this.notify('Case not found', 'err'); return; }
       this.formMode = 'edit';
       this.editingId = id;
       const blank = blankCase();
@@ -782,7 +782,7 @@ function makeApp() {
       ];
       for (const [s, ed] of pairs) {
         const a = data[s], b = data[ed];
-        if (a && b && a > b) e[ed] = `Doit être ≥ ${this.labelOf(s)} (${a}).`;
+        if (a && b && a > b) e[ed] = `Must be ≥ ${this.labelOf(s)} (${a}).`;
       }
       return e;
     },
@@ -803,7 +803,7 @@ function makeApp() {
         this.formErrors = allErrors;
         const firstBadCat = getEditableFields().find((f) => allErrors[f.key])?.category;
         if (firstBadCat) this.formCategoryOpen[firstBadCat] = true;
-        this.notify('Veuillez corriger les erreurs.', 'err');
+        this.notify('Please fix the errors.', 'err');
         return;
       }
       this.formErrors = {};
@@ -824,7 +824,7 @@ function makeApp() {
           summary: `${created.prenom || ''} ${created.nom || ''} (${created.matricule || '—'})`.trim(),
           changes: diffCases({}, created),
         });
-        this.notify('Dossier créé.');
+        this.notify('Case created.');
       } else {
         const before = await cases.get(this.editingId);
         const updated = await cases.update(this.editingId, payload);
@@ -835,7 +835,7 @@ function makeApp() {
           summary: `${updated.prenom || ''} ${updated.nom || ''} (${updated.matricule || '—'})`.trim(),
           changes: diffCases(before, updated),
         });
-        this.notify('Dossier mis à jour.');
+        this.notify('Case updated.');
       }
 
       await this.refreshAll();
@@ -848,7 +848,7 @@ function makeApp() {
     },
 
     async deleteCase(id) {
-      this.ask('Supprimer définitivement ce dossier ?', async () => {
+      this.ask('Permanently delete this case?', async () => {
         const before = await cases.get(id);
         const ok = await cases.delete(id);
         if (ok) {
@@ -859,7 +859,7 @@ function makeApp() {
             summary: `${before?.prenom || ''} ${before?.nom || ''} (${before?.matricule || '—'})`.trim(),
             changes: diffCases(before, {}),
           });
-          this.notify('Dossier supprimé.');
+          this.notify('Case deleted.');
           await this.refreshAll();
           if (this.view === 'detail') this.view = 'cases';
         }
@@ -1004,7 +1004,7 @@ function makeApp() {
       this._dashCharts = [];
       if (!this.allCases.length) return;
       if (!window.Chart) {
-        console.error('CDSE: Chart.js is not loaded. Diagrammes désactivés.');
+        console.error('CDSE: Chart.js is not loaded. Charts disabled.');
         this.chartLibError = true;
         return;
       }
@@ -1172,7 +1172,7 @@ function makeApp() {
 
     async saveCurrentQuery() {
       const name = (this.saveQueryName || '').trim();
-      if (!name) { this.notify('Donnez un nom à la requête.', 'err'); return; }
+      if (!name) { this.notify('Give the query a name.', 'err'); return; }
       const saved = await savedQueries.save({
         id: this.editingSavedQueryId,
         name,
@@ -1180,7 +1180,7 @@ function makeApp() {
       });
       this.savedQueriesList = await savedQueries.list();
       this.editingSavedQueryId = saved.id;
-      this.notify('Requête sauvegardée.');
+      this.notify('Query saved.');
     },
 
     loadSavedQuery(id) {
@@ -1193,11 +1193,11 @@ function makeApp() {
     },
 
     async deleteSavedQuery(id) {
-      this.ask('Supprimer cette requête sauvegardée ?', async () => {
+      this.ask('Delete this saved query?', async () => {
         await savedQueries.delete(id);
         this.savedQueriesList = await savedQueries.list();
         if (this.editingSavedQueryId === id) { this.editingSavedQueryId = null; this.saveQueryName = ''; }
-        this.notify('Requête supprimée.');
+        this.notify('Query deleted.');
       });
     },
 
@@ -1210,7 +1210,7 @@ function makeApp() {
       const out = [];
       for (const cat of CATEGORIES) {
         const fields = FIELD_DEFS.filter((f) => f.category === cat.key && f.type !== 'computed');
-        if (cat.key === 'demographics') fields.splice(fields.length, 0, { key: 'age', label: 'Âge (calculé)', type: 'number', category: 'demographics' });
+        if (cat.key === 'demographics') fields.splice(fields.length, 0, { key: 'age', label: 'Age (computed)', type: 'number', category: 'demographics' });
         if (fields.length) out.push({ ...cat, fields });
       }
       return out;
@@ -1225,19 +1225,19 @@ function makeApp() {
       return out;
     },
 
-    /** Build the current query as a readable French sentence. */
+    /** Build the current query as a readable English sentence. */
     get questionPreview() {
       const FN_PHRASE = {
-        count:  'le nombre',
-        mean:   'la moyenne de',
-        median: 'la médiane de',
-        min:    'le minimum de',
-        max:    'le maximum de',
-        sum:    'la somme de',
-        stddev: "l'écart-type de",
+        count:  'the number',
+        mean:   'the average',
+        median: 'the median',
+        min:    'the minimum',
+        max:    'the maximum',
+        sum:    'the sum',
+        stddev: 'the std. deviation',
       };
       // Keep all-caps abbreviations as-is, otherwise leave the label's case alone
-      // (so 'QI' stays QI, 'DIR' stays DIR, 'École / Lycée' stays as written).
+      // (so 'IQ' stays IQ, 'DIR' stays DIR, 'School' stays as written).
       const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || a.field);
       const filters = (this.query.filters || []).filter((f) => {
         const ops = operatorsFor(f.field);
@@ -1249,17 +1249,17 @@ function makeApp() {
 
       let measure;
       if (!aggs.length) {
-        measure = 'le nombre';
+        measure = 'the number';
       } else {
         const parts = aggs.map((a) => {
-          if (a.fn === 'count') return 'le nombre';
+          if (a.fn === 'count') return 'the number';
           const phrase = FN_PHRASE[a.fn] || a.fn;
           return `${phrase} ${this.labelOf(a.field)}`;
         });
-        measure = parts.length === 1 ? parts[0] : parts.slice(0, -1).join(', ') + ' et ' + parts.slice(-1);
+        measure = parts.length === 1 ? parts[0] : parts.slice(0, -1).join(', ') + ' and ' + parts.slice(-1);
       }
 
-      let body = `${measure} des dossiers`;
+      let body = `${measure} of cases`;
 
       if (filters.length) {
         const fp = filters.map((f) => {
@@ -1267,14 +1267,14 @@ function makeApp() {
           const label = this.labelOf(f.field);
           if (!op.needsValue) return `${label} ${op.label}`;
           let val = f.value;
-          if (op.needsValue2) val = `${f.value} et ${f.value2}`;
-          return `${label} ${op.label} « ${val} »`;
+          if (op.needsValue2) val = `${f.value} and ${f.value2}`;
+          return `${label} ${op.label} “${val}”`;
         });
-        body += ' où ' + fp.join(' et ');
+        body += ' where ' + fp.join(' and ');
       }
 
       if (this.query.groupBy) {
-        body += `, regroupés par ${this.labelOf(this.query.groupBy)}`;
+        body += `, grouped by ${this.labelOf(this.query.groupBy)}`;
       }
 
       return body + '.';
@@ -1313,11 +1313,11 @@ function makeApp() {
       if (!r) return;
       const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || !!a.field);
       const effectiveAggs = aggs.length ? aggs : [{ fn: 'count', field: null }];
-      const header = ['Groupe', 'n', ...effectiveAggs.map((a) => this.aggLabel(a))];
+      const header = ['Group', 'n', ...effectiveAggs.map((a) => this.aggLabel(a))];
       const rows = r.groups.map((g) => [g.key, g.n, ...g.values.map((v) => v ?? '')]);
       const csv = [header, ...rows].map((row) => row.map(csvEscape).join(';')).join('\n');
-      downloadBlob(`cdse-requete-${Date.now()}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
-      audit.record({ action: 'export', user: this.user, summary: 'Résultat de requête (CSV)' });
+      downloadBlob(`cdse-query-${Date.now()}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
+      audit.record({ action: 'export', user: this.user, summary: 'Query result (CSV)' });
     },
 
     // ====================================================================
@@ -1326,8 +1326,8 @@ function makeApp() {
     async exportAllJSON() {
       const all = await cases.exportAll();
       downloadBlob(`cdse-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(all, null, 2), 'application/json');
-      await audit.record({ action: 'export', user: this.user, summary: `JSON complet — ${all.length} dossiers` });
-      this.notify(`${all.length} dossiers exportés.`);
+      await audit.record({ action: 'export', user: this.user, summary: `Full JSON — ${all.length} cases` });
+      this.notify(`${all.length} cases exported.`);
     },
 
     async exportAllCSV() {
@@ -1336,9 +1336,9 @@ function makeApp() {
       const header = ['id', ...cols, 'age', 'created_at', 'updated_at'];
       const rows = all.map((r) => [r.id, ...cols.map((k) => r[k]), r.age, r.created_at, r.updated_at]);
       const csv = [header, ...rows].map((row) => row.map(csvEscape).join(';')).join('\n');
-      downloadBlob(`cdse-dossiers-${new Date().toISOString().slice(0, 10)}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
-      await audit.record({ action: 'export', user: this.user, summary: `CSV complet — ${all.length} dossiers` });
-      this.notify(`${all.length} dossiers exportés.`);
+      downloadBlob(`cdse-cases-${new Date().toISOString().slice(0, 10)}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
+      await audit.record({ action: 'export', user: this.user, summary: `Full CSV — ${all.length} cases` });
+      this.notify(`${all.length} cases exported.`);
     },
 
     async onImportFile(ev) {
@@ -1351,7 +1351,7 @@ function makeApp() {
         let records;
         if (file.name.toLowerCase().endsWith('.json')) {
           records = JSON.parse(text);
-          if (!Array.isArray(records)) throw new Error('Le JSON doit être un tableau.');
+          if (!Array.isArray(records)) throw new Error('The JSON must be an array.');
         } else {
           const rows = parseCSV(text.replace(/^﻿/, ''));
           if (!rows.length) throw new Error('CSV vide.');
@@ -1389,7 +1389,7 @@ function makeApp() {
       await audit.record({
         action: 'import',
         user: this.user,
-        summary: `Import (${this.importMode}) — ${summary.added} ajoutés, ${summary.updated} mis à jour, ${summary.skipped} ignorés`,
+        summary: `Import (${this.importMode}) — ${summary.added} added, ${summary.updated} updated, ${summary.skipped} skipped`,
       });
       this.notify(`Import : +${summary.added} · ↻${summary.updated} · –${summary.skipped}`);
       this.importPreview = null;
@@ -1413,7 +1413,7 @@ function makeApp() {
       if (!iso) return '—';
       try {
         const d = new Date(iso);
-        return d.toLocaleString('fr-LU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       } catch { return iso; }
     },
 
@@ -1421,14 +1421,14 @@ function makeApp() {
     // Settings
     // ====================================================================
     async wipeAll() {
-      this.ask('Tout effacer ? Cette opération est irréversible. Exportez d\'abord un backup.', async () => {
+      this.ask('Erase everything? This cannot be undone. Export a backup first.', async () => {
         localStorage.removeItem('cdse_cases_v1');
         localStorage.removeItem('cdse_vocab_v1');
         localStorage.removeItem('cdse_saved_queries_v1');
         localStorage.removeItem('cdse_audit_v1');
         localStorage.removeItem('cdse_demo_ids_v1');
         await this.refreshAll();
-        this.notify('Données effacées.', 'err');
+        this.notify('Data erased.', 'err');
       });
     },
 
@@ -1443,27 +1443,27 @@ function makeApp() {
 
     async loadSample() {
       if (this.hasDemoData) {
-        this.notify('Des dossiers de démo sont déjà chargés.', 'err');
+        this.notify('Demo cases are already loaded.', 'err');
         return;
       }
-      this.ask('Charger 20 dossiers fictifs de démonstration ?', async () => {
+      this.ask('Load 20 fictional demo cases?', async () => {
         const seed = sampleData();
         const ids = [];
         // create one by one so we get the assigned ids back
         for (const s of seed) {
           const created = await cases.create(s);
           ids.push(created.id);
-          await audit.record({ action: 'create', user: this.user, caseId: created.id, summary: `[démo] ${s.prenom} ${s.nom}` });
+          await audit.record({ action: 'create', user: this.user, caseId: created.id, summary: `[demo] ${s.prenom} ${s.nom}` });
         }
         localStorage.setItem('cdse_demo_ids_v1', JSON.stringify(ids));
         await this.refreshAll();
-        this.notify(`${seed.length} dossiers fictifs chargés.`);
+        this.notify(`${seed.length} fictional cases loaded.`);
       });
     },
 
     async removeSample() {
       if (!this.hasDemoData) return;
-      this.ask('Retirer tous les dossiers de démonstration ? Vos dossiers réels ne sont pas touchés.', async () => {
+      this.ask('Remove all demo cases? Your real cases are not affected.', async () => {
         let ids = [];
         try { ids = JSON.parse(localStorage.getItem('cdse_demo_ids_v1') || '[]'); } catch {}
         let removed = 0;
@@ -1471,12 +1471,12 @@ function makeApp() {
           const ok = await cases.delete(id);
           if (ok) {
             removed++;
-            await audit.record({ action: 'delete', caseId: id, user: this.user, summary: `[démo retiré]` });
+            await audit.record({ action: 'delete', caseId: id, user: this.user, summary: `[demo removed]` });
           }
         }
         localStorage.removeItem('cdse_demo_ids_v1');
         await this.refreshAll();
-        this.notify(`${removed} dossier(s) de démo retiré(s).`);
+        this.notify(`${removed} demo case(s) removed.`);
       });
     },
 
@@ -1646,26 +1646,26 @@ function sampleData() {
     'Lycée Technique du Centre',
     'Athénée de Luxembourg',
   ];
-  const dirs = ['DIR Centre', 'DIR Est', 'DIR Ouest', 'DIR Sud', 'DIR Nord'];
-  const mesures = ['DS', 'ISA', 'C&G', 'Scol. Spé.', 'Autre'];
+  const dirs = ['DIR Centre', 'DIR East', 'DIR West', 'DIR South', 'DIR North'];
+  const mesures = ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'];
   const langs = ['LU', 'FR', 'DE', 'PT', 'EN'];
   const diags = [
-    ['F90.0 — TDAH, type inattention'],
-    ['F84.0 — Autisme infantile'],
-    ['F90.1 — TDAH, type combiné', 'F32.0 — Épisode dépressif léger'],
+    ['F90.0 — ADHD, predominantly inattentive'],
+    ['F84.0 — Childhood autism'],
+    ['F90.1 — ADHD, combined type', 'F32.0 — Mild depressive episode'],
     [],
-    ['F32.1 — Épisode dépressif moyen'],
-    ['F84.5 — Syndrome d\'Asperger'],
-    ['F41.1 — Anxiété généralisée'],
-    ['F90.0 — TDAH, type inattention', 'F41.1 — Anxiété généralisée'],
-    ['F81.0 — Dyslexie'],
-    ['F43.2 — Troubles de l\'adaptation'],
-    ['F90.0 — TDAH, type inattention', 'F81.0 — Dyslexie'],
-    ['HPI — Haut potentiel intellectuel'],
+    ['F32.1 — Moderate depressive episode'],
+    ['F84.5 — Asperger syndrome'],
+    ['F41.1 — Generalized anxiety'],
+    ['F90.0 — ADHD, predominantly inattentive', 'F41.1 — Generalized anxiety'],
+    ['F81.0 — Dyslexia'],
+    ['F43.2 — Adjustment disorders'],
+    ['F90.0 — ADHD, predominantly inattentive', 'F81.0 — Dyslexia'],
+    ['GIP — Gifted / high intellectual potential'],
   ];
   const profils = [
-    [], ['Profil mixte'], ['Suspicion TDAH'], [],
-    ['Profil attentionnel'], ['Refus scolaire / phobie scolaire'],
+    [], ['Mixed profile'], ['Suspected ADHD'], [],
+    ['Attentional profile'], ['School refusal / school phobia'],
   ];
   const services = [
     [], ['ONE — Office National de l\'Enfance'], [], ['SPOS — Service Psycho-Social et d\'Orientation Scolaire'],
@@ -1695,7 +1695,7 @@ function sampleData() {
       dates.debut_cg = daysAgo(200 + i * 4);
       dates.fin_cg = i % 5 === 0 ? daysAhead(20) : daysAhead(180);  // a few "ending soon"
     }
-    if (m1 === 'Scol. Spé.') {
+    if (m1 === 'Spec. School.') {
       dates.debut_scol_spe = daysAgo(365 + i * 7);
       dates.fin_scol_spe = '';
     }
@@ -1705,7 +1705,7 @@ function sampleData() {
       matricule: String(2010000000000 + i),
       dossier_mfile: `MF-${1000 + i}`,
       nom: `Test ${String.fromCharCode(64 + (i % 26) + 1)}`,
-      prenom: `Élève ${i}`,
+      prenom: `Pupil ${i}`,
       sexe,
       date_naissance: yearOf(ageTarget),
       dir: dirs[i % dirs.length],
@@ -1716,16 +1716,16 @@ function sampleData() {
       ...dates,
       iq: 75 + ((i * 7) % 55),
       langue_1: langs[i % langs.length],
-      parents: ['Ensemble', 'Séparés', 'Ensemble', 'Autre'][i % 4],
-      scas: i % 3 === 0 ? 'Oui' : 'Non',
-      tutelle: i % 5 === 0 ? 'Oui' : 'Non',
-      scol_etranger: i % 7 === 0 ? 'Oui' : 'Non',
+      parents: ['Together', 'Separated', 'Together', 'Other'][i % 4],
+      scas: i % 3 === 0 ? 'Yes' : 'No',
+      tutelle: i % 5 === 0 ? 'Yes' : 'No',
+      scol_etranger: i % 7 === 0 ? 'Yes' : 'No',
       diagnostics: diags[i % diags.length],
       verdachtsdiagnosen_profil: profils[i % profils.length],
       autres_services: services[i % services.length],
-      ds_realise_par: i % 4 === 0 ? 'Membre fictif A' : '',
-      isa_realise_par: dates.debut_isa ? 'Membre fictif B' : '',
-      cg_realise_par: dates.debut_cg ? 'Membre fictif C' : '',
+      ds_realise_par: i % 4 === 0 ? 'Fictional staff A' : '',
+      isa_realise_par: dates.debut_isa ? 'Fictional staff B' : '',
+      cg_realise_par: dates.debut_cg ? 'Fictional staff C' : '',
     });
   }
   return result;

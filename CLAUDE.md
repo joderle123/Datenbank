@@ -52,9 +52,15 @@ Minderjährigen (IQ, Diagnosen, SCAS, Tutelle). Anforderungen:
 
 ## Konventionen
 
-- **UI-Sprache**: Französisch (mit etablierten deutschen Begriffen wie
-  "Verdachtsdiagnosen", "Profil")
+- **UI-Sprache**: Englisch (auf Wunsch des Auftraggebers von Französisch
+  umgestellt). Alle sichtbaren Strings — Labels, Buttons, Meldungen, Query-
+  Builder-Satzvorschau, Demo-Daten — sind Englisch. Offizielle Luxemburger
+  Eigennamen (Schulnamen, Kompetenzzentren, Behörden wie ONE/SCAS/ALUPSE)
+  bleiben in ihrer Originalsprache. Datums-Locale `en-GB`.
 - **Code-Sprache**: Englisch (Kommentare, Variablen, Logs)
+- **Schema-Keys bleiben wie sie sind** (`nom`, `prenom`, `dossier_mfile`,
+  `ecole_lycee`, `debut_isa` …) — nur die `label`-Felder wurden übersetzt,
+  damit bestehende Daten und Importe kompatibel bleiben.
 - **Datums-Format auf der Wire**: ISO `YYYY-MM-DD`
 - **Multi-Tag-Felder** (`diagnostics`, `verdachtsdiagnosen_profil`,
   `autres_services`) werden als JSON-Array in TEXT-Spalten gespeichert und beim

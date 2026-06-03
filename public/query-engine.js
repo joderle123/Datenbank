@@ -14,8 +14,8 @@ import { FIELD_DEFS, getField, computeAge } from './fields.js';
 
 /** Fields that can be the subject of a numeric aggregation. */
 export const NUMERIC_FIELDS = [
-  { key: 'iq',  label: 'QI' },
-  { key: 'age', label: 'Âge', computed: true },
+  { key: 'iq',  label: 'IQ' },
+  { key: 'age', label: 'Age', computed: true },
 ];
 
 /** Fields a user can group results by. */
@@ -26,22 +26,22 @@ export const GROUPABLE_FIELDS = FIELD_DEFS.filter((f) =>
 /** Fields a user can filter on (anything except computed age, which is computed below). */
 export const FILTERABLE_FIELDS = [
   ...FIELD_DEFS.filter((f) => f.type !== 'computed'),
-  { key: 'age', label: 'Âge', type: 'number', category: 'demographics', computed: true },
+  { key: 'age', label: 'Age', type: 'number', category: 'demographics', computed: true },
 ];
 
 /** Aggregation functions. `field: null` means counts the rows themselves. */
 export const AGGREGATIONS = [
-  { key: 'count',  label: 'Nombre',           needsNumeric: false },
-  { key: 'mean',   label: 'Moyenne',          needsNumeric: true  },
-  { key: 'median', label: 'Médiane',          needsNumeric: true  },
-  { key: 'min',    label: 'Minimum',          needsNumeric: true  },
-  { key: 'max',    label: 'Maximum',          needsNumeric: true  },
-  { key: 'sum',    label: 'Somme',            needsNumeric: true  },
-  { key: 'stddev', label: 'Écart-type',       needsNumeric: true  },
+  { key: 'count',  label: 'Count',             needsNumeric: false },
+  { key: 'mean',   label: 'Average',           needsNumeric: true  },
+  { key: 'median', label: 'Median',            needsNumeric: true  },
+  { key: 'min',    label: 'Minimum',           needsNumeric: true  },
+  { key: 'max',    label: 'Maximum',           needsNumeric: true  },
+  { key: 'sum',    label: 'Sum',               needsNumeric: true  },
+  { key: 'stddev', label: 'Std. deviation',    needsNumeric: true  },
 ];
 
 /** Operators available per field type. Labels are intentionally written
- *  as natural French ("est" rather than "égale", "supérieur à" rather than
+ *  as natural English ("is" rather than "equals", "greater than" rather than
  *  ">") so the assembled query reads like a sentence in the preview. */
 export function operatorsFor(fieldKey) {
   const def = fieldKey === 'age'
@@ -51,48 +51,48 @@ export function operatorsFor(fieldKey) {
   switch (def.type) {
     case 'text':
       return [
-        { key: 'eq',       label: 'est',              needsValue: true  },
-        { key: 'neq',      label: "n'est pas",        needsValue: true  },
-        { key: 'contains', label: 'contient',         needsValue: true  },
-        { key: 'empty',    label: 'est vide',         needsValue: false },
-        { key: 'notempty', label: 'est renseigné',    needsValue: false },
+        { key: 'eq',       label: 'is',               needsValue: true  },
+        { key: 'neq',      label: 'is not',           needsValue: true  },
+        { key: 'contains', label: 'contains',         needsValue: true  },
+        { key: 'empty',    label: 'is empty',         needsValue: false },
+        { key: 'notempty', label: 'is filled in',     needsValue: false },
       ];
     case 'select':
       return [
-        { key: 'eq',       label: 'est',              needsValue: true  },
-        { key: 'neq',      label: "n'est pas",        needsValue: true  },
-        { key: 'empty',    label: 'est vide',         needsValue: false },
-        { key: 'notempty', label: 'est renseigné',    needsValue: false },
+        { key: 'eq',       label: 'is',               needsValue: true  },
+        { key: 'neq',      label: 'is not',           needsValue: true  },
+        { key: 'empty',    label: 'is empty',         needsValue: false },
+        { key: 'notempty', label: 'is filled in',     needsValue: false },
       ];
     case 'number':
       return [
-        { key: 'eq',       label: 'est égal à',           needsValue: true  },
-        { key: 'neq',      label: "n'est pas égal à",     needsValue: true  },
-        { key: 'gt',       label: 'est supérieur à',      needsValue: true  },
-        { key: 'gte',      label: 'est au moins',         needsValue: true  },
-        { key: 'lt',       label: 'est inférieur à',      needsValue: true  },
-        { key: 'lte',      label: 'est au maximum',       needsValue: true  },
-        { key: 'between',  label: 'est entre',            needsValue: true, needsValue2: true },
-        { key: 'empty',    label: 'est vide',             needsValue: false },
-        { key: 'notempty', label: 'est renseigné',        needsValue: false },
+        { key: 'eq',       label: 'is equal to',          needsValue: true  },
+        { key: 'neq',      label: 'is not equal to',      needsValue: true  },
+        { key: 'gt',       label: 'is greater than',      needsValue: true  },
+        { key: 'gte',      label: 'is at least',          needsValue: true  },
+        { key: 'lt',       label: 'is less than',         needsValue: true  },
+        { key: 'lte',      label: 'is at most',           needsValue: true  },
+        { key: 'between',  label: 'is between',           needsValue: true, needsValue2: true },
+        { key: 'empty',    label: 'is empty',             needsValue: false },
+        { key: 'notempty', label: 'is filled in',         needsValue: false },
       ];
     case 'date':
       return [
-        { key: 'eq',       label: 'est le',              needsValue: true  },
-        { key: 'gt',       label: 'est après le',        needsValue: true  },
-        { key: 'gte',      label: 'est à partir du',     needsValue: true  },
-        { key: 'lt',       label: 'est avant le',        needsValue: true  },
-        { key: 'lte',      label: "est jusqu'au",        needsValue: true  },
-        { key: 'between',  label: 'est entre',           needsValue: true, needsValue2: true },
-        { key: 'empty',    label: 'est vide',            needsValue: false },
-        { key: 'notempty', label: 'est renseignée',      needsValue: false },
+        { key: 'eq',       label: 'is on',               needsValue: true  },
+        { key: 'gt',       label: 'is after',            needsValue: true  },
+        { key: 'gte',      label: 'is from',             needsValue: true  },
+        { key: 'lt',       label: 'is before',           needsValue: true  },
+        { key: 'lte',      label: 'is until',            needsValue: true  },
+        { key: 'between',  label: 'is between',          needsValue: true, needsValue2: true },
+        { key: 'empty',    label: 'is empty',            needsValue: false },
+        { key: 'notempty', label: 'is filled in',        needsValue: false },
       ];
     case 'tags':
       return [
-        { key: 'has',      label: 'comporte',                  needsValue: true  },
-        { key: 'hasnot',   label: 'ne comporte pas',           needsValue: true  },
-        { key: 'empty',    label: 'aucun',                     needsValue: false },
-        { key: 'notempty', label: 'au moins un',               needsValue: false },
+        { key: 'has',      label: 'includes',                  needsValue: true  },
+        { key: 'hasnot',   label: 'does not include',          needsValue: true  },
+        { key: 'empty',    label: 'none',                      needsValue: false },
+        { key: 'notempty', label: 'at least one',              needsValue: false },
       ];
     default:
       return [];
@@ -235,8 +235,8 @@ export function runQuery(records, query) {
 }
 
 function formatGroupKey(value) {
-  if (value === null || value === undefined || value === '') return '(vide)';
-  if (Array.isArray(value)) return value.length ? value.join(', ') : '(vide)';
+  if (value === null || value === undefined || value === '') return '(empty)';
+  if (Array.isArray(value)) return value.length ? value.join(', ') : '(empty)';
   return String(value);
 }
 
@@ -244,6 +244,6 @@ function formatGroupKey(value) {
 
 export function formatNumber(n, fractionDigits = 1) {
   if (n === null || n === undefined || Number.isNaN(n)) return '—';
-  if (Number.isInteger(n)) return n.toLocaleString('fr-LU');
-  return Number(n).toLocaleString('fr-LU', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
+  if (Number.isInteger(n)) return n.toLocaleString('en-GB');
+  return Number(n).toLocaleString('en-GB', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
 }
