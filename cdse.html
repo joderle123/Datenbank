@@ -623,6 +623,11 @@
                     <label class="block text-xs uppercase tracking-widest text-muted dark:text-muted-dark mb-1">
                       <span x-text="f.label"></span>
                       <span x-show="f.required" class="text-accent">*</span>
+                      <span
+                        x-show="f.helpText"
+                        :title="f.helpText"
+                        class="ml-1 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] font-mono text-muted dark:text-muted-dark border border-line dark:border-line-dark cursor-help align-baseline"
+                      >?</span>
                     </label>
 
                     <!-- computed -->
@@ -1311,10 +1316,10 @@ const CATEGORIES = [
 const FIELD_DEFS = [
   // -- Identification -------------------------------------------------------
   { key: 'matricule',       label: 'National ID',         type: 'text', category: 'identification', required: true, unique: true, helpText: 'Luxembourg national ID (13 digits)' },
-  { key: 'dossier_mfile',   label: 'M-File No.',          type: 'text', category: 'identification' },
+  { key: 'dossier_mfile',   label: 'M-File No.',          type: 'text', category: 'identification', helpText: 'Internal M-File case number' },
   { key: 'nom',             label: 'Last name',           type: 'text', category: 'identification', required: true },
   { key: 'prenom',          label: 'First name',          type: 'text', category: 'identification', required: true },
-  { key: 'dito',            label: 'Alias',               type: 'text', category: 'identification' },
+  { key: 'dito',            label: 'Alias',               type: 'text', category: 'identification', helpText: 'Other name the pupil is known by (nickname, second first name)' },
 
   // -- Demographics ---------------------------------------------------------
   { key: 'sexe',            label: 'Sex',                 type: 'select', category: 'demographics', options: ['M', 'F', 'D'] },
@@ -1322,26 +1327,26 @@ const FIELD_DEFS = [
   { key: 'age',             label: 'Age',                 type: 'computed', category: 'demographics', helpText: 'Computed from the date of birth' },
 
   // -- School structure -----------------------------------------------------
-  { key: 'dir',             label: 'DIR',                 type: 'select', category: 'structure', options: ['DIR Centre', 'DIR East', 'DIR West', 'DIR South', 'DIR North'] },
+  { key: 'dir',             label: 'DIR',                 type: 'select', category: 'structure', options: ['DIR Centre', 'DIR East', 'DIR West', 'DIR South', 'DIR North'], helpText: 'Regional directorate — the geographic area the school belongs to' },
   { key: 'ecole_lycee',     label: 'School',              type: 'text',   category: 'structure', autocomplete: 'ecoles' },
 
   // -- CDSE Measures --------------------------------------------------------
-  { key: 'mesure_cdse_1',   label: 'CDSE Measure 1',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'] },
-  { key: 'mesure_cdse_2',   label: 'CDSE Measure 2',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'] },
-  { key: 'mesure_cdse_3',   label: 'CDSE Measure 3',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'] },
-  { key: 'date_decision_cni', label: 'CNI decision date', type: 'date', category: 'mesures_cdse' },
+  { key: 'mesure_cdse_1',   label: 'CDSE Measure 1',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'], helpText: 'Primary CDSE measure. DS = Specialized Diagnostic · ISA = Socio-emotional Intervention · C&G = Counseling & Guidance' },
+  { key: 'mesure_cdse_2',   label: 'CDSE Measure 2',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'], helpText: 'Secondary CDSE measure, if any' },
+  { key: 'mesure_cdse_3',   label: 'CDSE Measure 3',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'], helpText: 'Third CDSE measure, if any' },
+  { key: 'date_decision_cni', label: 'CNI decision date', type: 'date', category: 'mesures_cdse', helpText: 'Date of the Commission Nationale d\'Inclusion decision' },
 
   // -- DS -------------------------------------------------------------------
-  { key: 'ds_realise_par',  label: 'DS performed by',     type: 'text', category: 'ds', autocomplete: 'staff' },
+  { key: 'ds_realise_par',  label: 'DS performed by',     type: 'text', category: 'ds', autocomplete: 'staff', helpText: 'DS = Specialized Diagnostic. Staff member who carried it out' },
   { key: 'date_ds',         label: 'DS date',             type: 'date', category: 'ds' },
 
   // -- ISA ------------------------------------------------------------------
-  { key: 'isa_realise_par', label: 'ISA performed by',    type: 'text', category: 'isa', autocomplete: 'staff' },
+  { key: 'isa_realise_par', label: 'ISA performed by',    type: 'text', category: 'isa', autocomplete: 'staff', helpText: 'ISA = Socio-emotional Intervention. Staff member in charge' },
   { key: 'debut_isa',       label: 'ISA start',           type: 'date', category: 'isa' },
   { key: 'fin_isa',         label: 'ISA end',             type: 'date', category: 'isa' },
 
   // -- C&G ------------------------------------------------------------------
-  { key: 'cg_realise_par',  label: 'C&G performed by',    type: 'text', category: 'cg', autocomplete: 'staff' },
+  { key: 'cg_realise_par',  label: 'C&G performed by',    type: 'text', category: 'cg', autocomplete: 'staff', helpText: 'C&G = Counseling & Guidance. Staff member in charge' },
   { key: 'debut_cg',        label: 'C&G start',           type: 'date', category: 'cg' },
   { key: 'fin_cg',          label: 'C&G end',             type: 'date', category: 'cg' },
 
@@ -1356,20 +1361,20 @@ const FIELD_DEFS = [
   { key: 'fin_autre_mesure',   label: 'Other measure end',    type: 'date', category: 'autre_mesure' },
 
   // -- External Services ----------------------------------------------------
-  { key: 'autre_cc_implique', label: 'Other C&C involved',  type: 'text',   category: 'externe' },
+  { key: 'autre_cc_implique', label: 'Other C&C involved',  type: 'text',   category: 'externe', helpText: 'Other Centre de Compétences (specialised competence centre) involved with the case' },
   { key: 'autres_services',   label: 'Other services',      type: 'tags',   category: 'externe', helpText: 'Multiple values allowed (Enter to add)' },
   { key: 'scol_etranger',     label: 'Schooling abroad',    type: 'select', category: 'externe', options: ['Yes', 'No'] },
 
   // -- Clinical Profile -----------------------------------------------------
   { key: 'diagnostics',              label: 'Diagnoses',                type: 'tags',   category: 'klinik', helpText: 'ICD-10 / DSM-5 codes or free text' },
-  { key: 'verdachtsdiagnosen_profil', label: 'Suspected diagnoses / Profile', type: 'tags', category: 'klinik' },
-  { key: 'iq',                       label: 'IQ',                       type: 'number', category: 'klinik', min: 40, max: 160 },
+  { key: 'verdachtsdiagnosen_profil', label: 'Suspected diagnoses / Profile', type: 'tags', category: 'klinik', helpText: 'Working hypotheses or clinical profile, not yet a confirmed diagnosis' },
+  { key: 'iq',                       label: 'IQ',                       type: 'number', category: 'klinik', min: 40, max: 160, helpText: 'Total IQ score (40–160 range)' },
 
   // -- Family / Language Background ------------------------------------------
-  { key: 'langue_1', label: 'First language', type: 'select', category: 'background', options: ['LU', 'FR', 'DE', 'PT', 'EN', 'IT', 'ES', 'Other'] },
-  { key: 'parents',  label: 'Parents',  type: 'select', category: 'background', options: ['Together', 'Separated', 'Other'] },
-  { key: 'scas',     label: 'SCAS',     type: 'select', category: 'background', options: ['Yes', 'No'] },
-  { key: 'tutelle',  label: 'Guardianship',  type: 'select', category: 'background', options: ['Yes', 'No'] },
+  { key: 'langue_1', label: 'First language', type: 'select', category: 'background', options: ['LU', 'FR', 'DE', 'PT', 'EN', 'IT', 'ES', 'Other'], helpText: 'Main language spoken at home' },
+  { key: 'parents',  label: 'Parents',  type: 'select', category: 'background', options: ['Together', 'Separated', 'Other'], helpText: 'Parental living situation' },
+  { key: 'scas',     label: 'SCAS',     type: 'select', category: 'background', options: ['Yes', 'No'], helpText: 'SCAS = Service Central d\'Assistance Sociale. Is the SCAS involved in this case?' },
+  { key: 'tutelle',  label: 'Guardianship',  type: 'select', category: 'background', options: ['Yes', 'No'], helpText: 'Is the pupil under legal guardianship?' },
 ];
 
 // ----------------------------------------------------------------------------
@@ -2488,7 +2493,7 @@ function makeApp() {
     view: 'dashboard',
     theme: 'light',
     now: '',
-    buildTag: '260604T0654',
+    buildTag: '260604T0656',
 
     // -- session user (NOT auth, just for the audit log) ------------------
     user: '',

@@ -640,6 +640,11 @@
                     <label class="block text-xs uppercase tracking-widest text-muted dark:text-muted-dark mb-1">
                       <span x-text="f.label"></span>
                       <span x-show="f.required" class="text-accent">*</span>
+                      <span
+                        x-show="f.helpText"
+                        :title="f.helpText"
+                        class="ml-1 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] font-mono text-muted dark:text-muted-dark border border-line dark:border-line-dark cursor-help align-baseline"
+                      >?</span>
                     </label>
 
                     <!-- computed -->
