@@ -608,7 +608,11 @@
               <span x-show="formMode === 'create'"><span class="font-serif-i">New</span> case</span>
               <span x-show="formMode === 'edit'"><span class="font-serif-i">Edit</span> case</span>
             </h2>
-            <div class="flex gap-2">
+            <div class="flex items-center gap-3">
+              <span x-show="draftSaved && formMode === 'create'"
+                    class="text-[11px] text-muted dark:text-muted-dark italic">
+                Draft saved · auto-restored if you close the tab
+              </span>
               <button class="btn btn-ghost" @click="cancelForm()">Cancel</button>
               <button class="btn btn-primary" @click="submitForm()">
                 <span x-show="formMode === 'create'">Create</span>
@@ -616,6 +620,17 @@
               </button>
             </div>
           </div>
+
+          <!-- Offer to restore an earlier unsaved draft (new cases only) -->
+          <template x-if="draftRestorePending">
+            <div class="mb-4 border border-line dark:border-line-dark bg-black/[0.02] dark:bg-white/[0.02] rounded-lg p-3 flex items-center gap-3">
+              <div class="text-sm flex-1">
+                You have an unsaved draft from <span class="font-mono tnum" x-text="draftSavedAt()"></span>.
+              </div>
+              <button class="btn btn-primary text-xs" @click="restoreDraft()">Restore</button>
+              <button class="btn btn-ghost text-xs" @click="discardDraft()">Discard</button>
+            </div>
+          </template>
 
           <template x-if="Object.keys(formErrors).length > 0">
             <div class="mb-4 border border-accent rounded-lg p-3 text-sm text-accent">

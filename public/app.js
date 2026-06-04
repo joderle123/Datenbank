@@ -178,6 +178,8 @@ function makeApp() {
     formCategoryOpen: {},
     tagDraft: {},
     showAdvanced: false,
+    draftSaved: false,        // user-visible 'Draft saved …' indicator
+    draftRestorePending: null, // {timestamp} when a previous draft is offered
 
     // -- detail view ------------------------------------------------------
     detailCase: null,
@@ -392,6 +394,22 @@ function makeApp() {
       });
       A.watch(() => JSON.stringify(this.query), () => {
         if (this.view === 'query') this.queueRun();
+      });
+
+      // Autosave the form to localStorage on every change while the form is open.
+      // Debounced 400 ms so we are not writing on every keystroke.
+      A.watch(() => this.view === 'form' ? JSON.stringify(this.formData) : null, (next) => {
+        if (next === null) return;
+        clearTimeout(this._draftSaveTimer);
+        this._draftSaveTimer = setTimeout(() => this.saveDraft(), 400);
+      });
+
+      // Warn the user if they try to close the tab with unsaved form changes.
+      window.addEventListener('beforeunload', (e) => {
+        if (this.view === 'form' && this.hasFormChanges()) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
       });
 
       // Load data, THEN render — single source of truth for the first render
@@ -758,6 +776,11 @@ function makeApp() {
       this.showAdvanced = false;  // start with essentials only
       this.formCategoryOpen = { _essentials: true };
       for (const c of CATEGORIES) this.formCategoryOpen[c.key] = c.key === 'identification';
+      this.draftSaved = false;
+      // Offer to restore a previous draft if one exists for new cases.
+      const draft = this.readDraft();
+      this.draftRestorePending = (draft && draft.formMode === 'create') ? draft : null;
+      this._formBaseline = JSON.stringify(this.formData);
       this.view = 'form';
     },
 
@@ -781,7 +804,72 @@ function makeApp() {
       );
       this.formCategoryOpen = { _essentials: true };
       for (const c2 of CATEGORIES) this.formCategoryOpen[c2.key] = true;
+      this.draftSaved = false;
+      // Drafts apply to new cases only — clear any leftover.
+      this.draftRestorePending = null;
+      this._formBaseline = JSON.stringify(this.formData);
       this.view = 'form';
+    },
+
+    // ====================================================================
+    // Form autosave — survive accidental tab closes and navigations
+    // ====================================================================
+    _draftKey() { return 'cdse_draft_v1'; },
+    saveDraft() {
+      // Only save non-empty drafts for new cases. Drafts for edits aren't
+      // useful — the original record is already persisted.
+      if (this.formMode !== 'create') return;
+      if (!this.hasFormChanges()) {
+        localStorage.removeItem(this._draftKey());
+        this.draftSaved = false;
+        return;
+      }
+      const payload = {
+        formMode: this.formMode,
+        formData: this.formData,
+        showAdvanced: this.showAdvanced,
+        timestamp: new Date().toISOString(),
+      };
+      try {
+        localStorage.setItem(this._draftKey(), JSON.stringify(payload));
+        this.draftSaved = true;
+      } catch { /* quota or disabled */ }
+    },
+    readDraft() {
+      try {
+        const raw = localStorage.getItem(this._draftKey());
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    },
+    restoreDraft() {
+      const d = this.draftRestorePending;
+      if (!d) return;
+      this.formData = { ...blankCase(), ...d.formData };
+      this.showAdvanced = !!d.showAdvanced;
+      this.draftRestorePending = null;
+      this.draftSaved = true;
+      this._formBaseline = JSON.stringify(this.formData);
+      this.notify('Draft restored.');
+    },
+    discardDraft() {
+      localStorage.removeItem(this._draftKey());
+      this.draftRestorePending = null;
+      this.draftSaved = false;
+    },
+    clearDraft() {
+      localStorage.removeItem(this._draftKey());
+      this.draftSaved = false;
+    },
+    /** Has the user changed anything compared to the form's baseline? */
+    hasFormChanges() {
+      return this._formBaseline !== undefined && JSON.stringify(this.formData) !== this._formBaseline;
+    },
+    /** When was the draft last saved, as a relative-ish English phrase. */
+    draftSavedAt() {
+      const d = this.readDraft();
+      if (!d || !d.timestamp) return '';
+      try { return new Date(d.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+      catch { return ''; }
     },
 
     /** The 7 fields shown in the always-visible "Essentials" block. */
@@ -897,12 +985,23 @@ function makeApp() {
       }
 
       await this.refreshAll();
+      this.clearDraft();
+      this._formBaseline = JSON.stringify(this.formData);
       this.view = 'cases';
     },
 
     cancelForm() {
-      this.formErrors = {};
-      this.view = this.formMode === 'edit' ? 'cases' : 'cases';
+      const closeNow = () => {
+        this.formErrors = {};
+        this.clearDraft();
+        this._formBaseline = JSON.stringify(this.formData);
+        this.view = 'cases';
+      };
+      if (this.hasFormChanges()) {
+        this.ask('Discard your unsaved changes?', closeNow);
+      } else {
+        closeNow();
+      }
     },
 
     async deleteCase(id) {
