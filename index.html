@@ -1018,6 +1018,9 @@
                     On <span class="font-mono tnum" x-text="queryResult.n"></span> matching case(s)
                     <button class="ml-2 underline hover:text-ink dark:hover:text-ink-dark" @click="showMatchingCases()">view them</button>
                   </div>
+                  <div x-show="queryResult.fannedOut" class="text-xs text-muted dark:text-muted-dark italic mt-1">
+                    Multi-value field — a case with several tags is counted in each bucket, so the bucket totals can exceed the case count.
+                  </div>
                 </div>
               </div>
 

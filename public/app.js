@@ -291,6 +291,30 @@ function makeApp() {
         description: 'Histogram of age across all cases.',
         config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: '' },
       },
+      {
+        id: 'diagnostics_distribution',
+        label: 'Diagnoses — distribution',
+        description: 'How often does each diagnosis appear? Cases with multiple diagnoses are counted in each.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'diagnostics' },
+      },
+      {
+        id: 'avg_iq_by_diagnosis',
+        label: 'Average IQ by diagnosis',
+        description: 'Mean IQ in each diagnosis bucket.',
+        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'diagnostics' },
+      },
+      {
+        id: 'avg_age_by_diagnosis',
+        label: 'Average age by diagnosis',
+        description: 'Mean age in each diagnosis bucket.',
+        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'diagnostics' },
+      },
+      {
+        id: 'suspected_distribution',
+        label: 'Suspected profiles — distribution',
+        description: 'How often does each suspected diagnosis or clinical profile appear?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'verdachtsdiagnosen_profil' },
+      },
     ],
     savedQueriesList: [],
     saveQueryName: '',
@@ -1376,7 +1400,11 @@ function makeApp() {
     get groupableByCategory() {
       const out = [];
       for (const cat of CATEGORIES) {
-        const fields = FIELD_DEFS.filter((f) => f.category === cat.key && (f.type === 'select' || f.type === 'text'));
+        // Tags fields (diagnostics, guardianship, family measures, …) are
+        // now groupable too — the engine fans them out, one bucket per tag.
+        const fields = FIELD_DEFS.filter(
+          (f) => f.category === cat.key && (f.type === 'select' || f.type === 'text' || f.type === 'tags'),
+        );
         if (fields.length) out.push({ ...cat, fields });
       }
       return out;

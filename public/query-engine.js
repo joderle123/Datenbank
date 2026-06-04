@@ -209,10 +209,24 @@ export function runQuery(records, query) {
 
   if (query.groupBy) {
     const buckets = new Map();
+    let fannedOut = false;  // true if at least one record had a multi-tag group key
     for (const r of filtered) {
-      const k = formatGroupKey(valueOf(r, query.groupBy));
-      if (!buckets.has(k)) buckets.set(k, []);
-      buckets.get(k).push(r);
+      const v = valueOf(r, query.groupBy);
+      // Tags fields fan out: a case tagged ['F90.0','F84.0'] contributes once
+      // to the F90.0 bucket and once to the F84.0 bucket. This is what users
+      // expect from a 'group by diagnosis' chart — otherwise the chart shows
+      // composite keys like 'F90.0, F84.0' which nobody can read.
+      let keys;
+      if (Array.isArray(v)) {
+        keys = v.length ? v.map(formatGroupKey) : ['(empty)'];
+        if (v.length > 1) fannedOut = true;
+      } else {
+        keys = [formatGroupKey(v)];
+      }
+      for (const k of keys) {
+        if (!buckets.has(k)) buckets.set(k, []);
+        buckets.get(k).push(r);
+      }
     }
     const groups = [...buckets.entries()]
       .map(([key, items]) => ({
@@ -221,7 +235,7 @@ export function runQuery(records, query) {
         values: aggs.map((a) => aggregate(items, a)),
       }))
       .sort((a, b) => b.n - a.n);
-    return { n: filtered.length, groupBy: query.groupBy, groups };
+    return { n: filtered.length, groupBy: query.groupBy, groups, fannedOut };
   }
 
   const values = aggs.map((a) => aggregate(filtered, a));

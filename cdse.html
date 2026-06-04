@@ -997,6 +997,9 @@
                     On <span class="font-mono tnum" x-text="queryResult.n"></span> matching case(s)
                     <button class="ml-2 underline hover:text-ink dark:hover:text-ink-dark" @click="showMatchingCases()">view them</button>
                   </div>
+                  <div x-show="queryResult.fannedOut" class="text-xs text-muted dark:text-muted-dark italic mt-1">
+                    Multi-value field — a case with several tags is counted in each bucket, so the bucket totals can exceed the case count.
+                  </div>
                 </div>
               </div>
 
@@ -1975,10 +1978,24 @@ function runQuery(records, query) {
 
   if (query.groupBy) {
     const buckets = new Map();
+    let fannedOut = false;  // true if at least one record had a multi-tag group key
     for (const r of filtered) {
-      const k = formatGroupKey(valueOf(r, query.groupBy));
-      if (!buckets.has(k)) buckets.set(k, []);
-      buckets.get(k).push(r);
+      const v = valueOf(r, query.groupBy);
+      // Tags fields fan out: a case tagged ['F90.0','F84.0'] contributes once
+      // to the F90.0 bucket and once to the F84.0 bucket. This is what users
+      // expect from a 'group by diagnosis' chart — otherwise the chart shows
+      // composite keys like 'F90.0, F84.0' which nobody can read.
+      let keys;
+      if (Array.isArray(v)) {
+        keys = v.length ? v.map(formatGroupKey) : ['(empty)'];
+        if (v.length > 1) fannedOut = true;
+      } else {
+        keys = [formatGroupKey(v)];
+      }
+      for (const k of keys) {
+        if (!buckets.has(k)) buckets.set(k, []);
+        buckets.get(k).push(r);
+      }
     }
     const groups = [...buckets.entries()]
       .map(([key, items]) => ({
@@ -1987,7 +2004,7 @@ function runQuery(records, query) {
         values: aggs.map((a) => aggregate(items, a)),
       }))
       .sort((a, b) => b.n - a.n);
-    return { n: filtered.length, groupBy: query.groupBy, groups };
+    return { n: filtered.length, groupBy: query.groupBy, groups, fannedOut };
   }
 
   const values = aggs.map((a) => aggregate(filtered, a));
@@ -2577,7 +2594,7 @@ function makeApp() {
     view: 'dashboard',
     theme: 'light',
     now: '',
-    buildTag: '260604T1109',
+    buildTag: '260604T1111',
 
     // -- session user (NOT auth, just for the audit log) ------------------
     user: '',
@@ -2724,6 +2741,30 @@ function makeApp() {
         label: 'Age distribution',
         description: 'Histogram of age across all cases.',
         config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: '' },
+      },
+      {
+        id: 'diagnostics_distribution',
+        label: 'Diagnoses — distribution',
+        description: 'How often does each diagnosis appear? Cases with multiple diagnoses are counted in each.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'diagnostics' },
+      },
+      {
+        id: 'avg_iq_by_diagnosis',
+        label: 'Average IQ by diagnosis',
+        description: 'Mean IQ in each diagnosis bucket.',
+        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'diagnostics' },
+      },
+      {
+        id: 'avg_age_by_diagnosis',
+        label: 'Average age by diagnosis',
+        description: 'Mean age in each diagnosis bucket.',
+        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'diagnostics' },
+      },
+      {
+        id: 'suspected_distribution',
+        label: 'Suspected profiles — distribution',
+        description: 'How often does each suspected diagnosis or clinical profile appear?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'verdachtsdiagnosen_profil' },
       },
     ],
     savedQueriesList: [],
@@ -3810,7 +3851,11 @@ function makeApp() {
     get groupableByCategory() {
       const out = [];
       for (const cat of CATEGORIES) {
-        const fields = FIELD_DEFS.filter((f) => f.category === cat.key && (f.type === 'select' || f.type === 'text'));
+        // Tags fields (diagnostics, guardianship, family measures, …) are
+        // now groupable too — the engine fans them out, one bucket per tag.
+        const fields = FIELD_DEFS.filter(
+          (f) => f.category === cat.key && (f.type === 'select' || f.type === 'text' || f.type === 'tags'),
+        );
         if (fields.length) out.push({ ...cat, fields });
       }
       return out;
