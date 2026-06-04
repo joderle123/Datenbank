@@ -33,7 +33,7 @@
       font-family: "Schibsted Grotesk", system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
-    html.dark, html.dark body { background: #161513; color: #e8e4dc; }
+    html.dark, html.dark body { background: #1E1C18; color: #e8e4dc; }
     .font-serif-i { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; }
     .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
     [x-cloak] { display: none !important; }
@@ -41,6 +41,23 @@
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 999px; }
     html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+
+    /* Sidebar brand monogram — soft circular badge, ink-on-paper */
+    .brand-mark {
+      width: 2.25rem; height: 2.25rem;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 999px;
+      border: 1px solid #E5DFD2;
+      background: rgba(15,61,62,0.05);
+      color: #0F3D3E;
+      font-size: 1.45rem; line-height: 1;
+      padding-bottom: 0.15rem;  /* compensate serif descender for optical centring */
+    }
+    html.dark .brand-mark {
+      border-color: #332F2A;
+      background: rgba(232,228,220,0.05);
+      color: #E8E4DC;
+    }
 
     .nav-btn {
       display: flex; align-items: center; gap: 0.625rem;
@@ -71,7 +88,7 @@
     .btn-primary:hover { background: #143F40; }
     .btn-ghost { color: #1a1814; border-color: #E5DFD2; background: transparent; }
     .btn-ghost:hover { background: rgba(15,61,62,0.05); }
-    html.dark .btn-ghost { color: #E8E4DC; border-color: #2A2723; }
+    html.dark .btn-ghost { color: #E8E4DC; border-color: #332F2A; }
     html.dark .btn-ghost:hover { background: rgba(232,228,220,0.05); }
     .btn-danger { color: #B85C38; border: 1px solid #B85C38; background: transparent; }
     .btn-danger:hover { background: rgba(184,92,56,0.08); }
@@ -87,7 +104,7 @@
       transition: border-color 120ms ease;
     }
     .field-input:focus { outline: none; border-color: #0F3D3E; }
-    html.dark .field-input { border-color: #2A2723; }
+    html.dark .field-input { border-color: #332F2A; }
     html.dark .field-input:focus { border-color: #E8E4DC; }
     .field-error { border-color: #B85C38 !important; }
 
@@ -133,10 +150,10 @@
     .chip-toggle-err {
       border-color: #B85C38;
     }
-    html.dark .chip-toggle { border-color: #2A2723; }
+    html.dark .chip-toggle { border-color: #332F2A; }
     html.dark .chip-toggle:hover { background: rgba(232,228,220,0.06); border-color: #E8E4DC; }
-    html.dark .chip-toggle-active { background: #E8E4DC; color: #161513; border-color: #E8E4DC; }
-    html.dark .chip-toggle-active:hover { background: #FAF8F4; color: #161513; }
+    html.dark .chip-toggle-active { background: #E8E4DC; color: #1E1C18; border-color: #E8E4DC; }
+    html.dark .chip-toggle-active:hover { background: #FAF8F4; color: #1E1C18; }
 
     .table-row:hover { background: rgba(15,61,62,0.03); }
     html.dark .table-row:hover { background: rgba(232,228,220,0.03); }
@@ -212,9 +229,17 @@
   <div class="flex min-h-screen">
     <!-- Sidebar -->
     <aside class="w-60 shrink-0 border-r border-line dark:border-line-dark flex flex-col px-4 py-6 gap-6 bg-paper dark:bg-paper-dark">
-      <div class="px-2">
-        <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">CDSE Luxembourg</div>
-        <div class="mt-1 text-2xl"><span class="font-serif-i">Statistics</span></div>
+      <!-- Brand lockup: serif monogram + two-line name -->
+      <div class="px-2 flex items-start gap-3">
+        <div class="brand-mark shrink-0">
+          <span class="font-serif-i">C</span>
+        </div>
+        <div class="leading-tight pt-0.5">
+          <div class="text-2xl"><span class="font-serif-i">Statistics</span></div>
+          <div class="text-[10px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mt-1">
+            Centre pour le Développement<br/>Social et Éducatif
+          </div>
+        </div>
       </div>
 
       <nav class="flex flex-col gap-0.5">
@@ -2552,7 +2577,7 @@ function makeApp() {
     view: 'dashboard',
     theme: 'light',
     now: '',
-    buildTag: '260604T1106',
+    buildTag: '260604T1109',
 
     // -- session user (NOT auth, just for the audit log) ------------------
     user: '',
