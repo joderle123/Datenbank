@@ -985,6 +985,7 @@
               <input type="text" x-model="saveQueryName" placeholder="Name this question…" class="field-input text-sm w-64" />
               <button class="btn btn-ghost" @click="saveCurrentQuery()">Save</button>
               <button class="btn btn-ghost" @click="exportQueryCSV()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''">Export CSV</button>
+              <button class="btn btn-ghost" @click="exportQueryPDF()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''" title="Print-ready PDF with the chart and the data table">Export PDF</button>
             </div>
           </div>
 
@@ -2584,6 +2585,17 @@ function downloadBlob(filename, content, mime = 'text/plain') {
   URL.revokeObjectURL(url);
 }
 
+// HTML-escape user-supplied text before injecting into innerHTML or a
+// document.write payload (used by the PDF export window).
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ----------------------------------------------------------------------------
 // Alpine component factory
 // ----------------------------------------------------------------------------
@@ -2594,7 +2606,7 @@ function makeApp() {
     view: 'dashboard',
     theme: 'light',
     now: '',
-    buildTag: '260604T1111',
+    buildTag: '260604T1115',
 
     // -- session user (NOT auth, just for the audit log) ------------------
     user: '',
@@ -3954,6 +3966,89 @@ function makeApp() {
       const csv = [header, ...rows].map((row) => row.map(csvEscape).join(';')).join('\n');
       downloadBlob(`cdse-query-${Date.now()}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
       audit.record({ action: 'export', user: this.user, summary: 'Query result (CSV)' });
+    },
+
+    /**
+     * Export the current Query Builder result as a print-ready PDF — chart
+     * (rasterised from the live Chart.js canvas) on top, data table below,
+     * CDSE wordmark and the query sentence as the page title. Pops a new
+     * window with the print layout and triggers the browser's print dialog
+     * so the user picks 'Save as PDF' from there. No extra dependency.
+     */
+    exportQueryPDF() {
+      const r = this.queryResult;
+      if (!r) return;
+      const canvas = document.getElementById('queryChart');
+      const chartUrl = (canvas && canvas.width > 0) ? canvas.toDataURL('image/png') : null;
+      const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || !!a.field);
+      const effectiveAggs = aggs.length ? aggs : [{ fn: 'count', field: null }];
+      const headers = ['Group', 'n', ...effectiveAggs.map((a) => this.aggLabel(a))];
+      const rows = r.groups.map((g) => [g.key, g.n, ...g.values.map((v) => v == null ? '' : (typeof v === 'number' ? Number(v).toFixed(1) : v))]);
+      const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+      const sentence = this.questionPreview || 'Query result';
+      const fanout = r.fannedOut
+        ? '<p class="caption">Multi-value field — a case with several tags is counted in each bucket, so the bucket totals can exceed the case count.</p>'
+        : '';
+      const html = `<!doctype html><html><head><meta charset="utf-8">
+<title>CDSE Statistics — ${escapeHtml(sentence)}</title>
+<style>
+  @page { margin: 22mm 18mm; size: A4 portrait; }
+  body { font-family: "Schibsted Grotesk", system-ui, sans-serif; color: #1A1814; }
+  header { display:flex; align-items:flex-start; gap:14px; padding-bottom:14px; border-bottom:1px solid #E5DFD2; margin-bottom:18px; }
+  .mark { width:34px;height:34px;border:1px solid #E5DFD2;border-radius:999px;
+          display:inline-flex;align-items:center;justify-content:center;
+          background:rgba(15,61,62,0.05);color:#0F3D3E;
+          font-family:"Instrument Serif",serif;font-style:italic;font-size:22px;padding-bottom:2px;}
+  .brand-title { font-family:"Instrument Serif",serif;font-style:italic;font-size:22px;line-height:1;margin:0; }
+  .brand-sub { font-size:9px;text-transform:uppercase;letter-spacing:0.18em;color:#6B6358;margin-top:4px; }
+  h1 { font-size:18px;margin:8px 0 4px 0;font-weight:500; }
+  .meta { font-size:11px;color:#6B6358;margin-bottom:18px; }
+  .chart-wrap { text-align:center;margin:6px 0 16px 0; }
+  .chart-wrap img { max-width:100%;height:auto; }
+  table { width:100%;border-collapse:collapse;font-size:11px;margin-top:8px; }
+  th, td { text-align:left;padding:6px 8px;border-bottom:1px solid #E5DFD2; }
+  th { background:rgba(15,61,62,0.04);font-weight:500;color:#6B6358;text-transform:uppercase;font-size:9px;letter-spacing:0.1em; }
+  td.num { font-variant-numeric: tabular-nums; font-family: "JetBrains Mono",ui-monospace,monospace; text-align:right; }
+  .caption { font-size:10px;color:#6B6358;font-style:italic;margin:6px 0 0 0; }
+  footer { margin-top:24px;padding-top:10px;border-top:1px solid #E5DFD2;
+           font-size:10px;color:#6B6358;display:flex;justify-content:space-between; }
+  @media print { .no-print { display:none !important; } }
+  .no-print { text-align:right;margin:0 0 18px 0; }
+  .no-print button { font:inherit;background:#0F3D3E;color:#FAF8F4;border:0;padding:8px 14px;border-radius:6px;cursor:pointer; }
+</style></head><body>
+<div class="no-print"><button onclick="window.print()">Print / save as PDF</button></div>
+<header>
+  <div class="mark">C</div>
+  <div>
+    <div class="brand-title">Statistics</div>
+    <div class="brand-sub">Centre pour le Développement Social et Éducatif</div>
+  </div>
+</header>
+<h1>${escapeHtml(sentence)}</h1>
+<div class="meta">On ${r.n} matching case(s) · generated ${today}</div>
+${chartUrl ? `<div class="chart-wrap"><img src="${chartUrl}" alt="Chart"/></div>` : ''}
+${fanout}
+<table>
+  <thead><tr>${headers.map((h) => `<th>${escapeHtml(String(h))}</th>`).join('')}</tr></thead>
+  <tbody>
+    ${rows.map((row) => `<tr>${row.map((c, i) => `<td${i === 0 ? '' : ' class="num"'}>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('')}
+  </tbody>
+</table>
+<footer>
+  <span>CDSE Luxembourg — Statistics</span>
+  <span>${today}</span>
+</footer>
+<script>window.addEventListener('load', () => setTimeout(() => window.print(), 250));<\/script>
+</body></html>`;
+      const w = window.open('', '_blank');
+      if (!w) {
+        this.notify('Pop-up blocked. Allow pop-ups for this page to export PDF.', 'err');
+        return;
+      }
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      audit.record({ action: 'export', user: this.user, summary: `Query result (PDF) — ${sentence}` });
     },
 
     // ====================================================================

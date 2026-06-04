@@ -1006,6 +1006,7 @@
               <input type="text" x-model="saveQueryName" placeholder="Name this question…" class="field-input text-sm w-64" />
               <button class="btn btn-ghost" @click="saveCurrentQuery()">Save</button>
               <button class="btn btn-ghost" @click="exportQueryCSV()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''">Export CSV</button>
+              <button class="btn btn-ghost" @click="exportQueryPDF()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''" title="Print-ready PDF with the chart and the data table">Export PDF</button>
             </div>
           </div>
 
