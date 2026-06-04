@@ -195,6 +195,8 @@ function makeApp() {
     // -- file-based sync (see exportSyncFile / importSyncFile) ------------
     syncMeta: { revision: 0, lastSyncedRevision: 0, lastSyncedAt: null, lastSyncedBy: null },
     conflictModal: null,
+    // -- Excel backups (timestamp of last backup, ISO) --------------------
+    lastBackupAt: (typeof localStorage !== 'undefined' && localStorage.getItem('cdse_last_backup_v1')) || null,
 
     // -- detail view ------------------------------------------------------
     detailCase: null,
@@ -513,10 +515,21 @@ function makeApp() {
       // the shared network drive. The filename is constant so File Explorer's
       // overwrite-prompt offers the right default.
       downloadBlob('cdse.json', JSON.stringify(payload, null, 2), 'application/json');
+
+      // Auto-Excel-backup alongside the sync export. Two files land in the
+      // download folder: the constant cdse.json (replaces previous) AND a
+      // timestamped cdse-backup-*.csv that accumulates. Disaster-recovery
+      // story: every publish point produces an audit-grade snapshot.
+      const backupCsv = this._buildBackupCSV(all);
+      const backupName = this._backupFilename();
+      downloadBlob(backupName, backupCsv, 'text/csv;charset=utf-8');
+      try { localStorage.setItem('cdse_last_backup_v1', new Date().toISOString()); } catch { /* quota */ }
+      this.lastBackupAt = new Date().toISOString();
+
       await cases.markExported(this.user);
       this.syncMeta = await cases.getSyncMeta();
-      await audit.record({ action: 'export', user: this.user, summary: `Sync export — revision ${payload.revision}, ${all.length} cases` });
-      this.notify(`Sync file exported — revision ${payload.revision} (${all.length} cases).`);
+      await audit.record({ action: 'export', user: this.user, summary: `Sync export — revision ${payload.revision}, ${all.length} cases (+Excel backup)` });
+      this.notify(`Sync file exported (revision ${payload.revision}) + Excel backup ${backupName}.`);
     },
 
     /** Triggered from a <input type="file"> change. */
@@ -1746,6 +1759,78 @@ ${fanout}
       downloadBlob(`cdse-cases-${new Date().toISOString().slice(0, 10)}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
       await audit.record({ action: 'export', user: this.user, summary: `Full CSV — ${all.length} cases` });
       this.notify(`${all.length} cases exported.`);
+    },
+
+    // ====================================================================
+    // Excel-compatible backup
+    // ====================================================================
+    // The format is a UTF-8 BOM + semicolon-delimited CSV — opens in Excel
+    // (continental locale) on double-click without an Import Wizard. Headers
+    // use the human FIELD_DEFS labels (not bare keys), and multi-tag fields
+    // are joined with '; ' so they stay readable in a cell.
+    //
+    // Filenames carry a YYYY-MM-DD-HHMM timestamp so successive backups
+    // accumulate side by side instead of overwriting each other. Each sync
+    // export auto-triggers a backup; a standalone button in Settings does
+    // the same on demand. lastBackupAt is tracked in localStorage so we can
+    // remind staff if they have not backed up recently.
+
+    _buildBackupCSV(cases) {
+      const editable = getEditableFields();
+      const headerKeys   = ['id', ...editable.map((f) => f.key), 'age', 'created_at', 'updated_at'];
+      const headerLabels = ['ID', ...editable.map((f) => f.label || f.key), 'Age', 'Created at', 'Updated at'];
+      const rows = cases.map((r) => headerKeys.map((k) => {
+        const v = r[k];
+        if (Array.isArray(v)) return v.join('; ');  // tags → "F90.0; F84.0"
+        if (v === null || v === undefined) return '';
+        return v;
+      }));
+      const csv = [headerLabels, ...rows].map((row) => row.map(csvEscape).join(';')).join('\r\n');
+      return '﻿' + csv;  // UTF-8 BOM, Excel-friendly
+    },
+
+    _backupFilename() {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      return `cdse-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+    },
+
+    async downloadExcelBackup() {
+      const all = await cases.exportAll();
+      const csv = this._buildBackupCSV(all);
+      const filename = this._backupFilename();
+      downloadBlob(filename, csv, 'text/csv;charset=utf-8');
+      try { localStorage.setItem('cdse_last_backup_v1', new Date().toISOString()); } catch { /* quota */ }
+      this.lastBackupAt = new Date().toISOString();
+      await audit.record({ action: 'export', user: this.user, summary: `Excel backup — ${filename}, ${all.length} cases` });
+      this.notify(`Backup saved: ${filename} (${all.length} cases).`);
+    },
+
+    /** Human-readable 'X days ago' / 'today' for the banner + Settings panel. */
+    lastBackupDisplay() {
+      const t = this.lastBackupAt;
+      if (!t) return 'never';
+      try {
+        const ms = Date.now() - new Date(t).getTime();
+        const days = Math.floor(ms / 86400000);
+        if (days <= 0) return 'today';
+        if (days === 1) return 'yesterday';
+        if (days < 30) return `${days} days ago`;
+        return new Date(t).toLocaleDateString('en-GB');
+      } catch { return t; }
+    },
+
+    /** How many days since the last backup (∞ when never). */
+    get backupAgeDays() {
+      if (!this.lastBackupAt) return Infinity;
+      try { return Math.floor((Date.now() - new Date(this.lastBackupAt).getTime()) / 86400000); }
+      catch { return Infinity; }
+    },
+
+    get backupReminderVisible() {
+      // Show the banner when there is data to back up AND no fresh backup.
+      // 7 days is the threshold for the first nudge.
+      return (this.allCases?.length || 0) > 0 && this.backupAgeDays >= 7;
     },
 
     async onImportFile(ev) {

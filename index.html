@@ -313,6 +313,21 @@
         </span>
       </button>
 
+      <!-- Backup overdue nudge — same slot, only shown when no fresh backup -->
+      <button
+        x-show="backupReminderVisible && !hasUnsyncedChanges"
+        @click="downloadExcelBackup()"
+        class="px-2.5 py-2 -mt-2 rounded-lg border border-line dark:border-line-dark text-left flex items-start gap-2 hover:bg-paper dark:hover:bg-paper-dark"
+        style="display:none"
+        title="No Excel backup recently — click to download one now"
+      >
+        <span class="text-muted dark:text-muted-dark text-xs">●</span>
+        <span class="text-xs leading-snug">
+          Backup overdue
+          <span class="block text-[10px] text-muted dark:text-muted-dark mt-0.5">Last: <span x-text="lastBackupDisplay()"></span></span>
+        </span>
+      </button>
+
       <nav class="flex flex-col gap-0.5">
         <template x-for="item in nav" :key="item.id">
           <button class="nav-btn text-sm" :class="{ active: view === item.id || (item.id === 'cases' && (view === 'form' || view === 'detail')) }" @click="view = item.id">
@@ -1398,6 +1413,30 @@
                   <li>Always import first when you sit down; export when you're done editing.</li>
                 </ol>
               </details>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Excel backup</div>
+              <p class="text-sm text-muted dark:text-muted-dark mb-3 leading-relaxed">
+                A timestamped <code class="font-mono text-xs">cdse-backup-YYYY-MM-DD-HHMM.csv</code>
+                snapshot that opens directly in Excel on double-click. Generated automatically every
+                time you Export the sync file (above), or on demand here. Keep these accumulating in
+                a <code class="font-mono text-xs">backups/</code> sub-folder on the network drive —
+                they are your disaster-recovery copies.
+              </p>
+              <div class="border border-line dark:border-line-dark rounded-lg p-4 mb-3">
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                  <div class="text-sm">
+                    <div>Last Excel backup: <span class="font-mono" x-text="lastBackupDisplay()"></span></div>
+                    <div class="text-xs text-muted dark:text-muted-dark mt-1" x-show="backupAgeDays >= 7 && allCases.length > 0">
+                      Overdue — please run a backup.
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" @click="downloadExcelBackup()" :disabled="!allCases.length" :class="!allCases.length ? 'opacity-50 cursor-not-allowed' : ''">
+                    Download Excel backup now
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div>
