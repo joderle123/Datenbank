@@ -275,9 +275,9 @@ function makeApp() {
       },
       {
         id: 'tutelle',
-        label: 'Cases under guardianship',
-        description: 'How many and by directorate?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'eq', value: 'Yes' }], groupBy: 'dir' },
+        label: 'Cases under foyer guardianship',
+        description: 'How many pupils have a foyer as one of their guardianship holders?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'contains', value: 'Foyer' }], groupBy: 'dir' },
       },
       {
         id: 'iq_distribution',
@@ -1803,7 +1803,13 @@ function sampleData() {
     'Lycée Technique du Centre',
     'Athénée de Luxembourg',
   ];
-  const dirs = ['DIR Centre', 'DIR East', 'DIR West', 'DIR South', 'DIR North'];
+  const dirs = [
+    'DIR Capellen', 'DIR Clervaux/Wiltz', 'DIR Diekirch/Vianden', 'DIR Echternach',
+    'DIR Esch-sur-Alzette', 'DIR Grevenmacher',
+    'DIR Luxembourg-Est', 'DIR Luxembourg-Ouest', 'DIR Luxembourg-Ville',
+    'DIR Mersch', 'DIR Pétange', 'DIR Redange/Rambrouch',
+    'DIR Remich', 'DIR Strassen', 'DIR Wiltz',
+  ];
   const mesures = ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'];
   const langs = ['LU', 'FR', 'DE', 'PT', 'EN'];
   const diags = [
@@ -1875,7 +1881,12 @@ function sampleData() {
       langue_1: langs[i % langs.length],
       parents: ['Together', 'Separated', 'Together', 'Other'][i % 4],
       scas: i % 3 === 0 ? 'Yes' : 'No',
-      tutelle: i % 5 === 0 ? 'Yes' : 'No',
+      // New tags-style guardianship: most cases keep both parents; every
+      // 5th case has a foyer placement layered on top.
+      tutelle: i % 5 === 0 ? ['Mother', 'Foyer'] : (i % 4 === 0 ? ['Father'] : ['Both parents']),
+      mesures_famille: i % 6 === 0 ? ['Assistance familiale (ONE)', 'Suivi SCAS']
+                     : (i % 4 === 0 ? ['Aide éducative en milieu ouvert (AEMO)'] : []),
+      school_type: i % 8 === 0 ? 'Privé' : 'Public',
       scol_etranger: i % 7 === 0 ? 'Yes' : 'No',
       diagnostics: diags[i % diags.length],
       verdachtsdiagnosen_profil: profils[i % profils.length],

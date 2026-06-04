@@ -40,7 +40,6 @@ export const FIELD_DEFS = [
   { key: 'dossier_mfile',   label: 'M-File No.',          type: 'text', category: 'identification', helpText: 'Internal M-File case number' },
   { key: 'nom',             label: 'Last name',           type: 'text', category: 'identification', required: true },
   { key: 'prenom',          label: 'First name',          type: 'text', category: 'identification', required: true },
-  { key: 'dito',            label: 'Alias',               type: 'text', category: 'identification', helpText: 'Other name the pupil is known by (nickname, second first name)' },
 
   // -- Demographics ---------------------------------------------------------
   { key: 'sexe',            label: 'Sex',                 type: 'select', category: 'demographics', options: ['M', 'F', 'D'] },
@@ -48,8 +47,20 @@ export const FIELD_DEFS = [
   { key: 'age',             label: 'Age',                 type: 'computed', category: 'demographics', helpText: 'Computed from the date of birth' },
 
   // -- School structure -----------------------------------------------------
-  { key: 'dir',             label: 'DIR',                 type: 'select', category: 'structure', options: ['DIR Centre', 'DIR East', 'DIR West', 'DIR South', 'DIR North'], helpText: 'Regional directorate — the geographic area the school belongs to' },
+  { key: 'dir',             label: 'DIR',                 type: 'select', category: 'structure',
+    options: [
+      'DIR Capellen', 'DIR Clervaux/Wiltz', 'DIR Diekirch/Vianden', 'DIR Echternach',
+      'DIR Esch-sur-Alzette', 'DIR Grevenmacher',
+      'DIR Luxembourg-Est', 'DIR Luxembourg-Ouest', 'DIR Luxembourg-Ville',
+      'DIR Mersch', 'DIR Pétange', 'DIR Redange/Rambrouch',
+      'DIR Remich', 'DIR Strassen', 'DIR Wiltz',
+    ],
+    helpText: 'Direction régionale de l\'enseignement fondamental (15 regional directorates)' },
   { key: 'ecole_lycee',     label: 'School',              type: 'text',   category: 'structure', autocomplete: 'ecoles' },
+  { key: 'school_type',     label: 'School sector',       type: 'select', category: 'structure', options: ['Public', 'Privé'], helpText: 'Public versus private (école privée)' },
+  { key: 'spec_school',     label: 'Specialized school',  type: 'select', category: 'structure', options: ['Annexe Junglinster', 'CST (Centre socio-thérapeutique)', 'Classe de participation'], helpText: 'Only fill if the pupil attends a specialized setting' },
+  { key: 'previous_school', label: 'Previous school',     type: 'text',   category: 'structure', autocomplete: 'ecoles', helpText: 'If the pupil changed schools — name of the previous one' },
+  { key: 'date_school_change', label: 'School change date', type: 'date', category: 'structure', helpText: 'Date of the move to the current school' },
 
   // -- CDSE Measures --------------------------------------------------------
   { key: 'mesure_cdse_1',   label: 'CDSE Measure 1',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'], helpText: 'Primary CDSE measure. DS = Specialized Diagnostic · ISA = Socio-emotional Intervention · C&G = Counseling & Guidance' },
@@ -95,7 +106,8 @@ export const FIELD_DEFS = [
   { key: 'langue_1', label: 'First language', type: 'select', category: 'background', options: ['LU', 'FR', 'DE', 'PT', 'EN', 'IT', 'ES', 'Other'], helpText: 'Main language spoken at home' },
   { key: 'parents',  label: 'Parents',  type: 'select', category: 'background', options: ['Together', 'Separated', 'Other'], helpText: 'Parental living situation' },
   { key: 'scas',     label: 'SCAS',     type: 'select', category: 'background', options: ['Yes', 'No'], helpText: 'SCAS = Service Central d\'Assistance Sociale. Is the SCAS involved in this case?' },
-  { key: 'tutelle',  label: 'Guardianship',  type: 'select', category: 'background', options: ['Yes', 'No'], helpText: 'Is the pupil under legal guardianship?' },
+  { key: 'tutelle',  label: 'Guardianship by',  type: 'tags',   category: 'background', helpText: 'Who currently holds guardianship (mother, father, foyer …). Multiple values allowed.' },
+  { key: 'mesures_famille', label: 'Family measures', type: 'tags', category: 'background', helpText: 'Family-side support measures currently in place (Assistance familiale, Aide éducative, ONE …)' },
 ];
 
 // ----------------------------------------------------------------------------

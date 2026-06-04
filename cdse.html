@@ -1334,7 +1334,6 @@ const FIELD_DEFS = [
   { key: 'dossier_mfile',   label: 'M-File No.',          type: 'text', category: 'identification', helpText: 'Internal M-File case number' },
   { key: 'nom',             label: 'Last name',           type: 'text', category: 'identification', required: true },
   { key: 'prenom',          label: 'First name',          type: 'text', category: 'identification', required: true },
-  { key: 'dito',            label: 'Alias',               type: 'text', category: 'identification', helpText: 'Other name the pupil is known by (nickname, second first name)' },
 
   // -- Demographics ---------------------------------------------------------
   { key: 'sexe',            label: 'Sex',                 type: 'select', category: 'demographics', options: ['M', 'F', 'D'] },
@@ -1342,8 +1341,20 @@ const FIELD_DEFS = [
   { key: 'age',             label: 'Age',                 type: 'computed', category: 'demographics', helpText: 'Computed from the date of birth' },
 
   // -- School structure -----------------------------------------------------
-  { key: 'dir',             label: 'DIR',                 type: 'select', category: 'structure', options: ['DIR Centre', 'DIR East', 'DIR West', 'DIR South', 'DIR North'], helpText: 'Regional directorate — the geographic area the school belongs to' },
+  { key: 'dir',             label: 'DIR',                 type: 'select', category: 'structure',
+    options: [
+      'DIR Capellen', 'DIR Clervaux/Wiltz', 'DIR Diekirch/Vianden', 'DIR Echternach',
+      'DIR Esch-sur-Alzette', 'DIR Grevenmacher',
+      'DIR Luxembourg-Est', 'DIR Luxembourg-Ouest', 'DIR Luxembourg-Ville',
+      'DIR Mersch', 'DIR Pétange', 'DIR Redange/Rambrouch',
+      'DIR Remich', 'DIR Strassen', 'DIR Wiltz',
+    ],
+    helpText: 'Direction régionale de l\'enseignement fondamental (15 regional directorates)' },
   { key: 'ecole_lycee',     label: 'School',              type: 'text',   category: 'structure', autocomplete: 'ecoles' },
+  { key: 'school_type',     label: 'School sector',       type: 'select', category: 'structure', options: ['Public', 'Privé'], helpText: 'Public versus private (école privée)' },
+  { key: 'spec_school',     label: 'Specialized school',  type: 'select', category: 'structure', options: ['Annexe Junglinster', 'CST (Centre socio-thérapeutique)', 'Classe de participation'], helpText: 'Only fill if the pupil attends a specialized setting' },
+  { key: 'previous_school', label: 'Previous school',     type: 'text',   category: 'structure', autocomplete: 'ecoles', helpText: 'If the pupil changed schools — name of the previous one' },
+  { key: 'date_school_change', label: 'School change date', type: 'date', category: 'structure', helpText: 'Date of the move to the current school' },
 
   // -- CDSE Measures --------------------------------------------------------
   { key: 'mesure_cdse_1',   label: 'CDSE Measure 1',      type: 'select', category: 'mesures_cdse', options: ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'], helpText: 'Primary CDSE measure. DS = Specialized Diagnostic · ISA = Socio-emotional Intervention · C&G = Counseling & Guidance' },
@@ -1389,7 +1400,8 @@ const FIELD_DEFS = [
   { key: 'langue_1', label: 'First language', type: 'select', category: 'background', options: ['LU', 'FR', 'DE', 'PT', 'EN', 'IT', 'ES', 'Other'], helpText: 'Main language spoken at home' },
   { key: 'parents',  label: 'Parents',  type: 'select', category: 'background', options: ['Together', 'Separated', 'Other'], helpText: 'Parental living situation' },
   { key: 'scas',     label: 'SCAS',     type: 'select', category: 'background', options: ['Yes', 'No'], helpText: 'SCAS = Service Central d\'Assistance Sociale. Is the SCAS involved in this case?' },
-  { key: 'tutelle',  label: 'Guardianship',  type: 'select', category: 'background', options: ['Yes', 'No'], helpText: 'Is the pupil under legal guardianship?' },
+  { key: 'tutelle',  label: 'Guardianship by',  type: 'tags',   category: 'background', helpText: 'Who currently holds guardianship (mother, father, foyer …). Multiple values allowed.' },
+  { key: 'mesures_famille', label: 'Family measures', type: 'tags', category: 'background', helpText: 'Family-side support measures currently in place (Assistance familiale, Aide éducative, ONE …)' },
 ];
 
 // ----------------------------------------------------------------------------
@@ -1681,13 +1693,45 @@ const VERDACHTSDIAGNOSEN_COMMUNS = [
   'Family difficulties',
 ];
 
+// Common holders of legal guardianship in the CDSE population.
+// Stored as plain strings so multiple holders can be picked at once
+// (e.g. "Mother" + "Foyer" for shared custody with a residential placement).
+const TUTELLE_COMMUNS = [
+  'Mother',
+  'Father',
+  'Both parents',
+  'Foyer',
+  'Foster family',
+  'Legal guardian',
+  'ONE — Office National de l\'Enfance',
+  'Other',
+];
+
+// Family-side support measures commonly attached to a CDSE case.
+// French institutional names kept as-is (official terminology).
+const MESURES_FAMILLE_COMMUNS = [
+  'Assistance familiale (ONE)',
+  'Aide éducative en milieu ouvert (AEMO)',
+  'Foyer / placement résidentiel',
+  'Famille d\'accueil',
+  'Suivi SCAS',
+  'Suivi ONE',
+  'ALUPSE',
+  'Thérapie familiale',
+  'Médiation familiale',
+  'Other',
+];
+
 // Mapping from field key → preset list. Consumed by the form UI.
 const FIELD_PRESETS = {
   ecole_lycee:               LYCEES_LUXEMBOURG,
+  previous_school:           LYCEES_LUXEMBOURG,
   scolarisation_specialisee: INSTITUTIONS_SPECIALISEES,
   autres_services:           AUTRES_SERVICES_COMMUNS,
   diagnostics:               DIAGNOSTICS_COMMUNS,
   verdachtsdiagnosen_profil: VERDACHTSDIAGNOSEN_COMMUNS,
+  tutelle:                   TUTELLE_COMMUNS,
+  mesures_famille:           MESURES_FAMILLE_COMMUNS,
 };
 
 function presetsForField(fieldKey) {
@@ -2508,7 +2552,7 @@ function makeApp() {
     view: 'dashboard',
     theme: 'light',
     now: '',
-    buildTag: '260604T0659',
+    buildTag: '260604T1106',
 
     // -- session user (NOT auth, just for the audit log) ------------------
     user: '',
@@ -2640,9 +2684,9 @@ function makeApp() {
       },
       {
         id: 'tutelle',
-        label: 'Cases under guardianship',
-        description: 'How many and by directorate?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'eq', value: 'Yes' }], groupBy: 'dir' },
+        label: 'Cases under foyer guardianship',
+        description: 'How many pupils have a foyer as one of their guardianship holders?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'contains', value: 'Foyer' }], groupBy: 'dir' },
       },
       {
         id: 'iq_distribution',
@@ -4168,7 +4212,13 @@ function sampleData() {
     'Lycée Technique du Centre',
     'Athénée de Luxembourg',
   ];
-  const dirs = ['DIR Centre', 'DIR East', 'DIR West', 'DIR South', 'DIR North'];
+  const dirs = [
+    'DIR Capellen', 'DIR Clervaux/Wiltz', 'DIR Diekirch/Vianden', 'DIR Echternach',
+    'DIR Esch-sur-Alzette', 'DIR Grevenmacher',
+    'DIR Luxembourg-Est', 'DIR Luxembourg-Ouest', 'DIR Luxembourg-Ville',
+    'DIR Mersch', 'DIR Pétange', 'DIR Redange/Rambrouch',
+    'DIR Remich', 'DIR Strassen', 'DIR Wiltz',
+  ];
   const mesures = ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'];
   const langs = ['LU', 'FR', 'DE', 'PT', 'EN'];
   const diags = [
@@ -4240,7 +4290,12 @@ function sampleData() {
       langue_1: langs[i % langs.length],
       parents: ['Together', 'Separated', 'Together', 'Other'][i % 4],
       scas: i % 3 === 0 ? 'Yes' : 'No',
-      tutelle: i % 5 === 0 ? 'Yes' : 'No',
+      // New tags-style guardianship: most cases keep both parents; every
+      // 5th case has a foyer placement layered on top.
+      tutelle: i % 5 === 0 ? ['Mother', 'Foyer'] : (i % 4 === 0 ? ['Father'] : ['Both parents']),
+      mesures_famille: i % 6 === 0 ? ['Assistance familiale (ONE)', 'Suivi SCAS']
+                     : (i % 4 === 0 ? ['Aide éducative en milieu ouvert (AEMO)'] : []),
+      school_type: i % 8 === 0 ? 'Privé' : 'Public',
       scol_etranger: i % 7 === 0 ? 'Yes' : 'No',
       diagnostics: diags[i % diags.length],
       verdachtsdiagnosen_profil: profils[i % profils.length],

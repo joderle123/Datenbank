@@ -163,13 +163,45 @@ export const VERDACHTSDIAGNOSEN_COMMUNS = [
   'Family difficulties',
 ];
 
+// Common holders of legal guardianship in the CDSE population.
+// Stored as plain strings so multiple holders can be picked at once
+// (e.g. "Mother" + "Foyer" for shared custody with a residential placement).
+export const TUTELLE_COMMUNS = [
+  'Mother',
+  'Father',
+  'Both parents',
+  'Foyer',
+  'Foster family',
+  'Legal guardian',
+  'ONE — Office National de l\'Enfance',
+  'Other',
+];
+
+// Family-side support measures commonly attached to a CDSE case.
+// French institutional names kept as-is (official terminology).
+export const MESURES_FAMILLE_COMMUNS = [
+  'Assistance familiale (ONE)',
+  'Aide éducative en milieu ouvert (AEMO)',
+  'Foyer / placement résidentiel',
+  'Famille d\'accueil',
+  'Suivi SCAS',
+  'Suivi ONE',
+  'ALUPSE',
+  'Thérapie familiale',
+  'Médiation familiale',
+  'Other',
+];
+
 // Mapping from field key → preset list. Consumed by the form UI.
 export const FIELD_PRESETS = {
   ecole_lycee:               LYCEES_LUXEMBOURG,
+  previous_school:           LYCEES_LUXEMBOURG,
   scolarisation_specialisee: INSTITUTIONS_SPECIALISEES,
   autres_services:           AUTRES_SERVICES_COMMUNS,
   diagnostics:               DIAGNOSTICS_COMMUNS,
   verdachtsdiagnosen_profil: VERDACHTSDIAGNOSEN_COMMUNS,
+  tutelle:                   TUTELLE_COMMUNS,
+  mesures_famille:           MESURES_FAMILLE_COMMUNS,
 };
 
 export function presetsForField(fieldKey) {

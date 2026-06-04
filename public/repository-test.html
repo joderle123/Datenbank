@@ -166,8 +166,8 @@
       assertOk(validateField('matricule', '') !== null));
     test('matricule filled (valid)', () =>
       assertEq(validateField('matricule', '2010052012345'), null));
-    test('dito optional (empty OK)', () =>
-      assertEq(validateField('dito', ''), null));
+    test('school_type optional (empty OK)', () =>
+      assertEq(validateField('school_type', ''), null));
     test('iq 100 OK', () => assertEq(validateField('iq', 100), null));
     test('iq 200 rejected', () => assertOk(validateField('iq', 200) !== null));
     test('iq 30 rejected', () => assertOk(validateField('iq', 30) !== null));
