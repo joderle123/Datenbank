@@ -957,7 +957,7 @@
                     </select>
                     <template x-if="a.fn !== 'count'">
                       <select x-model="a.field" class="bg-transparent border-0 text-sm py-1.5 pl-1 pr-1 outline-none border-l border-line dark:border-line-dark">
-                        <option value="">— variable —</option>
+                        <option value="">— pick a numeric variable —</option>
                         <template x-for="nf in NUMERIC_FIELDS" :key="nf.key">
                           <option :value="nf.key" x-text="nf.label"></option>
                         </template>
@@ -968,6 +968,10 @@
                 </template>
                 <button class="text-xs underline text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark" @click="addAggregation()">+ add a measure</button>
               </div>
+              <p class="text-xs text-muted dark:text-muted-dark mt-2 italic leading-snug">
+                Mean / median / sum need a numeric variable (IQ, Age, or counts like "number of diagnoses per case").
+                For categorical variables (Diagnoses, Schools, Languages …) use <span class="font-medium">Count of cases</span> and then pick the variable in <span class="font-medium">Group By</span> below.
+              </p>
             </div>
 
             <!-- Row 2: filters -->
@@ -1319,13 +1323,37 @@
             </div>
 
             <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">How saving works</div>
+              <div class="text-sm text-muted dark:text-muted-dark mb-4 space-y-2 leading-relaxed">
+                <p>
+                  <span class="text-ink dark:text-ink-dark">Local saves are automatic.</span>
+                  Every change you make to a case is written immediately to this browser
+                  (under <code class="font-mono text-xs">localStorage</code>). Closing the tab,
+                  rebooting your laptop — your work stays. There is no "Save" button to forget.
+                </p>
+                <p>
+                  <span class="text-ink dark:text-ink-dark">Sharing with colleagues is manual.</span>
+                  To stay on the same state as the rest of the team, you exchange a single
+                  <code class="font-mono text-xs">cdse.json</code> file on the CDSE network drive.
+                  Workflow: <span class="italic">Import</span> first when you sit down (pulls in
+                  everyone else's edits), make your changes, then <span class="italic">Export</span>
+                  to publish your version back to the same file.
+                </p>
+                <p>
+                  <span class="text-ink dark:text-ink-dark">What the JSON file contains.</span>
+                  Every case, all 38 fields, plus a revision number and the name of who saved last.
+                  No medical opinion, no machine learning, no cloud — just a structured snapshot
+                  of the database that any future tool (the planned Node + SQLite backend, an Excel
+                  export, a backup) can read. Each export overwrites the previous file.
+                </p>
+                <p>
+                  <span class="text-ink dark:text-ink-dark">If two people edit at the same time</span>,
+                  the app detects it on the next Import and pops a <span class="italic">Sync conflict</span>
+                  modal. You then choose: keep your version (and overwrite the file next), or discard
+                  yours and apply the remote one. No silent data loss.
+                </p>
+              </div>
               <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Shared sync</div>
-              <p class="text-sm text-muted dark:text-muted-dark mb-3">
-                A single <code class="font-mono text-xs">cdse.json</code> file on the CDSE
-                network drive holds the team's shared state. Workflow: <span class="italic">Import</span>
-                first to pull in your colleagues' changes, edit cases, then <span class="italic">Export</span>
-                to publish your version back to the same file.
-              </p>
 
               <div class="border border-line dark:border-line-dark rounded-lg p-4 mb-3">
                 <div class="flex items-center justify-between gap-4 flex-wrap">

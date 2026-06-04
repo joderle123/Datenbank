@@ -12,11 +12,30 @@ import { FIELD_DEFS, getField, computeAge } from './fields.js';
 
 // ----- field meta -----------------------------------------------------------
 
-/** Fields that can be the subject of a numeric aggregation. */
+/** Fields that can be the subject of a numeric aggregation.
+ *  Beside the two schema-level numbers (IQ, Age) we expose the LENGTHS of the
+ *  multi-tag fields as derived numeric variables. That lets users ask things
+ *  like 'mean number of diagnoses per case' or 'max number of family measures
+ *  per case in DIR Mersch'. The valueOf() function knows how to compute these
+ *  from the array fields at query time. */
 export const NUMERIC_FIELDS = [
-  { key: 'iq',  label: 'IQ' },
-  { key: 'age', label: 'Age', computed: true },
+  { key: 'iq',                 label: 'IQ' },
+  { key: 'age',                label: 'Age', computed: true },
+  { key: 'n_diagnostics',      label: 'Number of diagnoses (per case)',         computed: true },
+  { key: 'n_verdachts',        label: 'Number of suspected diagnoses',           computed: true },
+  { key: 'n_mesures_famille',  label: 'Number of family measures',               computed: true },
+  { key: 'n_autres_services',  label: 'Number of other services',                computed: true },
+  { key: 'n_tutelle',          label: 'Number of guardianship holders',          computed: true },
 ];
+
+/** Source keys for the derived per-case array-length numerics. */
+const ARRAY_LEN_NUMERICS = {
+  n_diagnostics:     'diagnostics',
+  n_verdachts:       'verdachtsdiagnosen_profil',
+  n_mesures_famille: 'mesures_famille',
+  n_autres_services: 'autres_services',
+  n_tutelle:         'tutelle',
+};
 
 /** Fields a user can group results by. */
 export const GROUPABLE_FIELDS = FIELD_DEFS.filter((f) =>
@@ -103,6 +122,11 @@ export function operatorsFor(fieldKey) {
 
 function valueOf(record, fieldKey) {
   if (fieldKey === 'age') return computeAge(record.date_naissance);
+  // Derived per-case counters: length of a multi-tag array (or 0 when empty).
+  if (Object.prototype.hasOwnProperty.call(ARRAY_LEN_NUMERICS, fieldKey)) {
+    const src = record[ARRAY_LEN_NUMERICS[fieldKey]];
+    return Array.isArray(src) ? src.length : 0;
+  }
   return record[fieldKey];
 }
 
