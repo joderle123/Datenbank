@@ -247,6 +247,41 @@
     </div>
   </div>
 
+  <!-- Sync conflict modal — appears when both local and remote advanced -->
+  <div x-show="conflictModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" style="display:none" @click.self="closeConflictModal()">
+    <div class="bg-paper dark:bg-paper-dark border border-line dark:border-line-dark rounded-xl p-7 max-w-lg w-full">
+      <div class="text-[11px] uppercase tracking-[0.18em] text-accent">Sync conflict</div>
+      <h2 class="mt-2 text-2xl"><span class="font-serif-i">Both</span> sides changed</h2>
+      <template x-if="conflictModal">
+        <div class="mt-4 text-sm space-y-2 leading-relaxed">
+          <p>
+            You have <span class="font-mono tnum" x-text="conflictModal.localCount"></span>
+            local change(s) since your last sync.
+          </p>
+          <p>
+            Meanwhile <span class="font-mono" x-text="conflictModal.remoteBy || 'someone'"></span>
+            also edited the sync file (revision
+            <span class="font-mono tnum" x-text="conflictModal.remoteRevision"></span><span x-show="conflictModal.remoteAt">, <span x-text="new Date(conflictModal.remoteAt).toLocaleString('en-GB', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})"></span></span>).
+          </p>
+          <p class="text-muted dark:text-muted-dark text-xs italic">
+            Pick how to resolve. There is no automatic three-way merge — one side wins.
+          </p>
+        </div>
+      </template>
+      <div class="mt-6 flex flex-col gap-2">
+        <button class="btn btn-primary justify-start" @click="resolveConflictKeepMine()">
+          Keep my changes <span class="text-xs opacity-70 ml-2">— I'll Export next, overwriting the sync file</span>
+        </button>
+        <button class="btn btn-danger justify-start" @click="resolveConflictApplyRemote()">
+          Discard my changes, apply remote <span class="text-xs opacity-70 ml-2">— local changes will be lost</span>
+        </button>
+        <button class="btn btn-ghost justify-start" @click="closeConflictModal()">
+          Cancel — decide later
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="flex min-h-screen">
     <!-- Sidebar -->
     <aside class="w-60 shrink-0 border-r border-line dark:border-line-dark flex flex-col px-4 py-6 gap-6 bg-paper dark:bg-paper-dark">
@@ -262,6 +297,21 @@
           </div>
         </div>
       </div>
+
+      <!-- Sync status nudge — visible from every view -->
+      <button
+        x-show="hasUnsyncedChanges"
+        @click="view = 'settings'"
+        class="px-2.5 py-2 -mt-2 rounded-lg border border-accent/40 bg-accent/[0.05] text-left flex items-start gap-2"
+        style="display:none"
+        :title="'Click to open Settings → Sync (' + unsyncedCount + ' unsynced change' + (unsyncedCount === 1 ? '' : 's') + ')'"
+      >
+        <span class="text-accent text-xs">●</span>
+        <span class="text-xs leading-snug">
+          <span class="font-mono tnum" x-text="unsyncedCount"></span> unsynced change(s)
+          <span class="block text-[10px] text-muted dark:text-muted-dark mt-0.5">Click to sync</span>
+        </span>
+      </button>
 
       <nav class="flex flex-col gap-0.5">
         <template x-for="item in nav" :key="item.id">
@@ -1266,6 +1316,60 @@
               <p class="text-xs text-muted dark:text-muted-dark mt-2" x-show="hasDemoData">
                 Demo currently loaded. The "Remove" button only affects the 20 fictional cases.
               </p>
+            </div>
+
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Shared sync</div>
+              <p class="text-sm text-muted dark:text-muted-dark mb-3">
+                A single <code class="font-mono text-xs">cdse.json</code> file on the CDSE
+                network drive holds the team's shared state. Workflow: <span class="italic">Import</span>
+                first to pull in your colleagues' changes, edit cases, then <span class="italic">Export</span>
+                to publish your version back to the same file.
+              </p>
+
+              <div class="border border-line dark:border-line-dark rounded-lg p-4 mb-3">
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                  <div class="text-sm">
+                    <div>
+                      <span x-show="!hasUnsyncedChanges" class="text-muted dark:text-muted-dark">All changes synced.</span>
+                      <span x-show="hasUnsyncedChanges">
+                        <span class="font-mono tnum" x-text="unsyncedCount"></span>
+                        unsynced change(s)
+                      </span>
+                    </div>
+                    <div class="text-xs text-muted dark:text-muted-dark mt-1">
+                      Last sync: <span x-text="lastSyncedDisplay()"></span>
+                      <template x-if="syncMeta.lastSyncedBy">
+                        <span> · by <span x-text="syncMeta.lastSyncedBy"></span></span>
+                      </template>
+                      <template x-if="syncMeta.revision">
+                        <span> · local revision <span class="font-mono tnum" x-text="syncMeta.revision"></span></span>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <label class="btn btn-ghost cursor-pointer">
+                      Import sync file
+                      <input type="file" accept="application/json,.json" class="hidden" @change="importSyncFile($event)"/>
+                    </label>
+                    <button class="btn btn-primary" @click="exportSyncFile()"
+                            :class="!hasUnsyncedChanges ? 'opacity-70' : ''">
+                      Export sync file
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <details class="text-xs text-muted dark:text-muted-dark">
+                <summary class="cursor-pointer">How to set this up on a network drive</summary>
+                <ol class="list-decimal pl-5 space-y-1 mt-2">
+                  <li>Pick a single shared folder everyone can read/write (e.g. <code>\\cdse-server\statistik\</code>).</li>
+                  <li>On every browser: in Firefox settings, set the default download folder to that shared folder.</li>
+                  <li>Click <span class="italic">Export sync file</span> — Firefox saves <code>cdse.json</code> straight onto the drive (it will offer to replace the existing file).</li>
+                  <li>Colleagues click <span class="italic">Import sync file</span> and pick <code>cdse.json</code> from the same drive.</li>
+                  <li>Always import first when you sit down; export when you're done editing.</li>
+                </ol>
+              </details>
             </div>
 
             <div>

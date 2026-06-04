@@ -29,6 +29,12 @@ export class CaseRepository {
 // Storage layout — versioned key so future migrations are explicit
 // ----------------------------------------------------------------------------
 const STORAGE_KEY = 'cdse_cases_v1';
+// Sync metadata — see exportSyncFile / importSyncFile in app.js.
+//   revision            : local Lamport counter, bumped on every mutation
+//   lastSyncedRevision  : revision at the last successful export OR import
+//   lastSyncedAt        : ISO timestamp of last export OR import
+//   lastSyncedBy        : name of the user who last touched the synced file
+const SYNC_META_KEY = 'cdse_sync_v1';
 
 // ----------------------------------------------------------------------------
 // Internal helpers
@@ -130,6 +136,50 @@ export class LocalStorageCaseRepository extends CaseRepository {
     this._storage.setItem(STORAGE_KEY, JSON.stringify(records));
   }
 
+  // -- Sync metadata --------------------------------------------------------
+  _readSyncMeta() {
+    const raw = this._storage.getItem(SYNC_META_KEY);
+    if (raw) { try { return JSON.parse(raw); } catch { /* corrupt -> reset */ } }
+    return { revision: 0, lastSyncedRevision: 0, lastSyncedAt: null, lastSyncedBy: null };
+  }
+  _writeSyncMeta(meta) {
+    this._storage.setItem(SYNC_META_KEY, JSON.stringify(meta));
+  }
+  _bumpRevision() {
+    const meta = this._readSyncMeta();
+    meta.revision = (meta.revision || 0) + 1;
+    this._writeSyncMeta(meta);
+    return meta.revision;
+  }
+  async getSyncMeta() {
+    return { ...this._readSyncMeta() };
+  }
+  /**
+   * Apply a remote sync payload — fully replaces local cases and aligns the
+   * local revision counter with the incoming revision so subsequent mutations
+   * continue past the remote one (monotonic).
+   */
+  async applyRemoteSync(remoteCases, remoteRevision, remoteEditedBy, remoteEditedAt) {
+    if (!Array.isArray(remoteCases)) throw new Error('applyRemoteSync expects an array');
+    this._writeAll(remoteCases);
+    this._writeSyncMeta({
+      revision: Math.max(remoteRevision || 0, this._readSyncMeta().revision || 0),
+      lastSyncedRevision: remoteRevision || 0,
+      lastSyncedAt: remoteEditedAt || nowIso(),
+      lastSyncedBy: remoteEditedBy || null,
+    });
+  }
+  /** Mark the current local state as exported (sets lastSyncedRevision = revision). */
+  async markExported(currentUser) {
+    const meta = this._readSyncMeta();
+    this._writeSyncMeta({
+      ...meta,
+      lastSyncedRevision: meta.revision,
+      lastSyncedAt: nowIso(),
+      lastSyncedBy: currentUser || null,
+    });
+  }
+
   async list({ filter, sort, search } = {}) {
     const all = this._readAll();
     const filtered = all.filter((r) => matchesFilter(r, filter) && matchesSearch(r, search));
@@ -151,6 +201,7 @@ export class LocalStorageCaseRepository extends CaseRepository {
     };
     all.push(record);
     this._writeAll(all);
+    this._bumpRevision();
     return hydrate(record);
   }
 
@@ -167,6 +218,7 @@ export class LocalStorageCaseRepository extends CaseRepository {
     };
     all[idx] = updated;
     this._writeAll(all);
+    this._bumpRevision();
     return hydrate(updated);
   }
 
@@ -175,6 +227,7 @@ export class LocalStorageCaseRepository extends CaseRepository {
     const next = all.filter((r) => r.id !== id);
     if (next.length === all.length) return false;
     this._writeAll(next);
+    this._bumpRevision();
     return true;
   }
 
@@ -205,6 +258,7 @@ export class LocalStorageCaseRepository extends CaseRepository {
         updated_at: nowIso(),
       }));
       this._writeAll(next);
+      this._bumpRevision();
       summary.added = next.length;
       return summary;
     }
@@ -242,6 +296,7 @@ export class LocalStorageCaseRepository extends CaseRepository {
     }
 
     this._writeAll(all);
+    if (summary.added > 0 || summary.updated > 0) this._bumpRevision();
     return summary;
   }
 

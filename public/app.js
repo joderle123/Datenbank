@@ -192,6 +192,10 @@ function makeApp() {
     draftSaved: false,        // user-visible 'Draft saved …' indicator
     draftRestorePending: null, // {timestamp} when a previous draft is offered
 
+    // -- file-based sync (see exportSyncFile / importSyncFile) ------------
+    syncMeta: { revision: 0, lastSyncedRevision: 0, lastSyncedAt: null, lastSyncedBy: null },
+    conflictModal: null,
+
     // -- detail view ------------------------------------------------------
     detailCase: null,
 
@@ -462,6 +466,130 @@ function makeApp() {
       this.vocabByCat = await vocab.all();
       this.auditEntries = await audit.list({ limit: 500 });
       this.savedQueriesList = await savedQueries.list();
+      this.syncMeta = await cases.getSyncMeta();
+    },
+
+    // ====================================================================
+    // File-based sync (shared JSON on a network drive)
+    // ====================================================================
+    // Every local mutation bumps cases.getSyncMeta().revision. lastSyncedRevision
+    // is the revision at our last successful export or import. Their difference
+    // is "how many local changes haven't been shared yet".
+    //
+    // The sync file format is `cdse-sync-v1`:
+    //   { format, revision, last_edited_by, last_edited_at, cases: [...] }
+    //
+    // Three import outcomes:
+    //   - incoming.revision == lastSyncedRevision && no local changes → noop
+    //   - incoming.revision == lastSyncedRevision && local changes    → info only
+    //   - incoming.revision >  lastSyncedRevision && no local changes → clean apply
+    //   - incoming.revision >  lastSyncedRevision && local changes    → conflict
+    // ====================================================================
+    get hasUnsyncedChanges() {
+      return (this.syncMeta?.revision || 0) > (this.syncMeta?.lastSyncedRevision || 0);
+    },
+    get unsyncedCount() {
+      return (this.syncMeta?.revision || 0) - (this.syncMeta?.lastSyncedRevision || 0);
+    },
+    lastSyncedDisplay() {
+      const t = this.syncMeta?.lastSyncedAt;
+      if (!t) return 'never';
+      try {
+        const d = new Date(t);
+        return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      } catch { return t; }
+    },
+
+    async exportSyncFile() {
+      const all = await cases.exportAll();
+      const payload = {
+        format: 'cdse-sync-v1',
+        revision: this.syncMeta.revision || 0,
+        last_edited_by: this.user || null,
+        last_edited_at: new Date().toISOString(),
+        cases: all,
+      };
+      // The browser saves to Downloads; the user moves/replaces the file on
+      // the shared network drive. The filename is constant so File Explorer's
+      // overwrite-prompt offers the right default.
+      downloadBlob('cdse.json', JSON.stringify(payload, null, 2), 'application/json');
+      await cases.markExported(this.user);
+      this.syncMeta = await cases.getSyncMeta();
+      await audit.record({ action: 'export', user: this.user, summary: `Sync export — revision ${payload.revision}, ${all.length} cases` });
+      this.notify(`Sync file exported — revision ${payload.revision} (${all.length} cases).`);
+    },
+
+    /** Triggered from a <input type="file"> change. */
+    async importSyncFile(event) {
+      const file = event?.target?.files?.[0];
+      if (!file) return;
+      let parsed;
+      try { parsed = JSON.parse(await file.text()); }
+      catch { this.notify('Invalid JSON file.', 'err'); event.target.value = ''; return; }
+      event.target.value = '';  // reset the input so picking the same file again works
+      if (!parsed || parsed.format !== 'cdse-sync-v1' || !Array.isArray(parsed.cases)) {
+        this.notify('Not a CDSE sync file. Use Import / Export for other JSON imports.', 'err');
+        return;
+      }
+      await this._processIncomingSync(parsed);
+    },
+
+    async _processIncomingSync(incoming) {
+      const meta = this.syncMeta || { revision: 0, lastSyncedRevision: 0 };
+      const localAdvanced = (meta.revision || 0) > (meta.lastSyncedRevision || 0);
+      const remoteAdvanced = (incoming.revision || 0) > (meta.lastSyncedRevision || 0);
+
+      if (!localAdvanced && !remoteAdvanced) {
+        this.notify('Already in sync. The file matches your last sync point.');
+        return;
+      }
+      if (!remoteAdvanced && localAdvanced) {
+        this.notify(`The sync file is the version you started from. ${this.unsyncedCount} local change(s) ready to export.`);
+        return;
+      }
+      if (remoteAdvanced && !localAdvanced) {
+        // Clean apply
+        await this._applyRemoteSync(incoming);
+        return;
+      }
+      // Both branches advanced → conflict modal
+      this.conflictModal = {
+        remote: incoming,
+        localCount: this.unsyncedCount,
+        remoteAt: incoming.last_edited_at,
+        remoteBy: incoming.last_edited_by,
+        remoteRevision: incoming.revision,
+      };
+    },
+
+    async _applyRemoteSync(incoming) {
+      await cases.applyRemoteSync(
+        incoming.cases,
+        incoming.revision,
+        incoming.last_edited_by,
+        incoming.last_edited_at,
+      );
+      await this.refreshAll();
+      await audit.record({
+        action: 'import',
+        user: this.user,
+        summary: `Sync import — revision ${incoming.revision} from ${incoming.last_edited_by || '?'} (${incoming.cases.length} cases)`,
+      });
+      this.notify(`Synced from ${incoming.last_edited_by || 'sync file'}. ${incoming.cases.length} cases now match revision ${incoming.revision}.`);
+    },
+
+    async resolveConflictApplyRemote() {
+      const remote = this.conflictModal?.remote;
+      if (!remote) return;
+      this.conflictModal = null;
+      await this._applyRemoteSync(remote);
+    },
+    resolveConflictKeepMine() {
+      this.conflictModal = null;
+      this.notify('Your local changes are kept. Click Export to overwrite the sync file when ready.');
+    },
+    closeConflictModal() {
+      this.conflictModal = null;
     },
 
     // ====================================================================
