@@ -56,6 +56,15 @@ const LIST_DEFAULT_COLUMNS = [
   'mesure_cdse_1', 'iq',
 ];
 
+// Fields shown by default in the form's "Essentials" block. New cases start
+// with only these visible; everything else lives behind a "Show all fields"
+// toggle. Picked to cover what staff almost always know at first contact.
+const ESSENTIAL_FIELD_KEYS = new Set([
+  'matricule', 'nom', 'prenom',
+  'sexe', 'date_naissance',
+  'dir', 'ecole_lycee',
+]);
+
 function blankCase() {
   const empty = {};
   for (const f of getEditableFields()) {
@@ -63,6 +72,13 @@ function blankCase() {
     else empty[f.key] = '';
   }
   return empty;
+}
+
+function hasValue(v) {
+  if (v === null || v === undefined) return false;
+  if (typeof v === 'string') return v.trim() !== '';
+  if (Array.isArray(v)) return v.length > 0;
+  return true;
 }
 
 function diffCases(before, after) {
@@ -161,6 +177,7 @@ function makeApp() {
     editingId: null,
     formCategoryOpen: {},
     tagDraft: {},
+    showAdvanced: false,
 
     // -- detail view ------------------------------------------------------
     detailCase: null,
@@ -738,6 +755,8 @@ function makeApp() {
       this.formData = blankCase();
       this.formErrors = {};
       this.tagDraft = {};
+      this.showAdvanced = false;  // start with essentials only
+      this.formCategoryOpen = { _essentials: true };
       for (const c of CATEGORIES) this.formCategoryOpen[c.key] = c.key === 'identification';
       this.view = 'form';
     },
@@ -755,8 +774,47 @@ function makeApp() {
       }
       this.formErrors = {};
       this.tagDraft = {};
+      // When editing, auto-expand the advanced section if the case has any
+      // non-essential fields already filled, so users see all their data.
+      this.showAdvanced = getEditableFields().some(
+        (f) => !ESSENTIAL_FIELD_KEYS.has(f.key) && hasValue(this.formData[f.key]),
+      );
+      this.formCategoryOpen = { _essentials: true };
       for (const c2 of CATEGORIES) this.formCategoryOpen[c2.key] = true;
       this.view = 'form';
+    },
+
+    /** The 7 fields shown in the always-visible "Essentials" block. */
+    essentialFields() {
+      return getEditableFields().filter((f) => ESSENTIAL_FIELD_KEYS.has(f.key));
+    },
+    /** Non-essential fields in a category (used by the advanced accordion). */
+    nonEssentialFieldsOf(catKey) {
+      return getFieldsByCategory(catKey).filter((f) => !ESSENTIAL_FIELD_KEYS.has(f.key));
+    },
+    /** Categories that still have non-essential fields to show. */
+    nonEssentialCategories() {
+      return CATEGORIES.filter((c) => this.nonEssentialFieldsOf(c.key).length > 0);
+    },
+    /** Form sections to render, switched by `showAdvanced`.
+     *  Simple mode: one virtual section "Essentials" with 7 picked fields.
+     *  Advanced mode: all 12 categories, each with all their fields. */
+    get formSections() {
+      if (!this.showAdvanced) {
+        return [{
+          key: '_essentials',
+          label: 'Essentials',
+          _fields: this.essentialFields(),
+        }];
+      }
+      return CATEGORIES.map((c) => ({
+        key: c.key,
+        label: c.label,
+        _fields: getFieldsByCategory(c.key),
+      }));
+    },
+    get nonEssentialFieldCount() {
+      return getEditableFields().length - this.essentialFields().length;
     },
 
     addTag(fieldKey) {

@@ -623,7 +623,11 @@
             </div>
           </template>
 
-          <template x-for="cat in CATEGORIES" :key="cat.key">
+          <div class="mb-4 text-xs text-muted dark:text-muted-dark italic" x-show="!showAdvanced">
+            Fill in the essentials first — you can add measures, diagnoses, family background and the rest after.
+          </div>
+
+          <template x-for="cat in formSections" :key="cat.key">
             <details class="mb-3 border border-line dark:border-line-dark rounded-lg" :open="formCategoryOpen[cat.key]">
               <summary class="px-4 py-3 flex items-center justify-between"
                        @click.prevent="formCategoryOpen[cat.key] = !formCategoryOpen[cat.key]">
@@ -631,7 +635,7 @@
                 <span class="text-xs text-muted dark:text-muted-dark" x-text="formCategoryOpen[cat.key] ? '−' : '+'"></span>
               </summary>
               <div x-show="formCategoryOpen[cat.key]" class="px-4 pb-4 grid grid-cols-2 gap-4" style="display:none">
-                <template x-for="f in fieldsOf(cat.key)" :key="f.key">
+                <template x-for="f in cat._fields" :key="f.key">
                   <div>
                     <label class="block text-xs uppercase tracking-widest text-muted dark:text-muted-dark mb-1">
                       <span x-text="f.label"></span>
@@ -759,6 +763,19 @@
               </div>
             </details>
           </template>
+
+          <!-- Progressive disclosure: hide the 30 optional fields behind a single toggle -->
+          <button
+            type="button"
+            @click="showAdvanced = !showAdvanced"
+            class="btn btn-ghost w-full justify-center mt-2 mb-2"
+          >
+            <span x-show="!showAdvanced">
+              + Show all fields
+              <span class="text-muted dark:text-muted-dark ml-1">(<span x-text="nonEssentialFieldCount"></span> more)</span>
+            </span>
+            <span x-show="showAdvanced">− Show essentials only</span>
+          </button>
 
           <div class="mt-6 flex gap-2 justify-end">
             <button class="btn btn-ghost" @click="cancelForm()">Cancel</button>
