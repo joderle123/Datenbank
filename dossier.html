@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dossier — Annexe Junglinster</title>
+<style>
+:root{
+  --bg:#f4f5f7; --surface:#ffffff; --border:#dde1e6; --text:#1f2630; --text-muted:#5b6573;
+  --accent:#3a5a78; --accent-soft:#e7eef4;
+  --danger:#b3432d; --danger-soft:#f6e7e3;
+  --radius:8px;
+  --shadow:0 1px 3px rgba(20,30,45,.08);
+  font-size:16px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--text); line-height:1.5;
+}
+button,input,select,textarea{font:inherit; color:inherit;}
+a{color:var(--accent);}
+h1,h2,h3,h4{margin:0 0 .4em; font-weight:600; line-height:1.25;}
+p{margin:.4em 0;}
+
+/* ---------- Layout ---------- */
+.app-shell{display:flex; min-height:100vh;}
+.sidebar{
+  width:230px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; padding:18px 14px; gap:4px;
+}
+.sidebar h1{font-size:1.05rem; margin:0 6px 14px; color:var(--accent);}
+.sidebar h1 small{display:block; font-size:.7rem; font-weight:400; color:var(--text-muted); margin-top:2px;}
+.nav-link{
+  display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:var(--radius);
+  text-decoration:none; color:var(--text); font-size:.92rem; cursor:pointer; border:none; background:none;
+  width:100%; text-align:left;
+}
+.nav-link:hover{background:var(--accent-soft);}
+.nav-link.active{background:var(--accent); color:#fff;}
+.sidebar-footer{margin-top:auto; font-size:.72rem; color:var(--text-muted); padding:10px 6px;}
+.main{flex:1; min-width:0; padding:24px 28px 60px; max-width:1180px;}
+.topbar-mobile{display:none;}
+
+@media (max-width: 880px){
+  .app-shell{flex-direction:column;}
+  .sidebar{
+    width:100%; flex-direction:row; flex-wrap:wrap; align-items:center; border-right:none;
+    border-bottom:1px solid var(--border); padding:10px 14px;
+  }
+  .sidebar h1{margin:0 10px 0 0; font-size:.95rem;}
+  .sidebar h1 small{display:none;}
+  .sidebar-footer{display:none;}
+  .nav-link{width:auto; padding:7px 10px; font-size:.85rem;}
+  .main{padding:18px;}
+}
+
+/* ---------- Banner ---------- */
+.privacy-banner{
+  background:#eef3f1; border-bottom:1px solid #c9dcd4; padding:12px 24px;
+  display:flex; align-items:center; gap:16px; font-size:.88rem; color:#1f3a30;
+}
+.privacy-banner strong{display:block; margin-bottom:2px;}
+.privacy-banner button{
+  margin-left:auto; flex-shrink:0; background:#fff; border:1px solid #b9d2c8; color:#1f3a30;
+  border-radius:var(--radius); padding:6px 12px; cursor:pointer;
+}
+
+/* ---------- Generic components ---------- */
+.btn{
+  display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:var(--surface);
+  color:var(--text); border-radius:var(--radius); padding:8px 14px; cursor:pointer; font-size:.88rem;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent);}
+.btn-primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+.btn-primary:hover{background:#2e4a64; color:#fff;}
+.btn-danger{color:var(--danger); border-color:var(--danger-soft);}
+.btn-danger:hover{background:var(--danger-soft); border-color:var(--danger);}
+.btn-sm{padding:5px 10px; font-size:.8rem;}
+.btn[disabled]{opacity:.5; cursor:not-allowed;}
+
+.card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);}
+.field{display:flex; flex-direction:column; gap:5px; margin-bottom:14px;}
+.field label{font-size:.82rem; font-weight:600; color:var(--text-muted);}
+.field .hint{font-size:.76rem; color:var(--text-muted); font-weight:400;}
+input[type=text],input[type=date],input[type=search],input[type=number],select,textarea{
+  border:1px solid var(--border); border-radius:var(--radius); padding:8px 10px; background:#fff; width:100%;
+}
+textarea{resize:vertical; font-family:inherit;}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+.row{display:flex; gap:14px; flex-wrap:wrap;}
+.row > .field{flex:1; min-width:200px;}
+
+.page-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap;}
+.page-head .actions{display:flex; gap:8px; flex-wrap:wrap;}
+.muted{color:var(--text-muted);}
+.empty-state{padding:40px 20px; text-align:center; color:var(--text-muted);}
+
+/* ---------- Toast ---------- */
+.toast-root{position:fixed; bottom:18px; right:18px; display:flex; flex-direction:column; gap:8px; z-index:200;}
+.toast{
+  background:#22303f; color:#fff; padding:10px 16px; border-radius:var(--radius); font-size:.85rem;
+  box-shadow:0 4px 14px rgba(0,0,0,.2); animation:toast-in .15s ease-out;
+}
+.toast.toast-error{background:var(--danger);}
+@keyframes toast-in{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+/* ---------- Dashboard ---------- */
+.search-bar{margin-bottom:18px;}
+.search-bar input{max-width:420px;}
+.card-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px;}
+.student-card{
+  padding:14px 16px; cursor:pointer; transition:box-shadow .12s, border-color .12s; display:flex; flex-direction:column; gap:8px;
+}
+.student-card:hover{border-color:var(--accent); box-shadow:0 3px 10px rgba(40,70,100,.12);}
+.student-card h3{font-size:1.02rem;}
+.student-card .meta-line{font-size:.8rem; color:var(--text-muted);}
+.risk-pill{
+  display:inline-flex; align-items:center; gap:6px; font-size:.76rem; font-weight:600; padding:3px 9px;
+  border-radius:999px; color:#fff; align-self:flex-start;
+}
+.spark-row{display:flex; align-items:center; gap:10px;}
+
+/* ---------- Chips / tags / categories ---------- */
+.chip{
+  display:inline-flex; align-items:center; gap:5px; background:var(--accent-soft); color:var(--accent);
+  border-radius:999px; padding:3px 10px; font-size:.76rem; line-height:1.3;
+}
+.chip button{background:none; border:none; color:inherit; cursor:pointer; padding:0; font-size:.9em; line-height:1;}
+.chip-row{display:flex; flex-wrap:wrap; gap:6px;}
+.cat-badge{
+  display:inline-block; padding:3px 10px; border-radius:999px; font-size:.74rem; font-weight:600; color:#fff; white-space:nowrap;
+}
+.toggle-chip{
+  border:1px solid var(--border); background:#fff; border-radius:999px; padding:5px 12px; font-size:.8rem; cursor:pointer;
+}
+.toggle-chip.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+/* ---------- Student detail ---------- */
+.detail-head{display:flex; flex-wrap:wrap; gap:24px; margin-bottom:20px;}
+.detail-head .info-block{min-width:180px;}
+.detail-head .info-block h4{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); margin-bottom:6px;}
+.charts-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-bottom:22px;}
+.chart-card{padding:12px 14px;}
+.chart-card h4{font-size:.84rem; margin-bottom:4px;}
+.chart-card .chart-empty{font-size:.8rem; color:var(--text-muted); padding:30px 0; text-align:center;}
+.chart-svg{width:100%; height:auto; display:block;}
+.chart-grid-line{stroke:#e6e9ee; stroke-width:1;}
+.chart-axis-label{font-size:9px; fill:#7a8696;}
+.unrated-note{font-size:.74rem; color:var(--text-muted); margin-top:4px;}
+
+.filter-bar{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 18px; align-items:center;}
+.filter-bar .filter-label{font-size:.78rem; color:var(--text-muted); margin-right:4px;}
+
+.timeline{display:flex; flex-direction:column; gap:10px;}
+.entry-card{padding:0;}
+.entry-head{
+  display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; flex-wrap:wrap;
+}
+.entry-head .date{font-weight:600; font-size:.86rem; min-width:84px;}
+.entry-head .author{font-size:.76rem; color:var(--text-muted);}
+.entry-head .spacer{flex:1;}
+.entry-body{padding:0 16px 16px; border-top:1px solid var(--border);}
+.entry-body .text{white-space:pre-wrap; font-size:.92rem; margin:12px 0;}
+.entry-actions{display:flex; gap:8px;}
+.caret{transition:transform .12s; color:var(--text-muted); font-size:.8rem;}
+.caret.open{transform:rotate(90deg);}
+
+/* ---------- Forms ---------- */
+.form-card{padding:22px; max-width:760px;}
+.tag-input-wrap{border:1px solid var(--border); border-radius:var(--radius); padding:6px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
+.tag-input-wrap input{border:none; flex:1; min-width:140px; padding:4px;}
+.tag-input-wrap input:focus{outline:none;}
+.slider-field{border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px;}
+.slider-field .slider-row{display:flex; align-items:center; gap:12px; margin-top:8px;}
+.slider-field input[type=range]{flex:1;}
+.slider-value{font-weight:700; min-width:28px; text-align:center;}
+.slider-field label.checkbox-label{font-weight:400; font-size:.8rem; display:flex; align-items:center; gap:6px;}
+
+/* ---------- Search ---------- */
+.search-results{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+.search-result{padding:12px 16px; cursor:pointer;}
+.search-result .meta{font-size:.78rem; color:var(--text-muted); margin-bottom:4px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.search-result .snippet{font-size:.88rem;}
+mark{background:#ffe9a8; padding:0 2px; border-radius:2px;}
+
+/* ---------- Export / AI ---------- */
+.export-config{padding:20px; max-width:680px; margin-bottom:20px;}
+.replacement-table{width:100%; border-collapse:collapse; font-size:.84rem; margin:10px 0;}
+.replacement-table th,.replacement-table td{border-bottom:1px solid var(--border); padding:6px 8px; text-align:left;}
+.replacement-table input{padding:4px 6px;}
+.preview-box{
+  white-space:pre-wrap; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.82rem;
+  background:#fbfbfc; border:1px solid var(--border); border-radius:var(--radius); padding:14px; max-height:480px; overflow:auto;
+}
+.warn-banner{
+  background:#fdf3e7; border:1px solid #eccfa3; color:#6b4a16; padding:10px 14px; border-radius:var(--radius);
+  font-size:.84rem; margin-bottom:14px;
+}
+.checkbox-row{display:flex; align-items:flex-start; gap:8px; font-size:.86rem; margin-bottom:8px;}
+.checkbox-row input{margin-top:3px;}
+
+/* ---------- Print ---------- */
+.print-sheet{display:none;}
+@media print{
+  body *{visibility:hidden;}
+  #print-sheet, #print-sheet *{visibility:visible;}
+  #print-sheet{display:block !important; position:absolute; top:0; left:0; width:100%; padding:0; margin:0;}
+  .no-print{display:none !important;}
+  .print-entry{break-inside:avoid; padding:10px 0; border-bottom:1px solid #ccc;}
+  .print-sheet h1{font-size:18px;}
+  .print-sheet h2{font-size:14px; color:#444; font-weight:400;}
+}
+
+/* ---------- Misc ---------- */
+.kbd{font-family:ui-monospace,monospace; background:#eef0f3; border:1px solid var(--border); border-radius:4px; padding:0 5px; font-size:.78rem;}
+.section-title{font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin:24px 0 8px;}
+.divider{border:none; border-top:1px solid var(--border); margin:18px 0;}
+
+</style>
+</head>
+<body>
+<div id="banner-root"></div>
+<div id="app-root"></div>
+<div id="toast-root" class="toast-root" aria-live="polite"></div>
+<script>
+'use strict';
+
+/* ============================================================
+   Konstanten: Kategorien, Tag-Vokabular, Slider-Definitionen
+   ============================================================ */
+
+var CATEGORIES = [
+  'Schule',
+  'Stage & Berufsorientierung',
+  'Medikation',
+  'Diagnostik',
+  'Therapie & Suivi',
+  'Familie & Eltern',
+  'Externe Stellen & Netzwerk',
+  'Verhalten & Krisen',
+  'Risiko & Sorge',
+  'Termine & RDV',
+  'Anwesenheit & Mobibus',
+  'Wochenziel'
+];
+
+/* Dezente, gut unterscheidbare Farben pro Kategorie (HSL, gedeckt) */
+var CATEGORY_COLORS = {
+  'Schule':                       'hsl(206, 55%, 45%)',
+  'Stage & Berufsorientierung':   'hsl(174, 45%, 36%)',
+  'Medikation':                   'hsl(280, 30%, 48%)',
+  'Diagnostik':                   'hsl(255, 35%, 52%)',
+  'Therapie & Suivi':             'hsl(150, 35%, 38%)',
+  'Familie & Eltern':             'hsl(28, 55%, 45%)',
+  'Externe Stellen & Netzwerk':   'hsl(195, 40%, 42%)',
+  'Verhalten & Krisen':           'hsl(20, 60%, 48%)',
+  'Risiko & Sorge':               'hsl(4, 62%, 46%)',
+  'Termine & RDV':                'hsl(225, 30%, 50%)',
+  'Anwesenheit & Mobibus':        'hsl(50, 50%, 40%)',
+  'Wochenziel':                   'hsl(120, 30%, 38%)'
+};
+function categoryColor(cat){ return CATEGORY_COLORS[cat] || 'hsl(210, 15%, 45%)'; }
+
+/* Grundvokabular für Tag-Autovervollständigung (lernt aus Eingaben dazu) */
+var SEED_TAGS = [
+  // Institutionen
+  'HRS','CTSA','ATVA','CNI','LEM','CDA','CHL','CeHJP','Foyer','Liewenshaff','CISP',
+  'SCAS','LTA','LTEtt','ALR','LJBM','Ermesinde',
+  // Personen / Behandler
+  'Dr Meinhardt','Dr Pignoloni','Dr Ristow','Dr Bertholdt','Dr Königs','Dr Karst',
+  'Dr Tomozei','Mme Rizzi','Mme Karp','Mme Leber','Här Tissier','Fabrice Kerg','Mediation scolaire',
+  // Themen
+  'Reintegration','Stage','Vape','Medikation','Asperger/ASS','Hochbegabung','Dys',
+  'Selbstverletzung','Suizidalität','Selbstgefährdung','Schlof','Promotioun','Zensur',
+  'Signalement','Mobibus','RDV','Familie','Autonomie'
+];
+
+/* Institutionskürzel — werden im KI-Export ggf. zu "Stell N" anonymisiert */
+var INSTITUTION_TAGS = [
+  'HRS','CTSA','ATVA','CNI','LEM','CDA','CHL','CeHJP','Foyer','Liewenshaff','CISP',
+  'SCAS','LTA','LTEtt','ALR','LJBM','Ermesinde'
+];
+
+/* Bekannte Personen (Behandler/Mitarbeiter) — Basis für Namenserkennung im KI-Export */
+var KNOWN_PERSONS = [
+  { name: 'Dr Meinhardt', category: 'Arzt' },
+  { name: 'Dr Pignoloni', category: 'Arzt' },
+  { name: 'Dr Ristow', category: 'Arzt' },
+  { name: 'Dr Bertholdt', category: 'Arzt' },
+  { name: 'Dr Königs', category: 'Arzt' },
+  { name: 'Dr Karst', category: 'Arzt' },
+  { name: 'Dr Tomozei', category: 'Arzt' },
+  { name: 'Dr.Meinhardt', category: 'Arzt' },
+  { name: 'Dr. Meinhardt', category: 'Arzt' },
+  { name: 'Dr. Pignoloni', category: 'Arzt' },
+  { name: 'Dr. Karst', category: 'Arzt' },
+  { name: 'Dr.Karst', category: 'Arzt' },
+  { name: 'Mme Rizzi', category: 'Mataarbechter' },
+  { name: 'Mme Karp', category: 'Mataarbechter' },
+  { name: 'Mme Leber', category: 'Mataarbechter' },
+  { name: 'Mme Krack', category: 'Mataarbechter' },
+  { name: 'Mme Everling', category: 'Mataarbechter' },
+  { name: 'Mme Kirsch-Pedrosa', category: 'Mataarbechter' },
+  { name: 'Mme Königs', category: 'Mataarbechter' },
+  { name: 'Här Tissier', category: 'Mataarbechter' },
+  { name: 'Charly Tissier', category: 'Mataarbechter' },
+  { name: 'Fabrice Kerg', category: 'Mataarbechter' },
+  { name: 'Fabrice Krez', category: 'Mataarbechter' },
+  { name: 'Mediation scolaire', category: 'Mataarbechter' },
+  { name: 'Mediation Scolaire', category: 'Mataarbechter' },
+  { name: 'Médiation Scolaire', category: 'Mataarbechter' },
+  { name: 'Médiation scolaire', category: 'Mataarbechter' },
+  { name: 'Service de médiation scolaire', category: 'Mataarbechter' },
+  { name: 'Martina Mick', category: 'Mataarbechter' },
+  { name: 'Claudine Welbes', category: 'Mataarbechter' },
+  { name: 'Mme Claudine Welbes', category: 'Mataarbechter' },
+  { name: 'Joey', category: 'Mataarbechter' },
+  { name: 'Mireille', category: 'Mataarbechter' },
+  { name: 'Sarah', category: 'Mataarbechter' },
+  { name: 'Sandra', category: 'Mataarbechter' },
+  { name: 'Annick', category: 'Mataarbechter' },
+  { name: 'Vanessa', category: 'Mataarbechter' },
+  { name: 'Jean-Pierre', category: 'Mataarbechter' },
+  { name: 'J-P', category: 'Mataarbechter' },
+  { name: 'J.P.', category: 'Mataarbechter' },
+  { name: 'Gary', category: 'Mataarbechter' },
+  { name: 'Carole', category: 'Mataarbechter' },
+  { name: 'Philippe Demart', category: 'Mataarbechter' },
+  { name: 'Philippe DEMART', category: 'Mataarbechter' },
+  { name: 'Fabrice KERG', category: 'Mataarbechter' },
+  { name: 'Marie-Christine Liegeois-Dom', category: 'Arzt' },
+  { name: 'Dr. Marie-Christine Liegeois-Dom', category: 'Arzt' },
+  { name: 'Dr Marie-Christine Liegeois-Dom', category: 'Arzt' },
+  { name: 'Mme Krack', category: 'Mataarbechter' }
+];
+
+/* Generische Muster zur Namenserkennung (Titel + Name) */
+var NAME_PATTERNS = [
+  { regex: /\bDr\.?\s?[A-ZÄÖÜ][\wäöüÄÖÜß.\-]{2,}/g, category: 'Arzt' },
+  { regex: /\bDokter\s[A-ZÄÖÜ][\wäöüÄÖÜß.\-]{2,}/g, category: 'Arzt' },
+  { regex: /\bDoktesch\s[A-ZÄÖÜ][\wäöüÄÖÜß.\-]{2,}/g, category: 'Arzt' },
+  { regex: /\b(Mme|Madame|Madamm)\.?\s[A-ZÄÖÜ][\wäöüÄÖÜß.\-]{2,}/g, category: 'Mataarbechter' },
+  { regex: /\b(Här|Herr|Monsieur)\.?\s[A-ZÄÖÜ][\wäöüÄÖÜß.\-]{2,}/g, category: 'Mataarbechter' }
+];
+
+/* Familien-/Elternbegriffe → einheitlicher Platzhalter "Elteren" */
+var FAMILY_TERM_REGEX = /\b(d['’]?Elteren|Elteren|d['’]?Mamm|Mamm|d['’]?Papp|Papp|Stéifpapp|Stéifmamm|Adoptivelteren|d['’]?Boma|Boma|d['’]?Bopp|Bopp|d['’]?Bop|Bop)\b/g;
+
+/* Vier Verlaufs-Slider (1–10, oder null = nicht bewertet) */
+var SLIDER_DEFS = [
+  { key: 'wellbeing',  label: 'Wohlbefinden',                       min: 1, max: 10, hint: '1 = sehr schlecht … 10 = sehr gut',          invert: false },
+  { key: 'stability',  label: 'Schulische Stabilität / Mitarbeit',  min: 1, max: 10, hint: '1 = sehr instabil … 10 = sehr stabil',       invert: false },
+  { key: 'attendance', label: 'Anwesenheit',                        min: 1, max: 10, hint: '1 = kaum da … 10 = vollständig present',      invert: false },
+  { key: 'risk',       label: 'Risiko / Sorge',                     min: 1, max: 10, hint: '1 = unbedenklich … 10 = höchste Sorge',       invert: true  }
+];
+function sliderDef(key){ return SLIDER_DEFS.filter(function(s){ return s.key === key; })[0]; }
+
+/* Feste KI-Aufgaben-Bausteine (§4) */
+var AI_PROMPT_OPTIONS = [
+  'Fasse den Verlauf zusammen',
+  'Welche Muster oder Auffälligkeiten fallen über die Wochen auf?',
+  'Welche offenen Punkte / unerledigten Schritte gibt es?',
+  'Welche nächsten Schritte wären denkbar?'
+];
+
+
+'use strict';
+
+/* ============================================================
+   Persistenz: IndexedDB mit localStorage-Fallback.
+   Alles läuft komplett lokal — keine Netzwerk-Aufrufe.
+   ============================================================ */
+
+var DB_NAME = 'cdse_dossier_db';
+var DB_VERSION = 1;
+var LS_PREFIX = 'cdse_dossier_v1_';
+
+var Storage = {
+  mode: null, // 'indexeddb' | 'localstorage'
+  _idb: null,
+
+  init: function () {
+    var self = this;
+    return new Promise(function (resolve) {
+      if (!window.indexedDB) {
+        self.mode = 'localstorage';
+        resolve();
+        return;
+      }
+      var req;
+      try {
+        req = indexedDB.open(DB_NAME, DB_VERSION);
+      } catch (e) {
+        self.mode = 'localstorage';
+        resolve();
+        return;
+      }
+      req.onupgradeneeded = function (ev) {
+        var db = ev.target.result;
+        if (!db.objectStoreNames.contains('students')) db.createObjectStore('students', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('entries')) db.createObjectStore('entries', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+      };
+      req.onsuccess = function (ev) {
+        self._idb = ev.target.result;
+        self.mode = 'indexeddb';
+        resolve();
+      };
+      req.onerror = function () {
+        self.mode = 'localstorage';
+        resolve();
+      };
+    });
+  },
+
+  /* ---- generic store access ---- */
+  _tx: function (stores, mode) {
+    return this._idb.transaction(stores, mode || 'readonly');
+  },
+
+  getAll: function (store) {
+    var self = this;
+    if (this.mode === 'localstorage') {
+      try {
+        var raw = localStorage.getItem(LS_PREFIX + store);
+        return Promise.resolve(raw ? JSON.parse(raw) : []);
+      } catch (e) {
+        return Promise.resolve([]);
+      }
+    }
+    return new Promise(function (resolve, reject) {
+      var tx = self._tx([store]);
+      var req = tx.objectStore(store).getAll();
+      req.onsuccess = function () { resolve(req.result || []); };
+      req.onerror = function () { reject(req.error); };
+    });
+  },
+
+  putAll: function (store, items) {
+    var self = this;
+    if (this.mode === 'localstorage') {
+      try {
+        localStorage.setItem(LS_PREFIX + store, JSON.stringify(items));
+      } catch (e) { /* quota or unavailable — silently ignore, in-memory state remains */ }
+      return Promise.resolve();
+    }
+    return new Promise(function (resolve, reject) {
+      var tx = self._tx([store], 'readwrite');
+      var os = tx.objectStore(store);
+      items.forEach(function (item) { os.put(item); });
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error); };
+    });
+  },
+
+  put: function (store, item) {
+    var self = this;
+    if (this.mode === 'localstorage') {
+      return this.getAll(store).then(function (all) {
+        var idx = all.findIndex(function (x) { return x.id === item.id; });
+        if (idx >= 0) all[idx] = item; else all.push(item);
+        return self.putAll(store, all);
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      var tx = self._tx([store], 'readwrite');
+      tx.objectStore(store).put(item);
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error); };
+    });
+  },
+
+  remove: function (store, id) {
+    var self = this;
+    if (this.mode === 'localstorage') {
+      return this.getAll(store).then(function (all) {
+        var filtered = all.filter(function (x) { return x.id !== id; });
+        return self.putAll(store, filtered);
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      var tx = self._tx([store], 'readwrite');
+      tx.objectStore(store).delete(id);
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error); };
+    });
+  },
+
+  clear: function (store) {
+    var self = this;
+    if (this.mode === 'localstorage') {
+      localStorage.removeItem(LS_PREFIX + store);
+      return Promise.resolve();
+    }
+    return new Promise(function (resolve, reject) {
+      var tx = self._tx([store], 'readwrite');
+      tx.objectStore(store).clear();
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error); };
+    });
+  },
+
+  getMeta: function (key) {
+    if (this.mode === 'localstorage') {
+      try {
+        var raw = localStorage.getItem(LS_PREFIX + 'meta_' + key);
+        return Promise.resolve(raw !== null ? JSON.parse(raw) : null);
+      } catch (e) { return Promise.resolve(null); }
+    }
+    var self = this;
+    return new Promise(function (resolve, reject) {
+      var tx = self._tx(['meta']);
+      var req = tx.objectStore('meta').get(key);
+      req.onsuccess = function () { resolve(req.result ? req.result.value : null); };
+      req.onerror = function () { reject(req.error); };
+    });
+  },
+
+  setMeta: function (key, value) {
+    if (this.mode === 'localstorage') {
+      try { localStorage.setItem(LS_PREFIX + 'meta_' + key, JSON.stringify(value)); } catch (e) {}
+      return Promise.resolve();
+    }
+    var self = this;
+    return new Promise(function (resolve, reject) {
+      var tx = self._tx(['meta'], 'readwrite');
+      tx.objectStore('meta').put({ key: key, value: value });
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error); };
+    });
+  }
+};
+
+/* ============================================================
+   Repository: hält In-Memory-Cache (Datenmenge ist klein genug,
+   ~Dutzende Schüler / Hunderte Einträge) und schreibt synchron
+   in die Persistenzschicht durch.
+   ============================================================ */
+
+var Repo = {
+  students: [],
+  entries: [],
+
+  init: function () {
+    var self = this;
+    return Storage.init()
+      .then(function () { return Promise.all([Storage.getAll('students'), Storage.getAll('entries')]); })
+      .then(function (res) {
+        self.students = res[0] || [];
+        self.entries = res[1] || [];
+        return Storage.getMeta('seeded');
+      })
+      .then(function (seeded) {
+        if (!seeded && self.students.length === 0 && self.entries.length === 0) {
+          return self._loadSeed();
+        }
+      });
+  },
+
+  _loadSeed: function () {
+    var self = this;
+    var data = window.SEED_DATA;
+    self.students = data.students.slice();
+    self.entries = data.entries.slice();
+    return Promise.all([
+      Storage.putAll('students', self.students),
+      Storage.putAll('entries', self.entries),
+      Storage.setMeta('seeded', true)
+    ]);
+  },
+
+  /* ---- Students ---- */
+  listStudents: function () {
+    return self_sortByName(this.students.slice());
+  },
+  getStudent: function (id) {
+    return this.students.filter(function (s) { return s.id === id; })[0] || null;
+  },
+  saveStudent: function (data) {
+    var self = this;
+    var clean = {
+      id: data.id || ('stud_' + uid()),
+      name: String(data.name || '').trim(),
+      anonLabel: String(data.anonLabel || '').trim(),
+      active: data.active !== false,
+      createdAt: data.createdAt || nowIso()
+    };
+    var idx = self.students.findIndex(function (s) { return s.id === clean.id; });
+    if (idx >= 0) self.students[idx] = clean; else self.students.push(clean);
+    return Storage.put('students', clean).then(function () { return clean; });
+  },
+
+  /* ---- Entries ---- */
+  listEntries: function () {
+    return this.entries.slice();
+  },
+  entriesForStudent: function (studentId) {
+    return this.entries.filter(function (e) { return e.studentId === studentId; });
+  },
+  getEntry: function (id) {
+    return this.entries.filter(function (e) { return e.id === id; })[0] || null;
+  },
+  saveEntry: function (data) {
+    var self = this;
+    var isNew = !data.id;
+    var clean = {
+      id: data.id || ('e_' + uid()),
+      studentId: data.studentId,
+      date: data.date,
+      author: String(data.author || '').trim(),
+      category: data.category,
+      tags: Array.isArray(data.tags) ? data.tags.slice() : [],
+      text: String(data.text || ''),
+      sliders: {
+        wellbeing: normalizeSlider(data.sliders && data.sliders.wellbeing),
+        stability: normalizeSlider(data.sliders && data.sliders.stability),
+        attendance: normalizeSlider(data.sliders && data.sliders.attendance),
+        risk: normalizeSlider(data.sliders && data.sliders.risk)
+      },
+      createdAt: data.createdAt || nowIso(),
+      updatedAt: nowIso()
+    };
+    var idx = self.entries.findIndex(function (e) { return e.id === clean.id; });
+    if (idx >= 0) self.entries[idx] = clean; else self.entries.push(clean);
+    return Storage.put('entries', clean).then(function () { return clean; });
+  },
+  deleteEntry: function (id) {
+    var self = this;
+    self.entries = self.entries.filter(function (e) { return e.id !== id; });
+    return Storage.remove('entries', id);
+  },
+
+  /* ---- Tag-Vokabular: lernt aus Eingaben ---- */
+  tagVocabulary: function () {
+    var set = {};
+    SEED_TAGS.forEach(function (t) { set[t] = true; });
+    this.entries.forEach(function (e) { (e.tags || []).forEach(function (t) { set[t] = true; }); });
+    return Object.keys(set).sort(function (a, b) { return a.localeCompare(b, 'de'); });
+  },
+
+  /* ---- Backup Export / Import ---- */
+  exportAll: function () {
+    return {
+      format: 'cdse-dossier-backup',
+      version: 1,
+      exportedAt: nowIso(),
+      students: this.students,
+      entries: this.entries
+    };
+  },
+  importAll: function (data, mode) {
+    // mode: 'merge' | 'replace'
+    var self = this;
+    if (!data || !Array.isArray(data.students) || !Array.isArray(data.entries)) {
+      return Promise.reject(new Error('Ungültiges Backup-Format.'));
+    }
+    if (mode === 'replace') {
+      self.students = data.students.slice();
+      self.entries = data.entries.slice();
+    } else {
+      var sIdx = {}; self.students.forEach(function (s, i) { sIdx[s.id] = i; });
+      data.students.forEach(function (s) {
+        if (sIdx[s.id] !== undefined) self.students[sIdx[s.id]] = s;
+        else { self.students.push(s); sIdx[s.id] = self.students.length - 1; }
+      });
+      var eIdx = {}; self.entries.forEach(function (e, i) { eIdx[e.id] = i; });
+      data.entries.forEach(function (e) {
+        if (eIdx[e.id] !== undefined) self.entries[eIdx[e.id]] = e;
+        else { self.entries.push(e); eIdx[e.id] = self.entries.length - 1; }
+      });
+    }
+    return Promise.all([
+      Storage.clear('students').then(function () { return Storage.putAll('students', self.students); }),
+      Storage.clear('entries').then(function () { return Storage.putAll('entries', self.entries); }),
+      Storage.setMeta('seeded', true)
+    ]);
+  }
+};
+
+function self_sortByName(list) {
+  return list.sort(function (a, b) { return (a.name || '').localeCompare(b.name || '', 'de'); });
+}
+
+function normalizeSlider(v) {
+  if (v === null || v === undefined || v === '' || v === false) return null;
+  var n = Number(v);
+  if (isNaN(n)) return null;
+  n = Math.round(n);
+  if (n < 1) n = 1;
+  if (n > 10) n = 10;
+  return n;
+}
+
+function uid() {
+  return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+
+'use strict';
+
+/* ============================================================
+   Allgemeine Helfer: Escaping, Datumsformat, Farbskalen, Toasts
+   ============================================================ */
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(str) { return escapeHtml(str); }
+
+/* ISO 'YYYY-MM-DD' -> 'DD.MM.YYYY' (Anzeige-Locale: de-LU / TT.MM.JJJJ) */
+function formatDate(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  if (p.length !== 3) return iso;
+  return p[2] + '.' + p[1] + '.' + p[0];
+}
+function formatDateShort(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  if (p.length !== 3) return iso;
+  return p[2] + '.' + p[1] + '.';
+}
+
+function formatDateTime(iso) {
+  if (!iso) return '';
+  try {
+    var d = new Date(iso);
+    return d.toLocaleString('de-LU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return iso; }
+}
+
+/* Grün(gut) -> Gelb -> Rot(schlecht) Skala für Slider-Werte 1..10.
+   `invert` = true bedeutet: hoher Wert ist fachlich "schlecht" (z. B. Risiko). */
+function sliderColor(def, value) {
+  if (value == null) return '#cbd5e1';
+  var v = def && def.invert ? (11 - value) : value;
+  var t = (v - 1) / 9; // 0 = schlecht/rot, 1 = gut/grün
+  var hue = Math.round(t * 120);
+  return 'hsl(' + hue + ', 62%, 42%)';
+}
+
+function highlightMatch(text, query) {
+  if (!query) return escapeHtml(text);
+  var esc = escapeHtml(text);
+  var q = query.trim();
+  if (!q) return esc;
+  try {
+    var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+    return esc.replace(re, '<mark>$1</mark>');
+  } catch (e) { return esc; }
+}
+
+function snippetAround(text, query, radius) {
+  radius = radius || 90;
+  var lower = text.toLowerCase();
+  var idx = query ? lower.indexOf(query.toLowerCase()) : -1;
+  if (idx === -1) {
+    return text.length > radius * 2 ? text.slice(0, radius * 2) + '…' : text;
+  }
+  var start = Math.max(0, idx - radius);
+  var end = Math.min(text.length, idx + query.length + radius);
+  var out = text.slice(start, end);
+  if (start > 0) out = '…' + out;
+  if (end < text.length) out = out + '…';
+  return out;
+}
+
+/* ---------- Toasts ---------- */
+function showToast(message, opts) {
+  opts = opts || {};
+  var root = document.getElementById('toast-root');
+  var el = document.createElement('div');
+  el.className = 'toast' + (opts.error ? ' toast-error' : '');
+  el.textContent = message;
+  root.appendChild(el);
+  setTimeout(function () {
+    el.style.transition = 'opacity .25s';
+    el.style.opacity = '0';
+    setTimeout(function () { el.remove(); }, 260);
+  }, opts.duration || 2600);
+}
+
+/* ---------- kleine DOM-Helfer ---------- */
+function qs(sel, root) { return (root || document).querySelector(sel); }
+function qsa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+function downloadBlob(filename, content, mime) {
+  var blob = new Blob([content], { type: mime || 'application/octet-stream' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 400);
+}
+
+function pluralize(n, singular, plural) {
+  return n + ' ' + (n === 1 ? singular : plural);
+}
+
+function optionsHtml(values, selected, allowEmpty, emptyLabel) {
+  var out = '';
+  if (allowEmpty) out += '<option value="">' + escapeHtml(emptyLabel || '— bitte wählen —') + '</option>';
+  values.forEach(function (v) {
+    var label = typeof v === 'object' ? v.label : v;
+    var value = typeof v === 'object' ? v.value : v;
+    out += '<option value="' + escapeAttr(value) + '"' + (value === selected ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
+  });
+  return out;
+}
+
+
+'use strict';
+
+/* ============================================================
+   Handgezeichnete Inline-SVG-Liniencharts (keine Chart-Library).
+   Zeigen NUR tatsächlich erfasste Werte — Lücken werden sauber
+   übersprungen, niemals als 0 interpretiert.
+   ============================================================ */
+
+/**
+ * @param {Array} entries  Einträge eines Schülers (chronologisch, beliebig sortiert)
+ * @param {Object} def     SLIDER_DEFS-Eintrag (key, label, invert, …)
+ * @param {Object} opts    { width, height, mini }
+ */
+function renderSliderChart(entries, def, opts) {
+  opts = opts || {};
+  var w = opts.width || 460;
+  var h = opts.height || 130;
+  var mini = !!opts.mini;
+
+  var points = entries
+    .filter(function (e) { return e.sliders && e.sliders[def.key] != null; })
+    .map(function (e) { return { date: e.date, value: e.sliders[def.key], id: e.id }; })
+    .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+
+  if (points.length === 0) {
+    return '<div class="chart-empty">Noch keine Werte erfasst</div>';
+  }
+
+  var pad = mini ? { top: 6, right: 6, bottom: 6, left: 6 } : { top: 12, right: 16, bottom: 22, left: 26 };
+  var innerW = w - pad.left - pad.right;
+  var innerH = h - pad.top - pad.bottom;
+  var minV = 1, maxV = 10;
+
+  var xy = points.map(function (p, i) {
+    var x = pad.left + (points.length > 1 ? (innerW * i / (points.length - 1)) : innerW / 2);
+    var y = pad.top + innerH - ((p.value - minV) / (maxV - minV)) * innerH;
+    return { x: x, y: y, value: p.value, date: p.date };
+  });
+
+  var path = xy.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ');
+
+  var gridLines = '';
+  var axisLabels = '';
+  if (!mini) {
+    [1, 5, 10].forEach(function (v) {
+      var y = pad.top + innerH - ((v - minV) / (maxV - minV)) * innerH;
+      gridLines += '<line x1="' + pad.left + '" x2="' + (w - pad.right) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" class="chart-grid-line"/>';
+      axisLabels += '<text x="' + (pad.left - 5) + '" y="' + (y + 3).toFixed(1) + '" class="chart-axis-label" text-anchor="end">' + v + '</text>';
+    });
+    axisLabels += '<text x="' + pad.left + '" y="' + (h - 6) + '" class="chart-axis-label">' + escapeHtml(formatDateShort(xy[0].date)) + '</text>';
+    axisLabels += '<text x="' + (w - pad.right) + '" y="' + (h - 6) + '" class="chart-axis-label" text-anchor="end">' + escapeHtml(formatDateShort(xy[xy.length - 1].date)) + '</text>';
+  }
+
+  var dots = xy.map(function (p) {
+    var color = sliderColor(def, p.value);
+    var r = mini ? 2 : 3.4;
+    return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r + '" fill="' + color + '" stroke="#fff" stroke-width="' + (mini ? 0 : 1) + '">' +
+      '<title>' + escapeHtml(formatDate(p.date)) + ': ' + p.value + '</title></circle>';
+  }).join('');
+
+  var lineColor = mini ? '#94a3b8' : '#64748b';
+
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet" class="chart-svg" role="img" aria-label="Verlauf ' + escapeAttr(def.label) + '">' +
+    gridLines +
+    '<path d="' + path + '" fill="none" stroke="' + lineColor + '" stroke-width="' + (mini ? 1.5 : 2) + '" stroke-linejoin="round" stroke-linecap="round"/>' +
+    dots +
+    axisLabels +
+    '</svg>';
+}
+
+/* Mini-Sparkline (Risiko-Verlauf) für Dashboard-Karten */
+function renderSparkline(entries, key) {
+  var def = sliderDef(key);
+  return renderSliderChart(entries, def, { width: 110, height: 32, mini: true });
+}
+
+function latestSliderValue(entries, key) {
+  var withValue = entries
+    .filter(function (e) { return e.sliders && e.sliders[key] != null; })
+    .sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+  return withValue.length ? withValue[0].sliders[key] : null;
+}
+
+function countUnrated(entries, key) {
+  return entries.filter(function (e) { return !e.sliders || e.sliders[key] == null; }).length;
+}
+
+
+'use strict';
+
+/* ============================================================
+   Anonymisierung für den KI-Export (§4).
+   Läuft komplett lokal; nichts wird automatisch versendet —
+   das Ergebnis landet ausschließlich (auf Wunsch) in der
+   Zwischenablage.
+   ============================================================ */
+
+/**
+ * Durchsucht den übergebenen Text nach bekannten / wahrscheinlichen
+ * Personennamen (Behandler, Mitarbeiter, Eltern) und liefert eine
+ * editierbare Vorschlagsliste "erkannter Name -> Platzhalter".
+ */
+function detectNamesInText(texts) {
+  var found = {}; // name -> category
+  var fullText = texts.join('\n');
+
+  KNOWN_PERSONS.forEach(function (p) {
+    if (fullText.indexOf(p.name) !== -1) found[p.name] = p.category;
+  });
+
+  NAME_PATTERNS.forEach(function (pat) {
+    var re = new RegExp(pat.regex.source, pat.regex.flags);
+    var m;
+    while ((m = re.exec(fullText)) !== null) {
+      var name = m[0].trim();
+      if (!found.hasOwnProperty(name)) found[name] = pat.category;
+      if (re.lastIndex === m.index) re.lastIndex++;
+    }
+  });
+
+  var familyRe = new RegExp(FAMILY_TERM_REGEX.source, FAMILY_TERM_REGEX.flags);
+  var fm;
+  while ((fm = familyRe.exec(fullText)) !== null) {
+    var fname = fm[0].trim();
+    if (!found.hasOwnProperty(fname)) found[fname] = 'Elteren';
+    if (familyRe.lastIndex === fm.index) familyRe.lastIndex++;
+  }
+
+  return found;
+}
+
+/**
+ * Baut aus der Erkennungs-Map eine geordnete, nummerierte
+ * Ersetzungsliste: gleiche Kategorie -> "<Kategorie> 1", "<Kategorie> 2", …
+ * "Elteren" bleibt als gemeinsamer Platzhalter ohne Nummer.
+ */
+function buildReplacementList(detectedMap) {
+  var counters = {};
+  var names = Object.keys(detectedMap).sort(function (a, b) { return b.length - a.length; });
+  return names.map(function (name) {
+    var cat = detectedMap[name];
+    var placeholder;
+    if (cat === 'Elteren') {
+      placeholder = 'Elteren';
+    } else {
+      counters[cat] = (counters[cat] || 0) + 1;
+      placeholder = cat + ' ' + counters[cat];
+    }
+    return { name: name, category: cat, placeholder: placeholder, active: true };
+  });
+}
+
+/**
+ * Erkennt verwendete Institutionskürzel in den ausgewählten Einträgen
+ * (für den optionalen Schalter "Institutionen ebenfalls anonymisieren").
+ */
+function detectInstitutions(entries) {
+  var set = {};
+  entries.forEach(function (e) {
+    (e.tags || []).forEach(function (t) {
+      if (INSTITUTION_TAGS.indexOf(t) !== -1) set[t] = true;
+    });
+  });
+  return Object.keys(set).sort();
+}
+
+/**
+ * Wendet die Anonymisierung auf einen Text an:
+ *  - Schülername -> anonLabel
+ *  - erkannte Personen-/Elternnamen -> Platzhalter (ggf. vom Nutzer angepasst)
+ *  - optional: Institutionskürzel -> "Stell N"
+ * Konkrete Datumsangaben bleiben unverändert.
+ */
+function anonymizeText(text, ctx) {
+  var out = text;
+
+  // 1) explizite, längere Namen zuerst ersetzen (vermeidet Teil-Überlappungen)
+  ctx.replacements
+    .filter(function (r) { return r.active && r.name; })
+    .sort(function (a, b) { return b.name.length - a.name.length; })
+    .forEach(function (r) {
+      out = splitJoin(out, r.name, r.placeholder);
+    });
+
+  // 2) Institutionen (optional)
+  if (ctx.anonymizeInstitutions) {
+    ctx.institutionMap.forEach(function (m) {
+      out = splitJoin(out, m.name, m.placeholder);
+    });
+  }
+
+  // 3) Schülername(n) -> anonLabel (zuletzt, damit Vor-/Nachnamen-Teile
+  //    nicht versehentlich schon durch generische Muster ersetzt wurden)
+  ctx.studentNameMap.forEach(function (m) {
+    out = splitJoin(out, m.name, m.anonLabel);
+  });
+
+  return out;
+}
+
+function splitJoin(haystack, needle, replacement) {
+  if (!needle) return haystack;
+  return haystack.split(needle).join(replacement);
+}
+
+/**
+ * Baut den vollständigen, kopierbaren KI-Export-Text zusammen:
+ * Auftrag/Frage + Hinweis zur Sprache + anonymisierte Einträge.
+ */
+function buildAiExportText(opts) {
+  // opts: { scopeLabel, taskText, entries, ctx }
+  var lines = [];
+  lines.push('=== Anonymisierter Auszug aus dem Schüler-Dossier ===');
+  lines.push('Umfang: ' + opts.scopeLabel);
+  lines.push('');
+  lines.push('Aufgabe an die KI:');
+  lines.push(opts.taskText || '(keine Aufgabe ausgewählt)');
+  lines.push('');
+  lines.push('Hinweis: Die folgenden Einträge sind im luxemburgischen Original verfasst ' +
+    'und wurden vor der Weitergabe anonymisiert (Namen durch Platzhalter ersetzt). ' +
+    'Konkrete Datumsangaben (Format TT.MM.JJJJ) wurden beibehalten.');
+  lines.push('');
+  lines.push('--- Einträge (chronologisch) ---');
+  opts.entries
+    .slice()
+    .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; })
+    .forEach(function (e) {
+      lines.push('');
+      lines.push('[' + formatDate(e.date) + '] ' + e.category + (e.tags && e.tags.length ? ' — Themen: ' + e.tags.join(', ') : ''));
+      lines.push(anonymizeText(e.text, opts.ctx));
+    });
+  return lines.join('\n');
+}
+
+
+'use strict';
+
+/* ============================================================
+   Ansicht A — Dashboard
+   ============================================================ */
+
+function viewDashboard(params, query) {
+  var students = Repo.listStudents();
+  var initialQuery = query.q || '';
+
+  function studentCardHtml(s) {
+    var entries = Repo.entriesForStudent(s.id);
+    var sorted = entries.slice().sort(function (a, b) { return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+    var lastEntry = sorted[0];
+    var riskValue = latestSliderValue(entries, 'risk');
+    var hasAnyValue = entries.some(function (e) {
+      return e.sliders && SLIDER_DEFS.some(function (d) { return e.sliders[d.key] != null; });
+    });
+
+    var riskBlock = '';
+    if (riskValue != null) {
+      riskBlock = '<div class="spark-row">' +
+        '<span class="risk-pill" style="background:' + sliderColor(sliderDef('risk'), riskValue) + '">Risiko: ' + riskValue + '</span>' +
+        '<span style="width:96px; flex-shrink:0;">' + renderSparkline(entries, 'risk') + '</span>' +
+        '</div>';
+    } else if (!hasAnyValue) {
+      riskBlock = '<div class="meta-line">Noch keine Bewertungen erfasst</div>';
+    }
+
+    return '<article class="card student-card" data-route="#/student/' + s.id + '" tabindex="0" role="button" aria-label="Dossier von ' + escapeAttr(s.name) + ' öffnen">' +
+      '<h3>' + escapeHtml(s.name) + '</h3>' +
+      '<div class="meta-line">' + pluralize(entries.length, 'Eintrag', 'Einträge') +
+      (lastEntry ? ' &middot; letzter Eintrag ' + escapeHtml(formatDate(lastEntry.date)) : ' &middot; noch keine Einträge') + '</div>' +
+      riskBlock +
+      '</article>';
+  }
+
+  function gridHtml(q) {
+    var needle = (q || '').trim().toLowerCase();
+    var filtered = students.filter(function (s) {
+      if (!needle) return true;
+      if (s.name.toLowerCase().indexOf(needle) !== -1) return true;
+      return Repo.entriesForStudent(s.id).some(function (e) {
+        return e.text.toLowerCase().indexOf(needle) !== -1 ||
+          e.category.toLowerCase().indexOf(needle) !== -1 ||
+          (e.tags || []).some(function (t) { return t.toLowerCase().indexOf(needle) !== -1; });
+      });
+    });
+    if (!filtered.length) {
+      return '<div class="empty-state">Keine Schüler oder Einträge gefunden für „' + escapeHtml(q) + '".</div>';
+    }
+    return '<div class="card-grid">' + filtered.map(studentCardHtml).join('') + '</div>';
+  }
+
+  var html =
+    '<div class="page-head">' +
+      '<div><h2>Dashboard</h2><p class="muted">' + students.length + ' Schüler &middot; ' + Repo.entries.length + ' Einträge insgesamt</p></div>' +
+      '<div class="actions"><button class="btn btn-primary" data-route="#/entry/new">+ Neuer Eintrag</button></div>' +
+    '</div>' +
+    '<div class="search-bar">' +
+      '<input type="search" id="dashboard-search" placeholder="Schüler, Themen, Tags oder Texte durchsuchen…" value="' + escapeAttr(initialQuery) + '" aria-label="Schnellsuche">' +
+    '</div>' +
+    '<div id="dashboard-grid">' + gridHtml(initialQuery) + '</div>';
+
+  return {
+    navKey: 'dashboard',
+    html: html,
+    afterRender: function (root) {
+      var input = qs('#dashboard-search', root);
+      var grid = qs('#dashboard-grid', root);
+      if (input) {
+        input.addEventListener('input', function () {
+          grid.innerHTML = gridHtml(input.value);
+        });
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    }
+  };
+}
+
+
+'use strict';
+
+/* ============================================================
+   Ansicht B — Schüler-Detailseite (Herzstück der App)
+   ============================================================ */
+
+var PERSON_TAG_REGEX = /^(Dr\.?|Dokter|Doktesch|Mme|Madame|Madamm|Här|Herr|Monsieur)\s/;
+
+function deriveInstitutionTags(entries) {
+  var set = {};
+  entries.forEach(function (e) { (e.tags || []).forEach(function (t) { if (INSTITUTION_TAGS.indexOf(t) !== -1) set[t] = true; }); });
+  return Object.keys(set).sort(function (a, b) { return a.localeCompare(b, 'de'); });
+}
+
+function derivePersonTags(entries) {
+  var set = {};
+  entries.forEach(function (e) { (e.tags || []).forEach(function (t) { if (PERSON_TAG_REGEX.test(t)) set[t] = true; }); });
+  return Object.keys(set).sort(function (a, b) { return a.localeCompare(b, 'de'); });
+}
+
+function deriveCurrentThemes(entries, weekCount) {
+  var byDateDesc = entries.slice().sort(function (a, b) { return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+  var seenDates = [];
+  byDateDesc.forEach(function (e) { if (seenDates.indexOf(e.date) === -1) seenDates.push(e.date); });
+  var recentDates = seenDates.slice(0, weekCount || 4);
+  var counts = {};
+  byDateDesc.forEach(function (e) {
+    if (recentDates.indexOf(e.date) === -1) return;
+    (e.tags || []).forEach(function (t) {
+      if (INSTITUTION_TAGS.indexOf(t) !== -1) return;
+      if (PERSON_TAG_REGEX.test(t)) return;
+      counts[t] = (counts[t] || 0) + 1;
+    });
+  });
+  return Object.keys(counts)
+    .sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b, 'de'); })
+    .slice(0, 10);
+}
+
+function viewStudentDetail(params) {
+  var student = Repo.getStudent(params.studentId);
+  if (!student) {
+    return {
+      navKey: '',
+      html: '<div class="empty-state">Schüler nicht gefunden. <a href="#/dashboard">Zurück zum Dashboard</a></div>',
+      afterRender: function () {}
+    };
+  }
+
+  var allEntries = Repo.entriesForStudent(student.id);
+  var categoriesPresent = uniqueSorted(allEntries.map(function (e) { return e.category; }), CATEGORIES);
+  var tagsPresent = uniqueSorted(flatten(allEntries.map(function (e) { return e.tags || []; })));
+
+  // ---- lokaler Filter-/UI-Zustand (kein Re-Routing nötig) ----
+  var state = {
+    activeCategories: {},
+    activeTags: {},
+    openEntries: {}
+  };
+  if (params.focusEntry) state.openEntries[params.focusEntry] = true;
+
+  function filteredEntries() {
+    var catKeys = Object.keys(state.activeCategories);
+    var tagKeys = Object.keys(state.activeTags);
+    return allEntries.filter(function (e) {
+      if (catKeys.length && catKeys.indexOf(e.category) === -1) return false;
+      if (tagKeys.length && !(e.tags || []).some(function (t) { return tagKeys.indexOf(t) !== -1; })) return false;
+      return true;
+    }).sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  }
+
+  function chartsHtml() {
+    return '<div class="charts-grid">' + SLIDER_DEFS.map(function (def) {
+      var unrated = countUnrated(allEntries, def.key);
+      return '<div class="card chart-card">' +
+        '<h4>' + escapeHtml(def.label) + '</h4>' +
+        renderSliderChart(allEntries, def, { width: 380, height: 120 }) +
+        '<div class="unrated-note">' + (allEntries.length ? (unrated + ' von ' + pluralize(allEntries.length, 'Eintrag', 'Einträgen') + ' noch unbewertet') : 'Noch keine Einträge') + '</div>' +
+        '</div>';
+    }).join('') + '</div>';
+  }
+
+  function filterBarHtml() {
+    var catChips = categoriesPresent.map(function (c) {
+      var active = !!state.activeCategories[c];
+      return '<button type="button" class="toggle-chip' + (active ? ' active' : '') + '" data-toggle="cat" data-value="' + escapeAttr(c) + '" style="' +
+        (active ? ('background:' + categoryColor(c) + ';border-color:' + categoryColor(c) + ';color:#fff;') : '') + '">' + escapeHtml(c) + '</button>';
+    }).join('');
+    var tagChips = tagsPresent.map(function (t) {
+      var active = !!state.activeTags[t];
+      return '<button type="button" class="toggle-chip' + (active ? ' active' : '') + '" data-toggle="tag" data-value="' + escapeAttr(t) + '">' + escapeHtml(t) + '</button>';
+    }).join('');
+    var hasFilters = Object.keys(state.activeCategories).length || Object.keys(state.activeTags).length;
+    return '<div class="filter-bar">' +
+        '<span class="filter-label">Kategorien:</span>' + (catChips || '<span class="muted">—</span>') +
+      '</div>' +
+      '<div class="filter-bar">' +
+        '<span class="filter-label">Themen / Tags:</span>' + (tagChips || '<span class="muted">—</span>') +
+        (hasFilters ? '<button type="button" class="btn btn-sm" data-action="clear-filters">Filter zurücksetzen</button>' : '') +
+      '</div>';
+  }
+
+  function entryCardHtml(e) {
+    var open = !!state.openEntries[e.id];
+    var tagChips = (e.tags || []).map(function (t) { return '<span class="chip">' + escapeHtml(t) + '</span>'; }).join('');
+    return '<div class="card entry-card" data-entry="' + e.id + '">' +
+      '<div class="entry-head" data-action="toggle-entry" data-id="' + e.id + '">' +
+        '<span class="caret' + (open ? ' open' : '') + '">&#9656;</span>' +
+        '<span class="date">' + escapeHtml(formatDate(e.date)) + '</span>' +
+        '<span class="cat-badge" style="background:' + categoryColor(e.category) + '">' + escapeHtml(e.category) + '</span>' +
+        '<span class="chip-row">' + tagChips + '</span>' +
+        '<span class="spacer"></span>' +
+        (e.author ? '<span class="author">Kürzel: ' + escapeHtml(e.author) + '</span>' : '<span class="author muted">kein Autor erfasst</span>') +
+      '</div>' +
+      '<div class="entry-body" ' + (open ? '' : 'hidden') + '>' +
+        '<div class="text">' + escapeHtml(e.text) + '</div>' +
+        '<div class="entry-actions">' +
+          '<button type="button" class="btn btn-sm" data-route="#/entry/' + e.id + '/edit">Bearbeiten</button>' +
+          '<button type="button" class="btn btn-sm btn-danger" data-action="delete-entry" data-id="' + e.id + '">Löschen</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function timelineHtml() {
+    var list = filteredEntries();
+    if (!list.length) {
+      return '<div class="empty-state">Keine Einträge für die aktuelle Auswahl.</div>';
+    }
+    return '<div class="timeline">' + list.map(entryCardHtml).join('') + '</div>';
+  }
+
+  var institutions = deriveInstitutionTags(allEntries);
+  var persons = derivePersonTags(allEntries);
+  var themes = deriveCurrentThemes(allEntries);
+
+  var html =
+    '<div class="page-head">' +
+      '<div><a href="#/dashboard" class="muted">&larr; Zurück zum Dashboard</a><h2>' + escapeHtml(student.name) + '</h2></div>' +
+      '<div class="actions">' +
+        '<button type="button" class="btn" data-route="#/export?student=' + encodeURIComponent(student.id) + '">PDF-Export</button>' +
+        '<button type="button" class="btn" data-route="#/ai-export?student=' + encodeURIComponent(student.id) + '">An externe KI geben</button>' +
+        '<button type="button" class="btn btn-primary" data-route="#/entry/new/' + student.id + '">+ Neuer Eintrag</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="detail-head">' +
+      '<div class="info-block"><h4>Aktive externe Stellen</h4>' + (institutions.length ? '<div class="chip-row">' + institutions.map(function (i) { return '<span class="chip">' + escapeHtml(i) + '</span>'; }).join('') + '</div>' : '<p class="muted">Keine erkannt</p>') + '</div>' +
+      '<div class="info-block"><h4>Beteiligte Behandler / Mitarbeiter</h4>' + (persons.length ? '<div class="chip-row">' + persons.map(function (i) { return '<span class="chip">' + escapeHtml(i) + '</span>'; }).join('') + '</div>' : '<p class="muted">Keine erkannt</p>') + '</div>' +
+      '<div class="info-block"><h4>Laufende Themen</h4>' + (themes.length ? '<div class="chip-row">' + themes.map(function (i) { return '<span class="chip">' + escapeHtml(i) + '</span>'; }).join('') + '</div>' : '<p class="muted">Keine erkannt</p>') + '</div>' +
+    '</div>' +
+
+    '<h3 class="section-title">Verlauf</h3>' +
+    chartsHtml() +
+
+    '<h3 class="section-title">Thematische Bündelung</h3>' +
+    '<div id="filter-bar-wrap">' + filterBarHtml() + '</div>' +
+
+    '<h3 class="section-title">Zeitleiste (' + allEntries.length + ' Einträge, chronologisch)</h3>' +
+    '<div id="timeline-wrap">' + timelineHtml() + '</div>';
+
+  return {
+    navKey: '',
+    html: html,
+    afterRender: function (root) {
+      var filterWrap = qs('#filter-bar-wrap', root);
+      var timelineWrap = qs('#timeline-wrap', root);
+
+      function rerenderFilters() { filterWrap.innerHTML = filterBarHtml(); wireFilters(); }
+      function rerenderTimeline() { timelineWrap.innerHTML = timelineHtml(); wireTimeline(); }
+
+      function wireFilters() {
+        qsa('[data-toggle]', filterWrap).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var kind = btn.getAttribute('data-toggle');
+            var value = btn.getAttribute('data-value');
+            var bucket = kind === 'cat' ? state.activeCategories : state.activeTags;
+            if (bucket[value]) delete bucket[value]; else bucket[value] = true;
+            rerenderFilters();
+            rerenderTimeline();
+          });
+        });
+        var clearBtn = qs('[data-action="clear-filters"]', filterWrap);
+        if (clearBtn) clearBtn.addEventListener('click', function () {
+          state.activeCategories = {};
+          state.activeTags = {};
+          rerenderFilters();
+          rerenderTimeline();
+        });
+      }
+
+      function wireTimeline() {
+        qsa('[data-action="toggle-entry"]', timelineWrap).forEach(function (head) {
+          head.addEventListener('click', function () {
+            var id = head.getAttribute('data-id');
+            state.openEntries[id] = !state.openEntries[id];
+            rerenderTimeline();
+          });
+        });
+        qsa('[data-action="delete-entry"]', timelineWrap).forEach(function (btn) {
+          btn.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            var id = btn.getAttribute('data-id');
+            var entry = Repo.getEntry(id);
+            if (!entry) return;
+            if (!confirm('Diesen Eintrag vom ' + formatDate(entry.date) + ' wirklich löschen? Das kann nicht rückgängig gemacht werden.')) return;
+            Repo.deleteEntry(id).then(function () {
+              showToast('Eintrag gelöscht.');
+              navigate('#/student/' + student.id, true);
+            });
+          });
+        });
+        if (params.focusEntry) {
+          var target = qs('[data-entry="' + params.focusEntry + '"]', timelineWrap);
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+
+      wireFilters();
+      wireTimeline();
+    }
+  };
+}
+
+function uniqueSorted(values, preferredOrder) {
+  var set = {};
+  values.forEach(function (v) { set[v] = true; });
+  var unique = Object.keys(set);
+  if (preferredOrder) {
+    return preferredOrder.filter(function (v) { return set[v]; });
+  }
+  return unique.sort(function (a, b) { return a.localeCompare(b, 'de'); });
+}
+
+function flatten(arrays) {
+  var out = [];
+  arrays.forEach(function (a) { out = out.concat(a); });
+  return out;
+}
+
+
+'use strict';
+
+/* ============================================================
+   Ansicht C — Eintrag erfassen / bearbeiten
+   ============================================================ */
+
+function viewEntryForm(params) {
+  var isEdit = !!params.entryId;
+  var existing = isEdit ? Repo.getEntry(params.entryId) : null;
+  if (isEdit && !existing) {
+    return { navKey: '', html: '<div class="empty-state">Eintrag nicht gefunden. <a href="#/dashboard">Zurück zum Dashboard</a></div>', afterRender: function () {} };
+  }
+
+  var students = Repo.listStudents();
+  var defaultStudentId = existing ? existing.studentId : (params.studentId || (students[0] && students[0].id) || '');
+  var vocabulary = Repo.tagVocabulary();
+
+  var formState = {
+    tags: existing ? existing.tags.slice() : []
+  };
+
+  function sliderFieldHtml(def) {
+    var current = existing && existing.sliders ? existing.sliders[def.key] : null;
+    var rated = current != null;
+    var value = rated ? current : 5;
+    return '<div class="slider-field" data-slider="' + def.key + '">' +
+      '<label>' + escapeHtml(def.label) + ' <span class="hint">(' + escapeHtml(def.hint) + ')</span></label>' +
+      '<label class="checkbox-label"><input type="checkbox" data-role="rated-toggle" ' + (rated ? 'checked' : '') + '> Bewertung erfassen</label>' +
+      '<div class="slider-row" ' + (rated ? '' : 'hidden') + '>' +
+        '<input type="range" min="' + def.min + '" max="' + def.max + '" step="1" value="' + value + '" data-role="slider-input">' +
+        '<span class="slider-value" data-role="slider-value">' + value + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function tagChipHtml(tag, idx) {
+    return '<span class="chip">' + escapeHtml(tag) + '<button type="button" data-action="remove-tag" data-idx="' + idx + '" aria-label="Tag ' + escapeAttr(tag) + ' entfernen">&times;</button></span>';
+  }
+
+  function tagsWrapHtml() {
+    return formState.tags.map(tagChipHtml).join('') +
+      '<input type="text" id="tag-input" placeholder="Tag eingeben + Enter…" list="tag-suggestions" autocomplete="off">';
+  }
+
+  var html =
+    '<div class="page-head">' +
+      '<div><h2>' + (isEdit ? 'Eintrag bearbeiten' : 'Neuen Eintrag erfassen') + '</h2>' +
+      (existing ? '<p class="muted">Erstellt am ' + escapeHtml(formatDateTime(existing.createdAt)) + (existing.updatedAt && existing.updatedAt !== existing.createdAt ? ' &middot; zuletzt geändert ' + escapeHtml(formatDateTime(existing.updatedAt)) : '') + '</p>' : '') +
+      '</div>' +
+    '</div>' +
+    '<form id="entry-form" class="card form-card">' +
+      '<div class="row">' +
+        '<div class="field">' +
+          '<label for="f-student">Schüler</label>' +
+          '<select id="f-student" required>' + optionsHtml(students.map(function (s) { return { value: s.id, label: s.name }; }), defaultStudentId) + '</select>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label for="f-date">Datum (Wochendatum des Rapports)</label>' +
+          '<input type="date" id="f-date" required value="' + escapeAttr(existing ? existing.date : todayIso()) + '">' +
+        '</div>' +
+        '<div class="field">' +
+          '<label for="f-author">Autor (Kürzel)</label>' +
+          '<input type="text" id="f-author" placeholder="z. B. JP" value="' + escapeAttr(existing ? existing.author : '') + '">' +
+        '</div>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div class="field">' +
+          '<label for="f-category">Primärkategorie</label>' +
+          '<select id="f-category" required>' + optionsHtml(CATEGORIES, existing ? existing.category : CATEGORIES[0]) + '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label for="tag-input">Themen-Tags <span class="hint">(0..n, Enter oder Komma zum Hinzufügen)</span></label>' +
+        '<div class="tag-input-wrap" id="tag-wrap">' + tagsWrapHtml() + '</div>' +
+        '<datalist id="tag-suggestions">' + vocabulary.map(function (t) { return '<option value="' + escapeAttr(t) + '">'; }).join('') + '</datalist>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label for="f-text">Eintragstext (Luxemburgisch — Originaltext, nicht übersetzen)</label>' +
+        '<textarea id="f-text" rows="8" required>' + escapeHtml(existing ? existing.text : '') + '</textarea>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>Verlaufs-Slider <span class="hint">(optional, 1–10 — bleiben „nicht bewertet“, wenn nicht angehakt)</span></label>' +
+        '<div class="row">' + SLIDER_DEFS.map(function (d) { return '<div style="flex:1; min-width:230px;">' + sliderFieldHtml(d) + '</div>'; }).join('') + '</div>' +
+      '</div>' +
+      '<hr class="divider">' +
+      '<div class="page-head" style="margin:0;">' +
+        '<button type="button" class="btn" data-route="' + (isEdit ? '#/student/' + existing.studentId : '#/dashboard') + '">Abbrechen</button>' +
+        '<button type="submit" class="btn btn-primary">' + (isEdit ? 'Änderungen speichern' : 'Eintrag speichern') + '</button>' +
+      '</div>' +
+    '</form>';
+
+  return {
+    navKey: '',
+    html: html,
+    afterRender: function (root) {
+      var form = qs('#entry-form', root);
+      var tagWrap = qs('#tag-wrap', root);
+
+      function rerenderTags() {
+        tagWrap.innerHTML = tagsWrapHtml();
+        wireTagInput();
+      }
+
+      function addTag(raw) {
+        var value = raw.trim().replace(/,$/, '').trim();
+        if (!value) return;
+        if (formState.tags.indexOf(value) !== -1) { rerenderTags(); return; }
+        formState.tags.push(value);
+        rerenderTags();
+        var input = qs('#tag-input', tagWrap);
+        if (input) input.focus();
+      }
+
+      function wireTagInput() {
+        var input = qs('#tag-input', tagWrap);
+        if (input) {
+          input.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter' || ev.key === ',') {
+              ev.preventDefault();
+              addTag(input.value);
+              input.value = '';
+            } else if (ev.key === 'Backspace' && !input.value && formState.tags.length) {
+              formState.tags.pop();
+              rerenderTags();
+            }
+          });
+          input.addEventListener('blur', function () {
+            if (input.value.trim()) { addTag(input.value); input.value = ''; }
+          });
+        }
+        qsa('[data-action="remove-tag"]', tagWrap).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var idx = Number(btn.getAttribute('data-idx'));
+            formState.tags.splice(idx, 1);
+            rerenderTags();
+          });
+        });
+      }
+      wireTagInput();
+
+      qsa('.slider-field', form).forEach(function (field) {
+        var toggle = qs('[data-role="rated-toggle"]', field);
+        var row = qs('.slider-row', field);
+        var range = qs('[data-role="slider-input"]', field);
+        var valueLabel = qs('[data-role="slider-value"]', field);
+        toggle.addEventListener('change', function () {
+          row.hidden = !toggle.checked;
+        });
+        range.addEventListener('input', function () {
+          valueLabel.textContent = range.value;
+        });
+      });
+
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var studentId = qs('#f-student', form).value;
+        var date = qs('#f-date', form).value;
+        var text = qs('#f-text', form).value.trim();
+        if (!studentId || !date || !text) {
+          showToast('Bitte Schüler, Datum und Text ausfüllen.', { error: true });
+          return;
+        }
+        var sliders = {};
+        SLIDER_DEFS.forEach(function (def) {
+          var field = qs('.slider-field[data-slider="' + def.key + '"]', form);
+          var toggle = qs('[data-role="rated-toggle"]', field);
+          var range = qs('[data-role="slider-input"]', field);
+          sliders[def.key] = toggle.checked ? Number(range.value) : null;
+        });
+
+        var payload = {
+          id: existing ? existing.id : null,
+          studentId: studentId,
+          date: date,
+          author: qs('#f-author', form).value,
+          category: qs('#f-category', form).value,
+          tags: formState.tags,
+          text: text,
+          sliders: sliders,
+          createdAt: existing ? existing.createdAt : null
+        };
+
+        Repo.saveEntry(payload).then(function (saved) {
+          showToast(isEdit ? 'Eintrag aktualisiert.' : 'Eintrag gespeichert.');
+          navigate('#/student/' + saved.studentId, true);
+        }).catch(function (err) {
+          showToast('Fehler beim Speichern: ' + err.message, { error: true });
+        });
+      });
+    }
+  };
+}
+
+function todayIso() {
+  var d = new Date();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + day;
+}
+
+
+'use strict';
+
+/* ============================================================
+   Ansicht D — Suche
+   Volltextsuche über Eintragstexte und Tags, kombinierbar mit
+   Filtern (Schüler, Kategorie, Tag, Zeitraum).
+   ============================================================ */
+
+function viewSearch(params, query) {
+  var students = Repo.listStudents();
+  var tagVocabulary = Repo.tagVocabulary();
+
+  var state = {
+    q: query.q || '',
+    studentId: query.student || '',
+    category: query.category || '',
+    tag: query.tag || '',
+    from: query.from || '',
+    to: query.to || ''
+  };
+
+  function matches(entry) {
+    if (state.studentId && entry.studentId !== state.studentId) return false;
+    if (state.category && entry.category !== state.category) return false;
+    if (state.tag && (entry.tags || []).indexOf(state.tag) === -1) return false;
+    if (state.from && entry.date < state.from) return false;
+    if (state.to && entry.date > state.to) return false;
+    if (state.q) {
+      var needle = state.q.toLowerCase();
+      var inText = entry.text.toLowerCase().indexOf(needle) !== -1;
+      var inTags = (entry.tags || []).some(function (t) { return t.toLowerCase().indexOf(needle) !== -1; });
+      if (!inText && !inTags) return false;
+    }
+    return true;
+  }
+
+  function results() {
+    return Repo.listEntries().filter(matches).sort(function (a, b) { return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+  }
+
+  function resultRowHtml(e) {
+    var student = Repo.getStudent(e.studentId);
+    var snippet = snippetAround(e.text, state.q);
+    var matchedTags = (e.tags || []).filter(function (t) { return state.q && t.toLowerCase().indexOf(state.q.toLowerCase()) !== -1; });
+    return '<article class="card search-result" data-route="#/student/' + e.studentId + '/entry/' + e.id + '">' +
+      '<div class="meta">' +
+        '<strong>' + escapeHtml(student ? student.name : e.studentId) + '</strong>' +
+        '<span>' + escapeHtml(formatDate(e.date)) + '</span>' +
+        '<span class="cat-badge" style="background:' + categoryColor(e.category) + '">' + escapeHtml(e.category) + '</span>' +
+        (e.tags && e.tags.length ? '<span class="chip-row">' + e.tags.map(function (t) { return '<span class="chip">' + highlightMatch(t, state.q) + '</span>'; }).join('') + '</span>' : '') +
+      '</div>' +
+      '<div class="snippet">' + highlightMatch(snippet, state.q) + '</div>' +
+      '</article>';
+  }
+
+  function resultsHtml() {
+    var list = results();
+    var summary = '<p class="muted">' + pluralize(list.length, 'Treffer', 'Treffer') + (state.q ? ' für „' + escapeHtml(state.q) + '"' : '') + '</p>';
+    if (!list.length) {
+      return summary + '<div class="empty-state">Keine Einträge gefunden. Filter anpassen oder Suchbegriff ändern.</div>';
+    }
+    return summary + '<div class="search-results">' + list.map(resultRowHtml).join('') + '</div>';
+  }
+
+  var html =
+    '<div class="page-head"><div><h2>Suche</h2><p class="muted">Volltextsuche über alle Eintragstexte und Tags, kombinierbar mit Filtern.</p></div></div>' +
+    '<div class="card export-config">' +
+      '<div class="field"><label for="s-q">Suchtext</label><input type="search" id="s-q" placeholder="z. B. Vape, Suizidalität, CTSA…" value="' + escapeAttr(state.q) + '"></div>' +
+      '<div class="row">' +
+        '<div class="field"><label for="s-student">Schüler</label><select id="s-student"><option value="">Alle Schüler</option>' + optionsHtml(students.map(function (s) { return { value: s.id, label: s.name }; }), state.studentId) + '</select></div>' +
+        '<div class="field"><label for="s-category">Kategorie</label><select id="s-category"><option value="">Alle Kategorien</option>' + optionsHtml(CATEGORIES, state.category) + '</select></div>' +
+        '<div class="field"><label for="s-tag">Tag</label><select id="s-tag"><option value="">Alle Tags</option>' + optionsHtml(tagVocabulary, state.tag) + '</select></div>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div class="field"><label for="s-from">Zeitraum von</label><input type="date" id="s-from" value="' + escapeAttr(state.from) + '"></div>' +
+        '<div class="field"><label for="s-to">Zeitraum bis</label><input type="date" id="s-to" value="' + escapeAttr(state.to) + '"></div>' +
+        '<div class="field"><label>&nbsp;</label><button type="button" class="btn" id="s-reset">Filter zurücksetzen</button></div>' +
+      '</div>' +
+    '</div>' +
+    '<div id="search-results-wrap">' + resultsHtml() + '</div>';
+
+  return {
+    navKey: 'search',
+    html: html,
+    afterRender: function (root) {
+      var wrap = qs('#search-results-wrap', root);
+      function rerender() { wrap.innerHTML = resultsHtml(); }
+
+      qs('#s-q', root).addEventListener('input', function (e) { state.q = e.target.value; rerender(); });
+      qs('#s-student', root).addEventListener('change', function (e) { state.studentId = e.target.value; rerender(); });
+      qs('#s-category', root).addEventListener('change', function (e) { state.category = e.target.value; rerender(); });
+      qs('#s-tag', root).addEventListener('change', function (e) { state.tag = e.target.value; rerender(); });
+      qs('#s-from', root).addEventListener('change', function (e) { state.from = e.target.value; rerender(); });
+      qs('#s-to', root).addEventListener('change', function (e) { state.to = e.target.value; rerender(); });
+      qs('#s-reset', root).addEventListener('click', function () {
+        state.q = ''; state.studentId = ''; state.category = ''; state.tag = ''; state.from = ''; state.to = '';
+        qs('#s-q', root).value = '';
+        qs('#s-student', root).value = '';
+        qs('#s-category', root).value = '';
+        qs('#s-tag', root).value = '';
+        qs('#s-from', root).value = '';
+        qs('#s-to', root).value = '';
+        rerender();
+      });
+      if (state.q) qs('#s-q', root).focus();
+    }
+  };
+}
+
+
+'use strict';
+
+/* ============================================================
+   Ansicht E — PDF-Export pro Thema
+   Saubere Druckansicht via window.print() ("Als PDF speichern").
+   ============================================================ */
+
+function viewPdfExport(params, query) {
+  var students = Repo.listStudents();
+  var preselectStudent = query.student || (students[0] && students[0].id) || '';
+
+  var state = {
+    studentId: preselectStudent,
+    category: '',
+    tags: {},
+    from: '',
+    to: '',
+    preview: null // { entries, scopeLabel, periodLabel }
+  };
+
+  function tagsForStudent(studentId) {
+    return uniqueSorted(flatten(Repo.entriesForStudent(studentId).map(function (e) { return e.tags || []; })));
+  }
+
+  function configHtml() {
+    var availableTags = state.studentId ? tagsForStudent(state.studentId) : [];
+    var tagChips = availableTags.map(function (t) {
+      var active = !!state.tags[t];
+      return '<button type="button" class="toggle-chip' + (active ? ' active' : '') + '" data-tag="' + escapeAttr(t) + '">' + escapeHtml(t) + '</button>';
+    }).join('');
+    return '<div class="card export-config no-print">' +
+      '<div class="field"><label for="pe-student">Schüler</label>' +
+        '<select id="pe-student">' + optionsHtml(students.map(function (s) { return { value: s.id, label: s.name }; }), state.studentId) + '</select>' +
+      '</div>' +
+      '<div class="field"><label for="pe-category">Kategorie <span class="hint">(optional)</span></label>' +
+        '<select id="pe-category"><option value="">Alle Kategorien</option>' + optionsHtml(CATEGORIES, state.category) + '</select>' +
+      '</div>' +
+      '<div class="field"><label>Tags <span class="hint">(optional, Mehrfachauswahl — der Schüler hat ' + availableTags.length + ' verschiedene Tags)</span></label>' +
+        '<div class="chip-row" id="pe-tags">' + (tagChips || '<span class="muted">Keine Tags vorhanden.</span>') + '</div>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div class="field"><label for="pe-from">Zeitraum von <span class="hint">(optional)</span></label><input type="date" id="pe-from" value="' + escapeAttr(state.from) + '"></div>' +
+        '<div class="field"><label for="pe-to">Zeitraum bis <span class="hint">(optional)</span></label><input type="date" id="pe-to" value="' + escapeAttr(state.to) + '"></div>' +
+      '</div>' +
+      '<button type="button" class="btn btn-primary" id="pe-generate">Vorschau erzeugen</button>' +
+    '</div>';
+  }
+
+  function buildScopeLabel(student) {
+    var parts = [];
+    if (state.category) parts.push('Kategorie „' + state.category + '"');
+    var tagList = Object.keys(state.tags);
+    if (tagList.length) parts.push('Tags: ' + tagList.join(', '));
+    if (!parts.length) parts.push('alle Themen');
+    return student.name + ' — ' + parts.join(' &middot; ');
+  }
+
+  function buildPeriodLabel() {
+    if (state.from && state.to) return formatDate(state.from) + ' – ' + formatDate(state.to);
+    if (state.from) return 'ab ' + formatDate(state.from);
+    if (state.to) return 'bis ' + formatDate(state.to);
+    return 'gesamter erfasster Zeitraum';
+  }
+
+  function generatePreview() {
+    var student = Repo.getStudent(state.studentId);
+    if (!student) { showToast('Bitte zuerst einen Schüler wählen.', { error: true }); return; }
+    var tagList = Object.keys(state.tags);
+    var entries = Repo.entriesForStudent(student.id).filter(function (e) {
+      if (state.category && e.category !== state.category) return false;
+      if (tagList.length && !(e.tags || []).some(function (t) { return tagList.indexOf(t) !== -1; })) return false;
+      if (state.from && e.date < state.from) return false;
+      if (state.to && e.date > state.to) return false;
+      return true;
+    }).sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+
+    state.preview = {
+      student: student,
+      entries: entries,
+      scopeLabel: buildScopeLabel(student),
+      periodLabel: buildPeriodLabel()
+    };
+    return state.preview;
+  }
+
+  function previewHtml() {
+    if (!state.preview) return '';
+    var p = state.preview;
+    if (!p.entries.length) {
+      return '<div class="empty-state no-print">Keine Einträge für diese Auswahl gefunden — bitte Filter anpassen.</div>';
+    }
+    var entriesHtml = p.entries.map(function (e) {
+      return '<div class="print-entry">' +
+        '<strong>' + escapeHtml(formatDate(e.date)) + '</strong> &middot; ' +
+        '<span>' + escapeHtml(e.category) + '</span>' +
+        (e.author ? ' &middot; <span>Autor: ' + escapeHtml(e.author) + '</span>' : '') +
+        (e.tags && e.tags.length ? '<br><em>Tags: ' + escapeHtml(e.tags.join(', ')) + '</em>' : '') +
+        '<p>' + escapeHtml(e.text) + '</p>' +
+      '</div>';
+    }).join('');
+    return '<div class="card no-print" style="padding:16px; margin-bottom:14px;">' +
+        '<p><strong>Vorschau bereit:</strong> ' + p.entries.length + ' Einträge — ' + escapeHtml(p.scopeLabel) + ', ' + escapeHtml(p.periodLabel) + '</p>' +
+        '<button type="button" class="btn btn-primary" id="pe-print">Drucken / Als PDF speichern</button>' +
+        '<p class="hint" style="margin-top:8px;">Öffnet den Druckdialog Ihres Browsers — wählen Sie dort „Als PDF speichern".</p>' +
+      '</div>' +
+      '<div class="print-sheet" id="print-sheet">' +
+        '<h1>Dossier-Auszug — ' + escapeHtml(p.student.name) + '</h1>' +
+        '<h2>' + escapeHtml(p.scopeLabel.split(' — ')[1] || 'alle Themen') + ' &middot; Zeitraum: ' + escapeHtml(p.periodLabel) + '</h2>' +
+        '<p class="muted">Erstellt am ' + escapeHtml(formatDateTime(nowIso())) + ' &middot; ' + p.entries.length + ' Einträge, chronologisch</p>' +
+        '<hr class="divider">' +
+        entriesHtml +
+      '</div>';
+  }
+
+  var html =
+    '<div class="page-head no-print"><div><h2>PDF-Export pro Thema</h2><p class="muted">Wählen Sie Schüler, optional Kategorie/Tags und Zeitraum — dann „Vorschau erzeugen" und drucken / als PDF speichern.</p></div></div>' +
+    '<div id="pe-config-wrap">' + configHtml() + '</div>' +
+    '<div id="pe-preview-wrap">' + previewHtml() + '</div>';
+
+  return {
+    navKey: 'export',
+    html: html,
+    afterRender: function (root) {
+      var configWrap = qs('#pe-config-wrap', root);
+      var previewWrap = qs('#pe-preview-wrap', root);
+
+      function rerenderConfig() { configWrap.innerHTML = configHtml(); wireConfig(); }
+      function rerenderPreview() { previewWrap.innerHTML = previewHtml(); wirePreview(); }
+
+      function wireConfig() {
+        qs('#pe-student', configWrap).addEventListener('change', function (e) {
+          state.studentId = e.target.value;
+          state.tags = {};
+          state.preview = null;
+          rerenderConfig();
+          rerenderPreview();
+        });
+        qs('#pe-category', configWrap).addEventListener('change', function (e) { state.category = e.target.value; });
+        qs('#pe-from', configWrap).addEventListener('change', function (e) { state.from = e.target.value; });
+        qs('#pe-to', configWrap).addEventListener('change', function (e) { state.to = e.target.value; });
+        qsa('[data-tag]', configWrap).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var tag = btn.getAttribute('data-tag');
+            if (state.tags[tag]) delete state.tags[tag]; else state.tags[tag] = true;
+            rerenderConfig();
+          });
+        });
+        qs('#pe-generate', configWrap).addEventListener('click', function () {
+          generatePreview();
+          rerenderPreview();
+          if (state.preview && state.preview.entries.length) {
+            previewWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      }
+
+      function wirePreview() {
+        var printBtn = qs('#pe-print', previewWrap);
+        if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+      }
+
+      wireConfig();
+      wirePreview();
+    }
+  };
+}
+
+
+'use strict';
+
+/* ============================================================
+   Ansicht §4 — Anonymisierter KI-Export
+   Drei Phasen: 1) Umfang & Aufgabe wählen  2) erkannte Namen
+   prüfen/ergänzen  3) Vorschau & "In Zwischenablage kopieren".
+   Nichts wird automatisch versendet.
+   ============================================================ */
+
+function viewAiExport(params, query) {
+  var students = Repo.listStudents();
+
+  var state = {
+    phase: 'config', // 'config' | 'names' | 'preview'
+    scopeType: 'student', // 'student' | 'theme' | 'selection'
+    studentId: query.student || (students[0] && students[0].id) || '',
+    category: '',
+    tags: {},
+    selectedEntries: {},
+    selectedPrompts: {},
+    freeText: '',
+    anonymizeInstitutions: false,
+    replacements: [],
+    institutionMap: [],
+    builtText: ''
+  };
+
+  function studentEntries() { return Repo.entriesForStudent(state.studentId); }
+
+  function scopedEntries() {
+    var all = studentEntries();
+    if (state.scopeType === 'student') return all.slice().sort(byDateAsc);
+    if (state.scopeType === 'theme') {
+      var tagList = Object.keys(state.tags);
+      return all.filter(function (e) {
+        if (state.category && e.category !== state.category) return false;
+        if (tagList.length && !(e.tags || []).some(function (t) { return tagList.indexOf(t) !== -1; })) return false;
+        return true;
+      }).sort(byDateAsc);
+    }
+    // selection
+    return all.filter(function (e) { return !!state.selectedEntries[e.id]; }).sort(byDateAsc);
+  }
+  function byDateAsc(a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); }
+
+  function scopeLabel() {
+    var student = Repo.getStudent(state.studentId);
+    if (!student) return '(kein Schüler gewählt)';
+    if (state.scopeType === 'student') return 'Gesamtes Dossier von ' + student.anonLabel + ' (' + studentEntries().length + ' Einträge)';
+    if (state.scopeType === 'theme') {
+      var bits = [];
+      if (state.category) bits.push('Kategorie „' + state.category + '"');
+      var tagList = Object.keys(state.tags);
+      if (tagList.length) bits.push('Tags: ' + tagList.join(', '));
+      if (!bits.length) bits.push('alle Themen');
+      return 'Thema bei ' + student.anonLabel + ' — ' + bits.join(' · ') + ' (' + scopedEntries().length + ' Einträge)';
+    }
+    return 'Eigene Auswahl bei ' + student.anonLabel + ' (' + scopedEntries().length + ' Einträge)';
+  }
+
+  function taskText() {
+    var lines = [];
+    AI_PROMPT_OPTIONS.forEach(function (p, i) { if (state.selectedPrompts[i]) lines.push('- ' + p); });
+    if (state.freeText.trim()) lines.push('- ' + state.freeText.trim());
+    return lines.join('\n');
+  }
+
+  /* ---------------- Phase 1: Umfang & Aufgabe ---------------- */
+  function configHtml() {
+    var student = Repo.getStudent(state.studentId);
+    var availableTags = student ? uniqueSorted(flatten(studentEntries().map(function (e) { return e.tags || []; }))) : [];
+    var tagChips = availableTags.map(function (t) {
+      var active = !!state.tags[t];
+      return '<button type="button" class="toggle-chip' + (active ? ' active' : '') + '" data-tag="' + escapeAttr(t) + '">' + escapeHtml(t) + '</button>';
+    }).join('');
+    var entryCheckboxes = student ? studentEntries().slice().sort(byDateAsc).map(function (e) {
+      var checked = !!state.selectedEntries[e.id];
+      return '<label class="checkbox-row"><input type="checkbox" data-entry-pick="' + e.id + '" ' + (checked ? 'checked' : '') + '>' +
+        '<span><strong>' + escapeHtml(formatDate(e.date)) + '</strong> &middot; ' + escapeHtml(e.category) +
+        (e.tags && e.tags.length ? ' &middot; <span class="muted">' + escapeHtml(e.tags.join(', ')) + '</span>' : '') +
+        '<br><span class="muted">' + escapeHtml(snippetAround(e.text, '', 70)) + '</span></span></label>';
+    }).join('') : '';
+
+    return '<div class="card export-config no-print">' +
+      '<h3 style="margin-top:0;">1. Umfang wählen</h3>' +
+      '<div class="field"><label for="ai-student">Schüler</label>' +
+        '<select id="ai-student">' + optionsHtml(students.map(function (s) { return { value: s.id, label: s.name + ' (' + s.anonLabel + ')' }; }), state.studentId) + '</select>' +
+      '</div>' +
+      '<div class="field"><label>Art der Auswahl</label>' +
+        '<div class="row" style="gap:8px;">' +
+          scopeOptionBtn('student', 'Ganzes Dossier') +
+          scopeOptionBtn('theme', 'Ein Thema (Kategorie/Tags)') +
+          scopeOptionBtn('selection', 'Eigene Auswahl an Einträgen') +
+        '</div>' +
+      '</div>' +
+      (state.scopeType === 'theme' ? (
+        '<div class="row">' +
+          '<div class="field"><label for="ai-category">Kategorie <span class="hint">(optional)</span></label>' +
+            '<select id="ai-category"><option value="">Alle Kategorien</option>' + optionsHtml(CATEGORIES, state.category) + '</select></div>' +
+        '</div>' +
+        '<div class="field"><label>Tags <span class="hint">(optional, Mehrfachauswahl)</span></label><div class="chip-row" id="ai-tags">' + (tagChips || '<span class="muted">Keine Tags vorhanden.</span>') + '</div></div>'
+      ) : '') +
+      (state.scopeType === 'selection' ? (
+        '<div class="field"><label>Einträge auswählen</label><div style="max-height:280px; overflow:auto; border:1px solid var(--border); border-radius:var(--radius); padding:10px;">' + (entryCheckboxes || '<p class="muted">Keine Einträge vorhanden.</p>') + '</div></div>'
+      ) : '') +
+      '<p class="muted" id="ai-scope-summary">' + escapeHtml(scopeLabel()) + '</p>' +
+
+      '<h3>2. Frage / Aufgabe an die KI</h3>' +
+      AI_PROMPT_OPTIONS.map(function (p, i) {
+        return '<label class="checkbox-row"><input type="checkbox" data-prompt="' + i + '" ' + (state.selectedPrompts[i] ? 'checked' : '') + '> <span>' + escapeHtml(p) + '</span></label>';
+      }).join('') +
+      '<div class="field"><label for="ai-free">Eigene Frage / Ergänzung <span class="hint">(optional)</span></label>' +
+        '<textarea id="ai-free" rows="2" placeholder="z. B. Worauf sollten wir im nächsten Gespräch mit den Eltern besonders achten?">' + escapeHtml(state.freeText) + '</textarea></div>' +
+
+      '<button type="button" class="btn btn-primary" id="ai-step-names">Weiter: Namen prüfen</button>' +
+    '</div>';
+  }
+
+  function scopeOptionBtn(type, label) {
+    var active = state.scopeType === type;
+    return '<button type="button" class="toggle-chip' + (active ? ' active' : '') + '" data-scope="' + type + '" style="flex:1;">' + escapeHtml(label) + '</button>';
+  }
+
+  /* ---------------- Phase 2: Namen prüfen ---------------- */
+  function namesHtml() {
+    var entries = scopedEntries();
+    var detected = detectNamesInText(entries.map(function (e) { return e.text; }));
+    if (!state.replacements.length) state.replacements = buildReplacementList(detected);
+    var institutions = detectInstitutions(entries);
+    if (!state.institutionMap.length && institutions.length) {
+      state.institutionMap = institutions.map(function (name, i) { return { name: name, placeholder: 'Stell ' + (i + 1) }; });
+    }
+
+    var rows = state.replacements.map(function (r, i) {
+      return '<tr>' +
+        '<td>' + escapeHtml(r.name) + '</td>' +
+        '<td><span class="muted">' + escapeHtml(r.category) + '</span></td>' +
+        '<td><input type="text" data-replacement-idx="' + i + '" value="' + escapeAttr(r.placeholder) + '"></td>' +
+        '<td><label class="checkbox-label"><input type="checkbox" data-replacement-active="' + i + '" ' + (r.active ? 'checked' : '') + '> ersetzen</label></td>' +
+      '</tr>';
+    }).join('');
+
+    var institutionRows = state.institutionMap.map(function (m, i) {
+      return '<tr><td>' + escapeHtml(m.name) + '</td><td class="muted">Institution</td>' +
+        '<td><input type="text" data-institution-idx="' + i + '" value="' + escapeAttr(m.placeholder) + '"></td><td></td></tr>';
+    }).join('');
+
+    return '<div class="card export-config no-print">' +
+      '<h3 style="margin-top:0;">3. Erkannte Namen prüfen &amp; ergänzen</h3>' +
+      '<p class="muted">Die App hat folgende mögliche Personen-/Elternbezeichnungen im gewählten Textumfang gefunden. Prüfen Sie die Platzhalter, passen Sie sie bei Bedarf an, oder fügen Sie weitere Namen hinzu.</p>' +
+      (state.replacements.length ?
+        '<table class="replacement-table"><thead><tr><th>Erkannter Name</th><th>Kategorie</th><th>Platzhalter</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' :
+        '<p class="muted">Keine Namen automatisch erkannt — Sie können unten weitere von Hand ergänzen.</p>') +
+      '<div class="row" style="align-items:flex-end;">' +
+        '<div class="field"><label for="ai-add-name">Name ergänzen</label><input type="text" id="ai-add-name" placeholder="z. B. Mme Schmit"></div>' +
+        '<div class="field"><label for="ai-add-placeholder">Platzhalter</label><input type="text" id="ai-add-placeholder" placeholder="z. B. Therapeut 2"></div>' +
+        '<div class="field"><button type="button" class="btn" id="ai-add-row">+ Hinzufügen</button></div>' +
+      '</div>' +
+      '<hr class="divider">' +
+      '<label class="checkbox-row"><input type="checkbox" id="ai-anon-inst" ' + (state.anonymizeInstitutions ? 'checked' : '') + '> <span>Institutionen ebenfalls anonymisieren (' +
+        (state.institutionMap.length ? state.institutionMap.map(function (m) { return escapeHtml(m.name); }).join(', ') : 'keine erkannt') + ' &rarr; „Stell 1, Stell 2, …")</span></label>' +
+      (state.anonymizeInstitutions && state.institutionMap.length ?
+        '<table class="replacement-table"><tbody>' + institutionRows + '</tbody></table>' : '') +
+      '<div class="page-head" style="margin:14px 0 0;">' +
+        '<button type="button" class="btn" id="ai-back-config">&larr; Zurück</button>' +
+        '<button type="button" class="btn btn-primary" id="ai-step-preview">Vorschau erzeugen</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* ---------------- Phase 3: Vorschau & Kopieren ---------------- */
+  function buildAnonymizationContext() {
+    var student = Repo.getStudent(state.studentId);
+    return {
+      replacements: state.replacements,
+      anonymizeInstitutions: state.anonymizeInstitutions,
+      institutionMap: state.institutionMap,
+      studentNameMap: student ? [{ name: student.name, anonLabel: student.anonLabel }] : []
+    };
+  }
+
+  function previewHtml() {
+    var entries = scopedEntries();
+    var ctx = buildAnonymizationContext();
+    state.builtText = buildAiExportText({
+      scopeLabel: scopeLabel(),
+      taskText: taskText(),
+      entries: entries,
+      ctx: ctx
+    });
+    return '<div class="card export-config no-print">' +
+      '<h3 style="margin-top:0;">4. Vorschau &amp; Übergabe</h3>' +
+      '<div class="warn-banner"><strong>Hinweis:</strong> Dieser Text verlässt die App nur, wenn Sie ihn selbst in eine externe KI einfügen. ' +
+        'Er wird ausschließlich in Ihre Zwischenablage kopiert — niemals automatisch versendet. Bitte prüfen Sie ihn sorgfältig auf verbliebene Namen, bevor Sie ihn weitergeben.</div>' +
+      '<div class="preview-box" id="ai-preview-text">' + escapeHtml(state.builtText) + '</div>' +
+      '<div class="page-head" style="margin:14px 0 0;">' +
+        '<button type="button" class="btn" id="ai-back-names">&larr; Zurück zu den Namen</button>' +
+        '<button type="button" class="btn btn-primary" id="ai-copy">In Zwischenablage kopieren</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  var html =
+    '<div class="page-head no-print"><div><h2>An externe KI geben</h2><p class="muted">Anonymisierter Export — wählen Sie Umfang und Aufgabe, prüfen Sie die Namenserkennung, und kopieren Sie das Ergebnis selbst in das KI-Werkzeug Ihrer Wahl.</p></div></div>' +
+    '<div id="ai-phase-wrap">' + phaseHtml() + '</div>';
+
+  function phaseHtml() {
+    if (state.phase === 'names') return namesHtml();
+    if (state.phase === 'preview') return previewHtml();
+    return configHtml();
+  }
+
+  return {
+    navKey: 'ai-export',
+    html: html,
+    afterRender: function (root) {
+      var wrap = qs('#ai-phase-wrap', root);
+      function rerender() { wrap.innerHTML = phaseHtml(); wire(); }
+
+      function wire() {
+        if (state.phase === 'config') wireConfig();
+        else if (state.phase === 'names') wireNames();
+        else wirePreview();
+      }
+
+      function wireConfig() {
+        qs('#ai-student', wrap).addEventListener('change', function (e) {
+          state.studentId = e.target.value;
+          state.tags = {};
+          state.selectedEntries = {};
+          state.replacements = [];
+          state.institutionMap = [];
+          rerender();
+        });
+        qsa('[data-scope]', wrap).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            state.scopeType = btn.getAttribute('data-scope');
+            state.replacements = [];
+            state.institutionMap = [];
+            rerender();
+          });
+        });
+        var catSel = qs('#ai-category', wrap);
+        if (catSel) catSel.addEventListener('change', function (e) { state.category = e.target.value; qs('#ai-scope-summary', wrap).textContent = scopeLabel(); });
+        qsa('[data-tag]', wrap).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var tag = btn.getAttribute('data-tag');
+            if (state.tags[tag]) delete state.tags[tag]; else state.tags[tag] = true;
+            rerender();
+          });
+        });
+        qsa('[data-entry-pick]', wrap).forEach(function (cb) {
+          cb.addEventListener('change', function () {
+            var id = cb.getAttribute('data-entry-pick');
+            if (cb.checked) state.selectedEntries[id] = true; else delete state.selectedEntries[id];
+            qs('#ai-scope-summary', wrap).textContent = scopeLabel();
+          });
+        });
+        qsa('[data-prompt]', wrap).forEach(function (cb) {
+          cb.addEventListener('change', function () {
+            var idx = cb.getAttribute('data-prompt');
+            if (cb.checked) state.selectedPrompts[idx] = true; else delete state.selectedPrompts[idx];
+          });
+        });
+        var freeEl = qs('#ai-free', wrap);
+        if (freeEl) freeEl.addEventListener('input', function () { state.freeText = freeEl.value; });
+        qs('#ai-step-names', wrap).addEventListener('click', function () {
+          if (!state.studentId) { showToast('Bitte zuerst einen Schüler wählen.', { error: true }); return; }
+          if (!scopedEntries().length) { showToast('Die aktuelle Auswahl enthält keine Einträge.', { error: true }); return; }
+          state.phase = 'names';
+          rerender();
+        });
+      }
+
+      function wireNames() {
+        qsa('[data-replacement-idx]', wrap).forEach(function (input) {
+          input.addEventListener('input', function () {
+            var idx = Number(input.getAttribute('data-replacement-idx'));
+            state.replacements[idx].placeholder = input.value;
+          });
+        });
+        qsa('[data-replacement-active]', wrap).forEach(function (cb) {
+          cb.addEventListener('change', function () {
+            var idx = Number(cb.getAttribute('data-replacement-active'));
+            state.replacements[idx].active = cb.checked;
+          });
+        });
+        qsa('[data-institution-idx]', wrap).forEach(function (input) {
+          input.addEventListener('input', function () {
+            var idx = Number(input.getAttribute('data-institution-idx'));
+            state.institutionMap[idx].placeholder = input.value;
+          });
+        });
+        qs('#ai-anon-inst', wrap).addEventListener('change', function (e) {
+          state.anonymizeInstitutions = e.target.checked;
+          rerender();
+        });
+        qs('#ai-add-row', wrap).addEventListener('click', function () {
+          var nameEl = qs('#ai-add-name', wrap);
+          var phEl = qs('#ai-add-placeholder', wrap);
+          var name = nameEl.value.trim();
+          var placeholder = phEl.value.trim();
+          if (!name || !placeholder) { showToast('Bitte Name und Platzhalter angeben.', { error: true }); return; }
+          state.replacements.push({ name: name, category: 'manuell', placeholder: placeholder, active: true });
+          nameEl.value = ''; phEl.value = '';
+          rerender();
+        });
+        qs('#ai-back-config', wrap).addEventListener('click', function () { state.phase = 'config'; rerender(); });
+        qs('#ai-step-preview', wrap).addEventListener('click', function () { state.phase = 'preview'; rerender(); });
+      }
+
+      function wirePreview() {
+        qs('#ai-back-names', wrap).addEventListener('click', function () { state.phase = 'names'; rerender(); });
+        qs('#ai-copy', wrap).addEventListener('click', function () {
+          copyTextToClipboard(state.builtText).then(function (ok) {
+            showToast(ok ? 'In die Zwischenablage kopiert.' : 'Kopieren nicht möglich — bitte Text manuell markieren und kopieren.', { error: !ok });
+          });
+        });
+      }
+
+      wire();
+    }
+  };
+}
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(function () { return true; }).catch(function () { return fallbackCopy(text); });
+  }
+  return Promise.resolve(fallbackCopy(text));
+}
+
+function fallbackCopy(text) {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) { return false; }
+}
+
+
+'use strict';
+
+/* ============================================================
+   Ansicht F — Backup (Export / Import als Datei)
+   ============================================================ */
+
+function viewBackup() {
+  var pendingImport = null; // { data, filename }
+
+  function summaryHtml() {
+    return '<p class="muted">Aktuell gespeichert: ' + pluralize(Repo.students.length, 'Schüler', 'Schüler') + ' &middot; ' +
+      pluralize(Repo.entries.length, 'Eintrag', 'Einträge') + ' &middot; Speicherort: ' +
+      (Storage.mode === 'indexeddb' ? 'IndexedDB (lokal im Browser)' : 'localStorage (lokal im Browser, Fallback)') + '</p>';
+  }
+
+  function importPanelHtml() {
+    if (!pendingImport) return '';
+    var d = pendingImport.data;
+    return '<div class="card export-config" style="margin-top:14px;">' +
+      '<h3 style="margin-top:0;">Import vorbereiten: ' + escapeHtml(pendingImport.filename) + '</h3>' +
+      '<p>Die Datei enthält ' + pluralize((d.students || []).length, 'Schüler', 'Schüler') + ' und ' +
+        pluralize((d.entries || []).length, 'Eintrag', 'Einträge') +
+        (d.exportedAt ? ' (exportiert am ' + escapeHtml(formatDateTime(d.exportedAt)) + ')' : '') + '.</p>' +
+      '<div class="field">' +
+        '<label class="checkbox-row"><input type="radio" name="import-mode" value="merge" checked> <span><strong>Zusammenführen</strong> — neue Datensätze ergänzen, gleiche IDs werden überschrieben, bestehende Daten bleiben sonst erhalten.</span></label>' +
+        '<label class="checkbox-row"><input type="radio" name="import-mode" value="replace"> <span><strong>Ersetzen</strong> — die komplette aktuelle Datenbank wird durch den Inhalt dieser Datei ersetzt. Nicht rückgängig zu machen!</span></label>' +
+      '</div>' +
+      '<div class="page-head" style="margin:0;">' +
+        '<button type="button" class="btn" id="bk-cancel-import">Abbrechen</button>' +
+        '<button type="button" class="btn btn-primary" id="bk-confirm-import">Import durchführen</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  var html =
+    '<div class="page-head"><div><h2>Backup</h2><p class="muted">Sicherung &amp; Geräteübertrag im Team — als JSON-Datei, komplett lokal.</p></div></div>' +
+    '<div class="card export-config">' +
+      '<h3 style="margin-top:0;">Backup exportieren</h3>' +
+      '<div id="bk-summary">' + summaryHtml() + '</div>' +
+      '<button type="button" class="btn btn-primary" id="bk-export">Backup als .json herunterladen</button>' +
+    '</div>' +
+    '<div class="card export-config" style="margin-top:14px;">' +
+      '<h3 style="margin-top:0;">Backup importieren</h3>' +
+      '<p class="muted">Wählen Sie eine zuvor exportierte <span class="kbd">.json</span>-Datei. Sie können danach wählen, ob die Daten zusammengeführt oder die Datenbank komplett ersetzt werden soll.</p>' +
+      '<input type="file" id="bk-file" accept="application/json,.json">' +
+    '</div>' +
+    '<div id="bk-import-panel">' + importPanelHtml() + '</div>';
+
+  return {
+    navKey: 'backup',
+    html: html,
+    afterRender: function (root) {
+      qs('#bk-export', root).addEventListener('click', function () {
+        var data = Repo.exportAll();
+        var filename = 'dossier-backup_' + nowIso().slice(0, 10) + '.json';
+        downloadBlob(filename, JSON.stringify(data, null, 2), 'application/json');
+        showToast('Backup wird heruntergeladen: ' + filename);
+      });
+
+      var fileInput = qs('#bk-file', root);
+      var importPanel = qs('#bk-import-panel', root);
+
+      fileInput.addEventListener('change', function () {
+        var file = fileInput.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          try {
+            var data = JSON.parse(reader.result);
+            if (!data || !Array.isArray(data.students) || !Array.isArray(data.entries)) {
+              showToast('Diese Datei sieht nicht wie ein gültiges Dossier-Backup aus.', { error: true });
+              return;
+            }
+            pendingImport = { data: data, filename: file.name };
+            importPanel.innerHTML = importPanelHtml();
+            wireImportPanel();
+            importPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } catch (e) {
+            showToast('Datei konnte nicht gelesen werden: ' + e.message, { error: true });
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      function wireImportPanel() {
+        var cancelBtn = qs('#bk-cancel-import', importPanel);
+        var confirmBtn = qs('#bk-confirm-import', importPanel);
+        if (cancelBtn) cancelBtn.addEventListener('click', function () {
+          pendingImport = null;
+          fileInput.value = '';
+          importPanel.innerHTML = '';
+        });
+        if (confirmBtn) confirmBtn.addEventListener('click', function () {
+          var mode = (qs('input[name="import-mode"]:checked', importPanel) || {}).value || 'merge';
+          if (mode === 'replace' && !confirm('Wirklich die GESAMTE aktuelle Datenbank durch diese Datei ersetzen? Das kann nicht rückgängig gemacht werden.')) return;
+          Repo.importAll(pendingImport.data, mode).then(function () {
+            showToast('Import abgeschlossen (' + (mode === 'replace' ? 'ersetzt' : 'zusammengeführt') + ').');
+            pendingImport = null;
+            fileInput.value = '';
+            navigate('#/backup', true);
+          }).catch(function (err) {
+            showToast('Import fehlgeschlagen: ' + err.message, { error: true });
+          });
+        });
+      }
+    }
+  };
+}
+
+
+'use strict';
+
+/* ============================================================
+   App-Shell, Routing, Bootstrap
+   ============================================================ */
+
+window.SEED_DATA = {"students":[{"id":"stud_alexp","name":"Alex P.","anonLabel":"Schüler A","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_alexk","name":"Alex K.","anonLabel":"Schüler B","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_colin","name":"Colin","anonLabel":"Schüler C","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_jason","name":"Jason","anonLabel":"Schüler D","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_miguel","name":"Miguel","anonLabel":"Schüler E","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_chase","name":"Chase","anonLabel":"Schüler F","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_ben","name":"Ben","anonLabel":"Schüler G","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_mia","name":"Mia","anonLabel":"Schüler H","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_lilly","name":"Lilly","anonLabel":"Schüler I","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_jayson","name":"Jayson","anonLabel":"Schüler J","active":true,"createdAt":"2026-03-02T08:00:00.000Z"},{"id":"stud_levi","name":"Levi","anonLabel":"Schüler K","active":true,"createdAt":"2026-03-02T08:00:00.000Z"}],"entries":[{"id":"seed_001","studentId":"stud_alexp","date":"2026-03-02","author":"","category":"Therapie & Suivi","tags":["Dr Meinhardt","HRS","Internat","Schlof"],"text":"Den Dr Meinhardt recommandeiert dem Alex sengen Elteren en Internat fir datt Alex dee Rhythmus behällt deen et elo huet (Schlofen, Handy, …). D'Internat vu Reiden steht am Raum zesummen mat engem Schoulwiessel an den ALR. De Papp war mei retizent wie d'Mamm a punkto Internat. Fazit vum Dr Meinhardt: D'Elteren haalen d'Alex a schwengen mat, datt ass awer net datt wat hatt brauch, et brauch een deen Struktur gett och wann et him kierperlech net gutt geht (psychosomatesch).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_002","studentId":"stud_lilly","date":"2026-03-02","author":"","category":"Therapie & Suivi","tags":["Dr Königs","Dr Bertholdt","SCAP"],"text":"De Papp huet décidéiert mat der Pedopsychiaterin vum SCAP, der Madame Königs, ofzebriechen. An si sinn elo bei der Dr Berthold.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_003","studentId":"stud_jason","date":"2026-03-02","author":"","category":"Medikation","tags":["Medikation","ATVA"],"text":"Huet zanter haut eng nei Medikatioun (Elvanse), hellt se net mei an der Annexe moies. ATVA kennt den Donneschden um 9h. Keng Infos zum Cardiolog.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_004","studentId":"stud_miguel","date":"2026-03-02","author":"","category":"Verhalten & Krisen","tags":["Vape","CNI","Stage","RDV"],"text":"Dëse Mëttwoch ass CNI um 8h30. 17.03 um 8 Auer RDV um Consulat fir carte d'identité ze erneieren. Méindes vun 11:30-12:00 weider Bezuchszäit. Auerzäiten Training: mardis, jeudis et vendredis à 17h. Papp proposéiert amplaatz Dënschdes schon um 14:00, 2 Deeg an der Woch um 15:00. Geigepropose: Denschtdes um 15h an 1mol soll de Papp siche kommen. Stage beim Coiffer Cap Act vum 18.05-23.05 (convention de stage muss nach ausgefëllt ginn). Vapesituatioun: Säit de Mëttwoch keng Vape dobäi (eidel ginn). An der HG-Zäit ass et him ganz schwéier gefall (Nikotinentzug). Sin dun Velo fuere gaangen wou et him däitlech besser gaangen ass. Donneschden och keng dobäi an huet den Dag gepackt. Säin Zil ass et keng Vape méi wärend der Schoulzäit ze benotzen. Haut och keng dobäi. Awer een Aan drop haalen, net dass hien eis eppes fir mescht... Identitätsfindung?","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_005","studentId":"stud_chase","date":"2026-03-02","author":"","category":"Schule","tags":["LTA","Reintegration","Franséisch","RDV","Dr Meinhardt"],"text":"War de Freideg am LTA. Hie wollt eleng an d'Gebai ragoen an och eleng de Sall sichen. Vu dass hien no der Schell awer nach ëmmer am Preau stoung, hunn ech mech mat him zesummen op d'Sich nom Sall gemaach. D'Franséischproff huet hien am Gank empfaang. Den Dag ass senger Ausso no gutt verlaf an et huet him gefall. Ech hat nach e Gespréich mat der Mme vun der ESEB an dem Directeur adjoint. Hunn den 19.3 mëttes e gemeinsamen RV mat Elteren, ESEB, Proffen an Direktioun. D'Bezuchszäit eréischt de Mëttwoch um 13.00. Den Donneschdeg de Mëtteg huet hie RV beim Dr.Meinhardt, ech ginn mat dohinner.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_006","studentId":"stud_ben","date":"2026-03-02","author":"","category":"Stage & Berufsorientierung","tags":["Stage","Liewenshaff","CISP"],"text":"Huet haut et net an de Stage gepackt, well et muer nach eemol probeieren. Ass läscht Woch 2mol reischt kuerz virun 16h opgetaucht... Eis Recommandation ass CISP Liewenshaff, Ben well dat awer net. Gespréich mat Elteren an Foyer gett organiséiert.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_007","studentId":"stud_mia","date":"2026-03-02","author":"","category":"Anwesenheit & Mobibus","tags":["Anwesenheit","Promotioun"],"text":"Ass haut rem ofgemellt weinst der Engleschprüfung, kann am Moment Denschtdegs um 14h heem. Wie fueren mer wieder? 01 wann et net kennt? Et kann definitif net sinn datt et eng 5G avancé certificeiert kritt… Mir sinn dogeint datt Promotioun op der Basis vun enger Semesterzensur gemaach gett. Et ass keng Demande un eis do, mir haalen op him entgeint ze kommen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_008","studentId":"stud_lilly","date":"2026-03-09","author":"","category":"Therapie & Suivi","tags":["Suivi","Pedopsychiatrie","CNI"],"text":"Zensur, kritt et een Modul bai? Modul 1 am Daitschen, Sport an Atelier Kichen. Atelier Metal. Frai Schreiwprouwen am FR an DE (z.B Diktat) fir den Testing. D'Sarah mellt hinnen zreck datt et net méiglech ass, hat blockéiert. De Papp krut eng Mail wou mir konkret Kontakter ernimmt hunn fir dem Lilly e Suivi ze bidden, hien muss sech just mellen. Et gouf och rëm drun erënnert dass d'Lilly et suivi pedopsychiatrique brauch laut der CNI an dass e Pediater net duer geet. --> 0 Reaktioun","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_009","studentId":"stud_jason","date":"2026-03-09","author":"","category":"Schule","tags":["Zensur","Stage"],"text":"Zensur, kritt en een Modul bai? Daitsch Modul 5, Culge a Franc net, Sport jo. Optioun Metal erem e riesen Thema, wann hien net well schaffen dann soll en do setzen. Classe de cohabitation zu Miersch ass momentan voll.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_010","studentId":"stud_miguel","date":"2026-03-09","author":"","category":"Verhalten & Krisen","tags":["Vape","CNI","Signalement","Familie"],"text":"Rdv CPI&co 16.03 9h30, keen Vertrauensvirschoss. Daitsch Modul 5? Franc Module 4, Culge Module 5?, Konscht, Sport, Atelier métal. Lëscht Woch huet de Miguel keng Vape oofginn. Hien huet behaapt, dass hien keng Vape méi am schoulsche Kontext brauch (daat wier säin Zil). Opgefall ass awer, datt hien méi dacks op d'Toilette geet. D'Eltere reprochéieren eis, wéisou mer Moies him d'Vape net ofhuelen. Gläichzäiteg betounen si, datt si frou a stolz sinn, datt hien et packt an der Schoulzäit net ze konsuméieren a gesinn d'Toilettepausen eventuell als Stressregulatioun... Haut huet hien d'Vape ofginn. 1. Block Däitsch - am Iessall (keen Bock op Däitsch). An der Paus heut en no senger 5 min Paus gefrot. Hunn him se refuséiert well e 'jo keng méi brauch'. Hien ass roose ginn, an den Iessraum gestiermt a gesot hien géif d'ganz Woch net schaffen. Laut den Elteren war déi lescht Woch fir de Miguel ganz stressvoll wéinst der CNI Réunioun (wéineg Schlof, Angschtreaktiounen). Dieren weiderhinn zousperren: Lescht Woch hunn ech en erwëscht wéi en an de Büro geschlach ass. D'Vertrauensbasis tëscht Schoul, Miguel an den Elteren ass ganz fragil.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_011","studentId":"stud_chase","date":"2026-03-09","author":"","category":"Schule","tags":["LTA","Reintegration","Franséisch","Familie","RDV","Dr Meinhardt"],"text":"Bezuchszäit beim Chase well hien sech de Mëttwoch ofgemellt hat. Hie war do Moies schlecht opkomm an net gutt drop, mä ab 8:20 Auer huet hie fonctionnéiert. Den Chase huet du moies doheem Hausaufgabe gemaach. Hien war nervös fir de Freideg, méi wéi fir déi éischte Kéier, wahrscheinlech 'Angscht' virum Franséischen. Den Chase hat net un d'Franséischprüfung geduecht, hat also näischt dofir geléiert. Et war ganz offensichtlech, dass den Chase sech geschummt huet an net wuelgefillt huet, well ech elo gesinn hu wéi si 'hausen'. D'Haus ass an engem schlechten, net gepflegten Zoustand. Hunn dem Chase réckgemellt, dass d'Saach mam Geroch sech gebessert hätt. Hien huet seng Kummer geraumt an d'Kaazenhoer gestaubsaugt. Positiv Réckmeldung de Freideg vun den LTA-Proffen. Den Chase war owes och glécklech a frou. Dem Chase seng Therapeutin wëll eis 'Bibel' (Buch mat den ElDib-Ziler) gesinn.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_012","studentId":"stud_ben","date":"2026-03-09","author":"","category":"Schule","tags":["Zensur","Stage"],"text":"Zensur, wat fehlt? Option Musique, Option Anglais, Vieso (vum Sandra), Info (vum Sarah). War de Méinden net, an de Freiden e bëssen ze spéit an den Stage, fir de Rescht war hien emmer do an motivéiert seet den Foyer. Ech ginn hien haut besichen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_013","studentId":"stud_mia","date":"2026-03-09","author":"","category":"Anwesenheit & Mobibus","tags":["Anwesenheit","Promotioun","Signalement","RDV"],"text":"Rdv Orientation LNB 17.03 14h30. Huet der Mamm kloer gesot dass hat net well. Mir mussen och do un en Signalement denken.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_014","studentId":"stud_alexp","date":"2026-03-09","author":"","category":"Termine & RDV","tags":["Dr Meinhardt","RDV"],"text":"Rdv Dr Meinhardt 23.03 15h.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_015","studentId":"stud_lilly","date":"2026-03-16","author":"","category":"Therapie & Suivi","tags":["Dr Bertholdt"],"text":"Dem Lilly säin RDV bei der Dokter Berthold steet des Woch un. Sie probéieren aner Weeër ze goen wéi déi déi mir recommandéiert hunn an ginn awer all Kéiers rem rappelléiert dass et net dat ass wat dem Lilly eppes bréngt.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_016","studentId":"stud_jason","date":"2026-03-16","author":"","category":"Externe Stellen & Netzwerk","tags":["ATVA","CTSA","Stage","Mobibus"],"text":"ATVA kënnt den Dënschden um 13h30-14h30 fir mam Jason säin CV ze maachen. Rdv e Mëttwoch zu Useldeng, Joey begleed (Vanessa ass am Congé), 23 Moduler op der Zensur, d'Schoul huet no engem avis d'orientation gefrot, ech sot mir kinnten net wirklech een ginn deen realistesch wier (hien huet Accès op all CCP'en). Den Gary huet dem CTSA geschriwwen fir ze froen wou den Dossier drun ass, den Dossier ass ukomm mee nach net dispatched.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_017","studentId":"stud_miguel","date":"2026-03-16","author":"","category":"Termine & RDV","tags":["Mediation scolaire","PEI"],"text":"Muer um 16h ass PEI Gespréich, mir soen datt mir de Service de médiation scolaire aschalten wellen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_018","studentId":"stud_chase","date":"2026-03-16","author":"","category":"Schule","tags":["Reintegration","LTA","Mobbing"],"text":"Bis elo leeft d'Reintegratioun gutt. Fillt sech wuel an der Klass. Papp ass nach virsichteg wéinst Angscht viru Mobbing. Krut 30/60 an dem Dossier Sciences naturelles deen hien wärend dem 1.Semester autonom ausgefëllt huet. Ab dem 3.Trimester Mëttwochs a Freides am LTA. Dann huet hie Mathé, Däitsch, Englesch a Sciences sociales jeweils 1x bei eis an 1x am LTA. Franséisch just nach 1x d'Woch (freides am LTA) a guer net méi hei. D'Mme Krack huet en Teams opgemaach wou si Material fir den Chase drasetzt. Den LTA huet dann de Lead an all deene Fächer. Den Chase bleiwt elo bis Juli am Niveau de base am Däitschen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_019","studentId":"stud_ben","date":"2026-03-16","author":"","category":"Stage & Berufsorientierung","tags":["Stage","DAP","ADEM"],"text":"Gemeng Ettelbréck bild aus fir de Landschaftsgärtner, se stellen och nach an der Carrière A an (ouvrier non qualifié), vill Gemengen maachen dat net mei. De Ben huet mir kloer gesoot dass hien well schaffen goen an méi spéit säin DAP nomaachen. Hien ass och gewëllt beim Bauer zu Keespelt testen/kucken ze goen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_020","studentId":"stud_mia","date":"2026-03-16","author":"","category":"Anwesenheit & Mobibus","tags":["Promotioun","Signalement","RDV"],"text":"Feedback Rdv LNB. Mir brauchen Datumer fir Prüfungen, 01 wann et net kennt. Mat der Zensur vum 1. Semester wier hat souguer am Couloir fir eng Réussite vun enger 5C. Mia huet refuséiert haut an Gespréich an Annexe ze kommen. Signalement ass eraus gaang.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_021","studentId":"stud_alexp","date":"2026-03-16","author":"","category":"Termine & RDV","tags":["Dr Meinhardt","HRS","RDV"],"text":"Rdv Dr Meinhardt 15h00 HRS.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_022","studentId":"stud_lilly","date":"2026-03-23","author":"","category":"Therapie & Suivi","tags":["Dr Bertholdt","Suivi"],"text":"Dem Lilly säin RDV bei der Dokter Berthold steet des Woch un. Sie probéieren aner Weeër ze goen wéi déi déi mir recommandéiert hunn an ginn awer all Kéiers rem rappelléiert dass et net dat ass wat dem Lilly eppes bréngt. (Erënnerung: Suivi pedopsychiatrique laut CNI néideg.)","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_023","studentId":"stud_jason","date":"2026-03-23","author":"","category":"Externe Stellen & Netzwerk","tags":["ATVA","CTSA","Stage"],"text":"ATVA kënnt den Dënschden um 13h30-14h30 fir mam Jason säin CV ze maachen. Rdv e Mëttwoch zu Useldeng, Joey begleed. 23 Moduler op der Zensur. Den Gary huet dem CTSA geschriwwen fir ze froen wou den Dossier drun ass, den Dossier ass ukomm mee nach net dispatched.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_024","studentId":"stud_miguel","date":"2026-03-23","author":"","category":"Familie & Eltern","tags":["Signalement","CPI","Familie","Mediation scolaire"],"text":"Debriefing vun Gespreich moies: Fazit de Problem ass a war emmer Schoul, mir sinn net konsequent genuch a kommunizeieren net kloer. An hiren Aan mussen si emmer bestroofen fir eppes wat si net gesinn. Doheem ass alles an der Reih. D'CPI huet eis gesot datt Scheedung zanter 3 Wochen am Raum steht. D'Mamm huet mei wie eng Keier gesot datt si en hellt a mat him a Portugal geht. Elteren beschwätzen ennert eneen ob si fraiwelleg un de Juge runtrieden (d'CPI ennerstetzt si dobai a prepareiert de Breif). Mir signaleieren. D'CPI recommandeiert den IMP zu Etalle, d'Mamm huet keen Vertrauen. Den 24.03 um 16h ass datt nächst Gespreich an der AJ (PEI + Kader klären). De Miguel kritt keng Informatiounen zu Juge an IMP zu desem Zaitpunkt.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_025","studentId":"stud_chase","date":"2026-03-23","author":"","category":"Medikation","tags":["Medikation","Dr Meinhardt","LTA"],"text":"Den Chase huet e gutt Referat am Däitschen gehal an eng anstänneg franséisch Prüfung geschriwwen. Rendez-vous beim Dr.Meinhardt ass gutt verlaf. Den Chase huet sech bereet erklärt sech op Medikatioun anzeloossen respektiv auszeprobéieren. Hëllt et säit gëschter Moien. De Freideg am Lycée ass et rëm gutt gaang. Hun dësen Donneschdeg de Mëtteg RV mat de Proffen, dem Chase sengem Papp an der Direktioun vum LTA.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_026","studentId":"stud_ben","date":"2026-03-23","author":"","category":"Stage & Berufsorientierung","tags":["Stage","Medikation","Dr Karst","DAP","Liewenshaff"],"text":"War super motivéiert, wollt méi laang an den Stage an huet gesoot hien wéilt onbedengt Landschaftsgärtner ginn. Waren um RDV beim Dr. Karst, hien hëllt Moies keen Risperdal méi, hien seet seng Tic'en wieren vill méi present. De Ben ass elo ganz fixeiert op dei Ekipp vun der Gemeng. E kinnt e Stage zu Keespelt beim Bauer 'A Lill' maan an do och souguer evt speider eng Aarbecht kreien. Mir organiseieren elo deemnächst en HPG fir Zukunftsperspektiven ze klären (mat Foyer an Elteren): DAP Landschaftsgärtner, SNJ, schaffen goen, CISP,…","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_027","studentId":"stud_mia","date":"2026-03-23","author":"","category":"Anwesenheit & Mobibus","tags":["Signalement","RDV"],"text":"Mamm gouf informéiert dass mir en Signalement mussen schreiwen wéinst den Non-excusé. Mia war haut do.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_028","studentId":"stud_alexp","date":"2026-03-23","author":"","category":"Termine & RDV","tags":["Dr Meinhardt","RDV"],"text":"Rdv Dr Meinhardt 23.03 15h.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_029","studentId":"stud_alexk","date":"2026-04-13","author":"","category":"Diagnostik","tags":["Asperger/ASS","Hochbegabung","HRS","CTSA","Ermesinde","Dr Pignoloni","Mme Karp","Mobibus"],"text":"15J, 6G am Ermesinde, adopteiert, Hautpotentiel, krut rezent Autismusspektrum Diagnose vum HRS (Clearing mam CTSA ufroen soubal de Rapport médical do ass), si huelen rem RDV beim Dr Pignoloni, HRS mécht keen Suivi, seng Psychotherapeutin Mme Karp ass aktuell am Congé de maternité, Elteren sichen no Ersatz. War an der Dagesklinik, konnt sech net richteg drop aloossen. Conditioun vum Dr Meinhardt: Schoul soss Statioun. Adoptivelteren sinn getrennt zanter 2022, si schaffen allebeid um CEJHP. En huet eng Schwester vun 20 Joer, Emma. Spillt Volleyball 2mol Woch plus Matcher (an Airsoft). Ech hunn driwwert informéiert datt mir net dem Ermesinde säin System iwwerhuelen, kritt keng Zensur dëst Trimester. Lycéeswiessel evt LJBM oder ALR. Hat eng ISA vum CEjHP (Sam Nilles). E wunnt beim Papp, Bus huelen ass en Thema. Huet all zweet Woch Psychomot Freides mëttes. Ass un Musik interesséiert, spillt Piano an Drums, komponéiert selwer um Computer. Ass un der Geschichte interesséiert (2. Weltkrich, Japan, Pazifik). Weilt gären en Animé ophuelen. Ka Schwammen a Velofueren, keng Allergien bekannt. Esst gären koreanesch/asiatesch. Kennt an den L2, Bezuch iwwerhellt den Jean-Pierre, Bezugszait Meindes um 11h15. Et huet dem JP am eischten Bezuch verzielt datt hien sech als FemBoy verkleed. Huet als Zil uginn: liewen...","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_030","studentId":"stud_colin","date":"2026-04-13","author":"","category":"Diagnostik","tags":["Asperger/ASS","Familie"],"text":"16J, 6P, liewt mat senger Mamm, dem Steifpapp an den 3 Hallefschwesteren zesummen zu Rosport. Kommunikatiounsproblemer doheem, hien fillt sech net geheiert, gesinn. Meng Beobachtungen beim Eischtgespréich: ganz distant Mamm, si hunn opginn, et brengt naischt eppes. Autismusspektrum Diagnose stoung am Raum, Elteren gesinn awer net wat datt brenge soll, och weinst de Waardezaiten. Ech gesinn hien am L2, Bezuch iwwerhellt den Jean-Pierre, Bezuchszait ass Dneschtdegs vun 13-14h. De Colin wärt bis Summervakanz weiderhin Meindes an de Lycée goen. Brauch keen Mobibus, kennt mam öffentlechen Transport. Wonschiessen: Spagetti carbonara (ouni Rahm), Pizza oder Schnitzel. Interessen/Hobbien: Computer spillen, Lego, Zeechnen. Geif gären an de Fitness goen. Ass net gären am Mettelpunkt. Breicht een Brell, well awer net. Ka Velofueren a Schwammen. Geht vum 8-10.6 mat senger Schoulklass op De Panne. Huet 12 Moduler (à confirmer). Seng Elteren wenschen sech datt en sech mei zoutraut, en ordentlechen Start an Berufswelt. ALLEM M3 en voie d'acquisition, FRANC M2 kennt elo, MATHE M2 en voie d'acquisition, CULGE kennt elo M6.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_031","studentId":"stud_lilly","date":"2026-04-13","author":"","category":"Externe Stellen & Netzwerk","tags":["Dr Bertholdt"],"text":"Dr Bertholdt an Mme Everling kennt op Besuch, den Joey an Carole ginn mat de Schüler.innen op den Terrain.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_032","studentId":"stud_jason","date":"2026-04-13","author":"","category":"Stage & Berufsorientierung","tags":["Stage","Mobibus","Medikation"],"text":"Stage zu Useldeng an der Epicerie vum 20-24.4, Mobibus ze speit ugefrot ginn, den Joey kuckt mat der Patronne op de stage ob mer emt eng Woch verleen kennen. Huet verschloof haut an keen konnt hien bréngen. Feedback Medikamenter un Dr Bertholdt wann se kennt? (consentement vun der Mamm anhuelen)","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_033","studentId":"stud_miguel","date":"2026-04-13","author":"","category":"Medikation","tags":["Medikation","Signalement","Mediation scolaire","RDV"],"text":"Signalement ass raus, 14.04 hunn si RDV mat der Mediation scolaire, hien war bei engem neien Psychiater (keen Pédopsychiater) Dr Tomozei, an deem Kontext huet hien eng nei Medikatioun: moies wéi gewinnt an um 12 Auer 1 Medikinet (léit alles bei mir am Tirang). 16.04 gëtt um 15:00 ofgeholl (am LLIS) -> RDV Sportsdokter.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_034","studentId":"stud_chase","date":"2026-04-13","author":"","category":"Schule","tags":["Medikation","Mobbing","LTA","Familie"],"text":"Feedback Mamm: den Chase hat Freed un der Geo Arbécht ze schaffen (mindestens 4 Stonnen drugeschafft); zu der Mobbing-Geschicht an der EIMAB: war dun an eng aner Klass gesat ginn a wou do erëm eppes virgefall war, konnt hien direkt Hëllef froen. Ass elo op 15 mg ropgaang mam Medikament. An der Vakanz all Dag 30 Minutte Sport gemaach a seng Kummer geraumt. Ass ab dëser Woch Mëttwochs a Freides am LTA. Ab dem 27.4 Méindes, Mëttwochs a Freides.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_035","studentId":"stud_ben","date":"2026-04-13","author":"","category":"Stage & Berufsorientierung","tags":["Stage","HPG","Familie","Schlof"],"text":"HPG den 29.04, ass awer nach net confirmeiert… zweeten Stage steht an de Stären. Huet en Vakanzenjob. Huet bei der Mamm geschloof an huet et gëschter net gepackt an den Foyer, huet anscheinend Suergen wéinst der Beschoulung.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_036","studentId":"stud_mia","date":"2026-04-13","author":"","category":"Verhalten & Krisen","tags":["Anwesenheit","Signalement"],"text":"Krut Denschdes virun der Vakanz den Punkt op den i gesat a ganz kloer erklärt wat et fir Meiglechkeeten huet an datt et net geht sou mat Leit emzegoen. Huet sain Physikdossier ofginn. Huet et haut net gepackt, war anscheinend prett an huet de lëschten Moment entscheed net ze kommen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_037","studentId":"stud_alexp","date":"2026-04-13","author":"","category":"Therapie & Suivi","tags":["HRS","Dr Meinhardt","Internat","Statioun"],"text":"Elteren sinn net ganz zefridden mat der Prise en charge vum HRS, Psychologin ass gewiesselt ginn. Alex leeft gutt op der Statioun. Internat ass hinnen ze deier, si kreien datt net finanziell gestemmt. Den Dr Meinhardt huet ze verstoen ginn datt Elteren datt Alex soss placeiert waert ginn. No der Vakanz soll elo e Schoulversuch bei eis gestart ginn, bis elo huet awer nach keen sech gemellt.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_038","studentId":"stud_alexk","date":"2026-04-20","author":"","category":"Risiko & Sorge","tags":["Selbstverletzung","Suizidalität","Schlof","Familie","Hochbegabung"],"text":"Individuelle Stonneplang mol déi nächst 2 Wochen: Mo bis 12 (um 11:15 Bezuchszäit), Dë vu 10:00 bis 16:00, Më ganzen Dag bis 16:00, Do bis 14:00, Fr bis 13:00. Huet läscht Woch vun 5 Deeg 3 gepackt. De Papp hëllt lo méi eng 'opbauend' Haltung. Zu sengem Schlofverhaale: hien kann just mat Musek aschlofen. Gëschter owend Diskussion, de Papp huet den Internet ausgemaach fir dass e schléift, war awer kontraproduktiv (huet de Wifi rem um 2 Auer an der Nuecht ugemaach). De Papp huet mam Alex eis Beobachtungen vum selbstverletzenden Verhaalen (Bläistëft an d'Hand picken) thématiséiert. Alex konnt dëst confirméieren: 'Et soll wéi doen domat de Stress ophällt'. Si wëllen him een Skillsrank matginn. Thema Suizid: waar bei him Thema, dowéinst ass hien hospitaliséiert ginn. Ech thematisiéieren dat mam Alex dass en seng Themen fir sech soll haalen a wann hien Besoin huet driwwer ze schwätze bei mech soll kommen. Schoulesch huet den Alex nach keng richteg Mathe gemaach. Papp schwätzt iwwert eng Mathe 'Phobie'. D'Eltere wënschen sech eng Bestandsopnahm. Mobibus? Hunn nach net ugefrot.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_039","studentId":"stud_colin","date":"2026-04-20","author":"","category":"Schule","tags":["Familie","Autonomie"],"text":"De Colin war d'ganz Woch präsent, huet un de Coursen deelgeholl. Hien huet Freides am Réckbléck uginn dass hien Stolz op sech ass well hien d'ganz Woch gepackt huet an ufänkt sech unzepassen. Pausesituationen waar hien lescht Woch net beim Grupp, soutz uewen sech 'auszerouen'. Dest Woch ass Zil hien e bessi méi an d'Pausesituatiounen z'intégréieren. Doheem huet hien den Elteren näicht iwwer seng Deeg an der AJ erzielt, dofir war d'Mamm emsou méi frou iwwer mäin Uruff.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_040","studentId":"stud_lilly","date":"2026-04-20","author":"","category":"Familie & Eltern","tags":["Familie","Dr Bertholdt","RDV"],"text":"Retour consentement? De Papp ass a Spuenien fëschen an dofir konnt d'Lilly e Freiden net an d'Schoul kommen well hatt zousätzlech e RDV beim Zänndokter hat um 14 Auer an d'Mamm hatt net sichen kann kommen wéinst PTSD (Accident). D'Lilly huet sech erëm selwer ofgemellt amplatz dass d'Elteren dat gemach hunn, an ech hunn nach eng Kéier drop higewisen dass dat net geet. RDV en Donneschden mat der Dr Berthold: zimlech informativ fir si. Informativ fir eis war, dass d'Madame Everling net komm ass nodeems mir kloer gemach hunn dass mir eis un de secret professionnel mussen halen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_041","studentId":"stud_jason","date":"2026-04-20","author":"","category":"Stage & Berufsorientierung","tags":["Stage","CTSA","Mobibus","RDV"],"text":"Stage elo vum 27.04-4.05, dei nei convention de stage ass am MLG ukomm, e Mëttwoch huet den Joey Rdv mam CTSA. Krut een n-e vir lëschten Méinden. Mamm ass am gaangen ze paaken, dauert net mei laang mam plenneren, viraussichtlich am Mee. Mobibus fiert net vun Irrel aus (oder?).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_042","studentId":"stud_miguel","date":"2026-04-20","author":"","category":"Medikation","tags":["Medikation","Stage"],"text":"Medikatioun, e leeft elo gudd sou krass/traureg wei datt ass... Convention de stage ufroen (alj@lbv.lu).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_043","studentId":"stud_chase","date":"2026-04-20","author":"","category":"Schule","tags":["Anwesenheit","Franséisch","LTA","Therapie","RDV"],"text":"Läschten Dënschdeg hat d'Mamm annoncéiert dass den Chase moies net gutt drop wär; bei eis hu mir näischt bemiertkt; war gutt drop. Läschten Donneschdeg immens gutt drop, de Freideg net an de Lycée (Bauchwéih); hätt Franséischprüfung gehat, schreiwt déi elo muer bei eis no. Haut war hie furchtbar, souwuel am Engleschcours wéi och op der Schoulfoire. Hat läschte Méindeg déi bäschte Therapiesstonn säit Ufank, laut der Mme Kirsch-Pedrosa.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_044","studentId":"stud_ben","date":"2026-04-20","author":"","category":"Verhalten & Krisen","tags":["HPG","Schule","Familie"],"text":"War läscht Woch just 1 Dag do, HPG ass confirméiert. Fir hien gëtt et keng Extrawurschten méi, entweder hien hällt sech un de Programm oder geet an den Iesssall. Refuséiert eppes an der Geschicht ze leieren wou hien 01 krut, huet awer net agesinn eppes ze maachen fir die nächst Prüfung, suguer den Chase huet him et ugerooden. 'Wat ass dann wann ech eng Datz hunn.'","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_045","studentId":"stud_mia","date":"2026-04-20","author":"","category":"Therapie & Suivi","tags":["ATVA","Familie"],"text":"Geht bei Therapeutin mee et packt et net heihinner. D'Mamm ass driwwert informeiert ginn datt mir sou net weiderfueren kennen an datt ATVA elo schon matagebonnen misst ginn wann se die Hellef wellen…","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_046","studentId":"stud_alexp","date":"2026-04-20","author":"","category":"Schule","tags":["Reintegration"],"text":"Nach keng Neiegkeeten wienie e Schoulversuch gestart gett.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_047","studentId":"stud_alexp","date":"2026-04-27","author":"","category":"Schule","tags":["Reintegration","ALR","Familie"],"text":"Kennt de Mëttwoch de moien. Ech huelen hat déi éischt 30-45min an duerno geet hat normal an den Cours. Vir de Moment kënnt hat 1x d'Woch an demno wéi Charly Tissier bréngt et klappt gett progressiv ropgesat. Internat an fräiwëlleg Foyer kennt fir Elteren net a Fro.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_048","studentId":"stud_alexk","date":"2026-04-27","author":"","category":"Diagnostik","tags":["Hochbegabung","Asperger/ASS","Familie","RDV","Selbstgefährdung"],"text":"Bleiwt HP onofhängeg vum neie Diagnostik. 15.05 RDV Psychologin. Méindes, Dënschdes absent, Mëttwoch um 10h10 ukomm (amplaatz vun 8h), Donneschden absent, Freiden bis 12h obwuel bis 13h ausgemaach wor. De Papp schwéngt immens mat. Den Dënschden wou den Alex behaapt huet hien hätt Kapp wéi a kéint dofir net an d'Schoul kommen huet de Papp him gesot dass hien dann och net op den Training goe kann. Doropshin ass den Alex aggressiv gin. D'Mireille huet dem Papp an dem Alex kloer gemaach dass net si déi sinn déi bestemmen wéi dem Alex säin Dag ausgesäit. Mathe: ganz nidderschwelleg ugefaangen: z.B 19-7 ass gaangen, 2x5 gaangen, 2x7 net gaangen. Weist seng kognitiv Fähegkeeten net. En huet eng erofloosend Art a Weis mat den Erwuessenen, wierkt arrogant, keng Frustratiounstoleranz. En ass ganz anescht am schouleschen Setting wei an de Pausen. Haut huet hien mir méi iwwer säin Projet Anime Serie geschwaat, hien brauch Synchronsprecher op Däitsch. Wëll net mat den aaneren Iessen an him schmaacht d'iessen och net...","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_049","studentId":"stud_colin","date":"2026-04-27","author":"","category":"Verhalten & Krisen","tags":["Familie","Selbstverletzung"],"text":"Wéi ass et mam Austausch vum Schoulmaterial? Donneschden hongreg an AJ komm, mat den Elteren thematiséieren, se sollen him eng Packung Müsli matginn. Fest vun der Frëndschaft net do, um Ausflug mat senger Klass. Am Daitschen jo, am Engleschen manner. Beim Sandra soll hien CULGE Module 6 maan.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_050","studentId":"stud_lilly","date":"2026-04-27","author":"","category":"Schule","tags":["Schule","Verhalten"],"text":"Retour consentement? orthophoniste? D'Lilly well verschidde Sachen net verstoen (Beispill: Excuse vum Dokter heescht keen Sport), ech mengen dass et wichteg ass him direkt ze soen wéi et ass an wat mir erwarden. Hatt mengt hatt misst fir déi aner Schüler do sinn an si motivéieren, hatt muss domat ophalen. Keng Progressioun am schouleschen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_051","studentId":"stud_jason","date":"2026-04-27","author":"","category":"Stage & Berufsorientierung","tags":["Stage","Mobibus","CTSA"],"text":"Am Stage elo vum 27.04-4.05, en ass gutt do ukomm. Mobibus Ausland geht net, och net ab Grenz, de Schüler muss eng Adress am Land hunn. Den 21.05 um 10h30 kënnt den CTSA an den Theater observéieren, den 15.05 schwätzten si mat der Mamm a mam Jason. Wann den Jason seng Medikamenter vergiess huet ze huelen, dierfen mir him déi an der AJ ginn.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_052","studentId":"stud_miguel","date":"2026-04-27","author":"","category":"Risiko & Sorge","tags":["Vape","Selbstgefährdung","Stage","Familie"],"text":"Ass lëscht Woch 2x wärend senger Vape Paus bei den Duarte gaangen. De Freiden hat hien e Leatherman (Täschemesser 8cm) dobäi, hunn him en ofgeholl. Et besteet erhéischten Verdacht dass hien eng zweet Vape bei sech huet. Hien huet och ugefaangen mat Bieden. Oppassen: net dass hien dat benotzt fir op der Toilette ze vapen. Den Donneschden fueren ech mam Miguel op Déifferdéng, convention de stage beim Coiffersalon Cap Act. D'Schoul huet eis informéiert dass si oft Stagen an deem Betriib refuséieren. D'Gespréich mat der Médiation Scolaire ass gutt verlaaf. Si hunn drop opmierksam gemaach datt si eis an dem Miguel seng Elteren wëllen ennersetzen de passenden Projet Scolaire fir hien ze fannen. De Miguel kritt doheem agetrichert datt mir hien hei net wëllen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_053","studentId":"stud_chase","date":"2026-04-27","author":"","category":"Verhalten & Krisen","tags":["Anwesenheit","Franséisch","LTA","Therapie"],"text":"War Méindes net gutt drop; seng sozial Batterie war net opgelueden; konnt sech net op d'Schoulfoire aloossen. Dënschdes besser drop. Huet déi Franséischprüfung bei eis nogeschriwwen, ka guer net aschätzen wéivill dat gëtt. Wëll demnächst am LTA an de Franséisch-Appui goen. Hien hätt keng Angscht an d'Schoul ze goen, héchstens virun der Prüfung. Hat dun awer an der Nuecht hefteg Problemer mat Mo an Daarm a war weder Mëttwochs am LTA nach Donneschdes bei eis. Hat läschte Méindeg déi bäschte Therapiesstonn. De Freideg war hien am LTA, 'gudden' Dag.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_054","studentId":"stud_ben","date":"2026-04-27","author":"","category":"Stage & Berufsorientierung","tags":["Stage","Liewenshaff","CISP","HPG"],"text":"Mir hunn viraussichtlech een Stage bei Hein fonnt (zu Remich), 1 Stonn vun Fueren. De Ben war ganz frou dass hien konnt mat engem Patron schwätz. Ech froen un den Stage op den 01-05.06 ze lëen. Hien huet sech fir d'Optioun 'Schaffe goen' entscheed no der 5AD, ech krut hien awer dozou anzewëllegen den Liewenshaff opmannst kucken ze goen. E Freiden 15/05 huet Mireille Rdv am LTA fir iwwert eng Admissioun an de CISP Liewenshaff ze schwätzen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_055","studentId":"stud_mia","date":"2026-04-27","author":"","category":"Anwesenheit & Mobibus","tags":["Anwesenheit"],"text":"Krut gesot et misst eng Entscheedung huelen, Schoul oder net.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_056","studentId":"stud_alexp","date":"2026-05-04","author":"","category":"Schule","tags":["Reintegration","ALR","Familie"],"text":"Nach keng Réckmeldung wéini dem Alex säin nächsten Dag ass. War immens frou hei ze sinn, gesäit sech am September an den Réidener Lycée goen an fest bei den Elteren ze wunnen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_057","studentId":"stud_alexk","date":"2026-05-04","author":"","category":"Diagnostik","tags":["Asperger/ASS","Hochbegabung","Familie","RDV"],"text":"Hien packt et aktuell net, reegelméisseg an d'Schoul ze kommen. Mir hunn den Androck, datt d'Schwieregkeeten éischter am schoulesche Kontext leien, onofhängeg vu sengem Autismus. An deem Kader iwwerleeë mir, en adaptéierte Stonneplang beim Ministère unzefroen. RDV mat den Elteren: Virraussiichtlech nächste Méinden um 15:00. Infos aus DS: 2017 CHL Psychologin Mme Karp stellt fest: Vorliegen einer besonderen sensorischen Integration und eine narzistisstische Verletzlichkeit aufgrund einer Bindungsstörung, die zu aggressivem und destruktivem Verhalten führt.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_058","studentId":"stud_colin","date":"2026-05-04","author":"","category":"Verhalten & Krisen","tags":["Reintegration","Familie","Selbstverletzung"],"text":"Versteet net wéisou hien an d'AJ muss kommen. Versicht virun allem an de Bezuchszäiten duerch argumentéieren e Wee zrëck an de Lycée ze fannen. Säin Zil Rentrée 26/27 ganz am Lycée ze sinn, en huet awer selwer gemierkt dass hien ëmmer rëm mat deem Thema kënnt. Hien zielt vill Geschichten, e kreckelt der gären, e bleiwt net bei der Wourecht am Morning Meeting, liicht manipulatif. D'Eltere si frou dass hien all Dag kënnt. Wann hien heem kënnt seet e net Moien, verzitt sech an d'Kummer. Am Summer geet hien 2 Wochen op d'Gemeng schaffen. Et fällt op dass hien extremst d'Haut vu sengen Fangeren zitt, se sinn bluddeg. Ass frou iwwert Opmierksamkeet wann een niewt em setzt.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_059","studentId":"stud_lilly","date":"2026-05-04","author":"","category":"Schule","tags":["Medikation","Schule"],"text":"D'Lilly huet sech d'lescht Woch méi drun ginn wéi soss. Consentement ass nach net do. Et hellt rëm 30mg Medikinet, mir wëllen wëssen wei et wat fir eng Medikamenter hellt. Mir kommen schoulesch net weider obwuel am klengen Setting mat him geschafft gëtt, et mécht ëmmer rem dei nämmlecht Fehler. Silben liesen oder 1x1 kennt et net weider. Sarah a J-P trainéieren datt verstäerkt mat him am 1:1. Lilly ass harmoniebedürfteg a net nodroend.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_060","studentId":"stud_jason","date":"2026-05-04","author":"","category":"Stage & Berufsorientierung","tags":["Stage","CTSA","CIP","Mobibus","Medikation"],"text":"Ass frou am Stage, en ass awer och frou fir muer rem bei eis well et get him schlecht am Bus. Wat ass de Plang B wann et näischt mam CTSA gëtt? CIP Klass an mei laang Stagen (ATVA) bis do eng Plaatz ass. Mamm seet de Mobibus kéint den Jason an Däitschland sichen goen, wier just een aaneren Service. Gëtt awer wahrscheinlech September bis se plenneren. Ordonnance fir d'Medikament huet se missen ofginn, freet e neien Certificat bei der Dr.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_061","studentId":"stud_miguel","date":"2026-05-04","author":"","category":"Risiko & Sorge","tags":["Vape","Selbstgefährdung","Stage","Familie"],"text":"Leschten Donneschden war geplangt vun 12:00 bis 14:00 op Déifferdeng ze fueren convention de stage ze ënnereschreiwen. Huet refuséiert well hien net um 14:00 mat zréck wollt kommen. Ass op de Späicher gaangen a loung uewen um Balken (Selbstgefährdung). D'Mamm hätt him gesot, ech soll him den Ziedel matginn fir dass si selwer bei de Patron ginn. Haut am MM huet hien de Grupp gestéiert mat sengen Kommentarer. Huet wärend dem 1. Block geschlof. Vape Paus duerno Paus mam Grupp.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_062","studentId":"stud_chase","date":"2026-05-04","author":"","category":"Anwesenheit & Mobibus","tags":["Anwesenheit","Franséisch","LTA","Sport"],"text":"Huet mir am Bezuch erzielt dass de Bus Freides um Wee fir an d'Schoul eng Pann hat. Hei ass hien dunn einfach zu Fouss drop lassgetrëppelt well hien net wollt ze spéit kommen, huet et schlussendlech zur Zäit gepackt. Hat just eng Situatioun am Sport wou hien sech kuerz onwuel gefillt huet. Den Chase mécht natierlech déi 'richteg' Rull a gesäit kee Sënn dran eng aner ze maachen. Krut eng 32 am Franséischen an eng 54 am Däitschen zréck. Mathé léiert hie mat ChatGPT. Proposéieren fir ab dem 1.6 och Méindes an den LTA ze goen am Fall wou et elo 3 Wochen mat deenen 2 Deeg klappt.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_063","studentId":"stud_ben","date":"2026-05-04","author":"","category":"Stage & Berufsorientierung","tags":["Liewenshaff","CISP","DAP","Berufsorientierung"],"text":"De Ben war dobai, dem Ben seng Mamm net. De Ben kruut die Optiounen virgestallt: CISP Liewenshaff (eis Recommandatioun), direkt schaffe goen als non qualifié an zreck an den LTA fir en DAP Landwirtschaftsgärtner. En Donneschtdeg huet hien d'Bezuchszait refuseiert a well sech keng Gedanken maachen iwwert seng Zukunft. Ech hat en haut an d'Gespreich geruff, ech mengen hien huet de Message verstaan an ugeholl. Mir ginn den Donneschden op d'Job Days.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_064","studentId":"stud_mia","date":"2026-05-04","author":"","category":"Anwesenheit & Mobibus","tags":["Anwesenheit","ATVA"],"text":"Naischt neies, d'Schoul ass informeiert. Ech telefoneieren mat der Mamm an der ATVA.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_065","studentId":"stud_alexp","date":"2026-05-11","author":"","category":"Familie & Eltern","tags":["Familie","Selbstgefährdung","HRS","ALR","Mobibus"],"text":"Hätt haut sollen kommen huet sech awer anscheinend déi kléng Zéiw gebrach. Den Här Tissier ass sech net secher ob et net en Vermeidungsversuch vum Alex an sengem Papp ass fir net an d'AJ ze kommen. Si maachen eng Röntgen. Den Här Tissier huet gesot dass den Papp all Fortschrëtter an Richtung Autonomie vum Alex torpedéiert. Hat kënnt wann alles klappt den Freiden (ganzen Dag).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_066","studentId":"stud_alexk","date":"2026-05-11","author":"","category":"Diagnostik","tags":["Asperger/ASS","Hochbegabung","Dys","ATVA","CDA","CTSA","Schlof","Familie"],"text":"Clearing ATVA, Conseiller ass de Fabrice Krez: Underachiever, Schwachpunkt mémoire de travail, Dyspraxie? Twice Exceptional (2e) – Hochbegabung und Teilleistungsstörung im selben Kopf? Am Gespréich mat den Elteren zwou zentral Froestellungen: 1) Diskrepanz tëscht intellektuellem Potenzial a schoulescher Leeschtung. Am schouleschen Alldag: niddreg Belastbarkeet, keng Grondkenntnisser, séier Frustratioun, staark Vermeidungstendenzen. Gläichzäiteg: huet sech Piano an Englesch selwer bäibruecht (eegen ganz staark Technik, awer net bereed Basics am Solfège ze leieren), wëll aner Sproochen (Koreanesch, Russesch, Japanesch) léieren, kritt et awer net emgesaat. Mir stellen eis d'Fro ob nieft der diagnostizéiertem ASS zousätzlech Dys'en, Léierschwieregkeeten, exekutiv Problemer eng Roll spillen. Mir emfroen eis fir Conseil/Guidance beim CDA/CTSA. 2) Zukunftsperspektiv: Orientatioun Richtung 5P (mat 0 Moduler) a speider CIP Klass sënnvoll. Optiounen: am Lycée Ermesinde ageschriwwen bleiwen (Ofklärung CIP Struktur) oder Neiorientatioun Lycée Réiden oder Mamer (Präferenz LJBM). D'Elteren huelen d'Ënnerstetzung vun der ATVA un, schrëftlechen Accord do. D'Elteren hunn den Androck dass auditiv vermëttelt Informatioune gutt bei him hänke bleiwen. D'Elteren hunn beschriwwen datt den Alex schwéier aschléift an e staarkt Owesritual brauch (Podcasts fir anzeschlofen). Fréier wéineg gelies, wann dann éischter Mangaen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_067","studentId":"stud_colin","date":"2026-05-11","author":"","category":"Schule","tags":["Autonomie","Sport"],"text":"Huet déi lescht Woch insgesamt eng positiv Entwécklung gewisen. Besonnesch gutt gefall hunn him de Mathescours an den Ausfluch en Dënschdeg beim Echternacher Séi. Nodeems eng Réckmeldung iwwert säi Schaffverhale gemaach gouf, huet hien sech sichtbar méi Méi ginn an och méi Eigeninitiativ. Positiv: méi Autonomie am Alldag, Participatioun um Vëlofueren (obwuel hien virdru gesot hat dass hien dat net gär huet). Aktuell sicht hien Opmierksamkeet iwwer 'Dommheeten, Geräischer'. Bei sou engem Verhaalen direkt stoppen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_068","studentId":"stud_lilly","date":"2026-05-11","author":"","category":"Familie & Eltern","tags":["Familie","Orthophonistin","RDV"],"text":"Huet den 19.5 den eischten Rdv bei der Orthophonistin. Consentement ass nach ëmmer net do. D'Lilly hat läscht Woch eng méi schwéier Woch well seng Boma um Stierwen loung. En Donnesden ass et dann och zum Stiewesfall komm an d'Lilly ass ofgeholl ginn. Ech fannen dass de Papp dat gutt gehändelt huet. D'Lilly war am Generellen zimlech duercheneen. Dem Lilly seng Interpretatiounen dierfen gäeren ënnert d'Loupe geholl ginn, well se baséieren net emmer op Wourechten. Hatt huet schon e gutt Gespier, dofir soll een net d'Sach a Fro stellen, mee et ass net emmer wéi hatt mengt. D'Lilly huet e Gespréich mam Ben gehat deen him konnt soen dass hien genervt ass well hatt 'ëmmer de Prof spillt'. Begriewnis vun der Boma ass e Mëttwoch.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_069","studentId":"stud_jason","date":"2026-05-11","author":"","category":"Externe Stellen & Netzwerk","tags":["Stage","CTSA","DS","Mobibus","Medikation"],"text":"Huet haut RDV mat der Mamm um CTSA fir den DS (21.05 Observatioun bei eis während der Optioun Theater), war e Freiden net do well de Concert deen Owend virdrun ze laang gedauert huet, krut eng absence non-excusé. Et ass un der Mamm een aaneren Service ze kontaktéieren vir den Transport iwwert d'Grenz ze organiséieren.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_070","studentId":"stud_miguel","date":"2026-05-11","author":"","category":"Verhalten & Krisen","tags":["Vape","Stage","Sport"],"text":"Vun Dënschden un ass d'Woch insgesamt gutt verlaf. Hien war an all de Coursen präsent a huet matgeschafft, méi kooperativ. Hien ass frou iwwer seng Stage Plaatz. Gläichzäiteg huet hien méi dacks no Vape-Pausen gefrot, huet selwer matgedeelt datt hien déi lescht Woch keng zweet Vape dobäi hat. Besonnesch gutt gefall: Vëlofueren an Mathescours (Modul 5 ofgeschloss). Säin Zil fir dës Woch: säi Vape-Konsum op all 2 Stonnen ze reduzéieren.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_071","studentId":"stud_chase","date":"2026-05-11","author":"","category":"Verhalten & Krisen","tags":["Anwesenheit","LTA","Sport","Familie"],"text":"Läscht Woch war et méi schwiereg am Bezuch. Den Chase war liicht iwwerfuerdert mat der Gestioun vum Teams, WebUntis. Hat d'Norichte vun de Proffen aus dem LTA einfach net gekuckt. Et war ganz schwéier fir der Proff eng kuerz Réckmeldung ze schécken. Hat Mëttwochs Geosprüfung am LTA, ass awer ok gaang. D'Mamm hëlleft fir d'Gestioun vum Teams. War e Film op Franséisch kucken an zimmlech begeeschtert. E Freideg am Lycée war et ok laut him.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_072","studentId":"stud_ben","date":"2026-05-11","author":"","category":"Stage & Berufsorientierung","tags":["Stage","Liewenshaff","CISP","Familie","Schlof"],"text":"Den 29.04 ass HPG, d'Fro déi sech stëllt ass schaffen goen oder awer Liewenshaff. War den Freiden um 15h do, opwuel hien wosst dass keen do wier. Huet an der Vakanz en 'Experiment' gemaach wou hien keen Medikament geholl huet bei der Mamm. Dr. Karst seet dass de Ben net an d'Schoul komm ass wëll hien keen Schloofrhythmus méi hat. Martina Mick well datt hien e Plang B huet (net just Gemeng), Jobdag 7.05.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_073","studentId":"stud_mia","date":"2026-05-11","author":"","category":"Anwesenheit & Mobibus","tags":["Anwesenheit"],"text":"Krut Denschdes virun der Vakanz den Punkt op den i gesat. Huet et haut net gepackt, war anscheinend prett an huet de lëschten Moment entscheed net ze kommen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_074","studentId":"stud_alexp","date":"2026-05-18","author":"","category":"Schule","tags":["Reintegration","HRS","ALR","Familie","Autonomie"],"text":"Plang fir des Woch: Alex kennt e Mëttwoch an en Donneschdeg, Rdv am ALR no der Péngschtvakanz (12.06). D'Elteren kruten vun der Schoul gesot datt Gespréich géif mat mir zesummen stattfannen. No der Vakanz ass och Gespréich am HRS (5.06), den Joey geht dohinner. Falls den Papp irgentwann sollt optauchen, net op een Gespréich agoen, mais dorop opmierksam maachen dass hien dat mat mir oder dem Mireille soll beschwätzen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_075","studentId":"stud_alexk","date":"2026-05-18","author":"","category":"Risiko & Sorge","tags":["Asperger/ASS","Hochbegabung","Familie","RDV","Medikation"],"text":"'Du hast einen hochbegabten Jugendlichen mit Asperger vor dir, dessen Begabung das ASS-Profil jahrelang verdeckt hat — bis das Kompensationsbudget aufgebraucht war. Was du jetzt als Depression siehst, ist die Erschöpfung nach Jahren des „ich bin doch klug, also muss ich es schaffen\". Neurokognitiv liegt hier typischerweise eine ausgeprägte Index-Spreizung im WISC-V vor — verbales Verständnis und fluides Schließen oft 130+, Arbeitsgedächtnis und Verarbeitungsgeschwindigkeit deutlich darunter. Was wir brauchen, ist eine doppelte Anpassung: Die Begabung braucht herausforderndes Material — Akzeleration, Enrichment. Das ASS-Profil braucht Struktur, Vorhersehbarkeit und sensorische Anpassungen.' De Weekend hat den Alex e puer 'Minikrisen' wou et ëmmer dremm gaangen ass datt hien seng Musek oder seng Pläng net géif hikréien. War de Weekend mat Zäit an d'Bett (12:00-01:00) an moies opkomm. Geschter Owend rem total refuséiert, net ukomm bis spéid an Nuecht. Hien huet och an 2 Wochen B-Day (2.06). Dem Papp fällt op dass ronderem säin Gebuetsdaag säin Verhaalen nach méi schwiereg ass, Frustratiounen a Krisen si virprogramméiert. 11.06 RDV bei der Mme Rizzi. Dëse Freiden um 10:00 RDV Dr. Pignoloni (Medikatioun/Antidepressiva). D'Elteren wëllen Hëllef beim groupe de support fir Autismus an der Belge ufroen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_076","studentId":"stud_colin","date":"2026-05-18","author":"","category":"Familie & Eltern","tags":["Familie","Motorik","ATVA"],"text":"Leschten Donneschden ass hien säin Bop an d'Klinik besiche gaangen. Hien war schockéiert säin Bop an deem Zoustand ze gesinn a mescht sech Suergen. Dëst Situatioun hat de Freiden Auswierkungen op dem Colin säin Wuelbefannen. Mëttes ass et him immens schwéier gefall sech ze konzentréiren. Op meng Fro ob hien am Workshop vun der ATVA eppes matkritt: 'Brauch net opzepassen, ech kann näicht a mech brauch souwéisou keen.' Hunn d'Mamm op seng Motorik, Koordinatioun higewisen. A Bezuch op den Openthalt an der Klinik huet d'Mamm gesot, de Colin wier den sensibelschen an der Famill.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_077","studentId":"stud_jason","date":"2026-05-18","author":"","category":"Externe Stellen & Netzwerk","tags":["CTSA","Theater","Autismus","Familie"],"text":"Beobachtung CTSA des Woch. Krut vun der Madamm Leber erklärt wat Autismus ass an hien schéngt immens frou ze sinn dass seng Mamm hien elo besser versteed. Hien well oft läscht Wuert hunn. Am Theater weist hien schon extrem Reaktiounen, zB wann en roosen soll ginn: e gëtt dann richteg ausfaalend. E kann sech net an Situatiounen eraversetzen dei net mat senger Liewenssituatioun iwwerteneen stemmen. Sarah an Annick spillen datt Spill en Donneschtdeg an der Theateroptioun, perfekt fir wann Mme Leber kucke kennt.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_078","studentId":"stud_miguel","date":"2026-05-18","author":"","category":"Stage & Berufsorientierung","tags":["Stage","Familie"],"text":"Am Stage des ganz Woch, de J-P war haut fir Mëtteg dohinner an e geet och e Mëttwoch nach eemol, d'Elteren äntwerten net mei wirklech op Feedback mailen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_079","studentId":"stud_chase","date":"2026-05-18","author":"","category":"Therapie & Suivi","tags":["Therapie","Medikation","LTA","Familie"],"text":"Hat de Méindeg vergiess bei d'Psychotherapeutin op Esch ze fueren. De RV den Dënschdeg beim Dr.Meinhardt war gutt, den Dr war ganz zefridden mam Chase senger Entwécklung, huet vill méi geschwat wéi soss. Feedback Spendenlaaf LTA: huet sech immens druginn; ee Moment huet en Blutt am Mond geschmaacht (eventuell sech am Mond gebass), éischt Hëllef huet no him gekuckt, näicht festgestallt. Huet sech e Moment op d'Mauer gesat a liischt gekrasch, ass duerno rem weidergelaf. War éiergäizeg. Vun der Franséischproff krut hien de Choix ob hien den Exposé bei eis oder virun der Klass am LTA mécht, huet sech fir d'Klass entscheed. De Moien Bioprüfung. Den Donneschdeg Mathéprüfung.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_080","studentId":"stud_ben","date":"2026-05-18","author":"","category":"Stage & Berufsorientierung","tags":["Liewenshaff","CISP","Stage","Familie"],"text":"Feedback vum Gespréich am LTEtt: d'Schoul ennerstetzt de Wee a Richtung CISP Liewenshaff. Die nächst Etapp ass fir e Rdv um Liewenshaff auszemaachen fir zesummen mat den Elteren kucken ze goen. Kontakt ass Mme Claudine Welbes. No engem Stage vun 10 Wochen kennt et reischt zur definitver Admissioun. Hien soll e Motivatiounsbreif schreiwen. D'Schoul wärt dem Ben seng Absencen mellen. De Foyer deelt Suerg datt de Ben bei seng Mamm geht wann en der 18 kritt. De Ben huet mir gesoot hien wéilt wahrscheinlech bis 20 am Foyer bleiwen wann méiglech.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_081","studentId":"stud_mia","date":"2026-05-18","author":"","category":"Anwesenheit & Mobibus","tags":["Anwesenheit","Cloture"],"text":"D'Mamm huet sech bei der Schoul gemellt fir et ofzemellen, d'Schoul seed Bescheed wann d'fiche de départ ausgefëllt ass (Ofschlossrapport schreiwen).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_082","studentId":"stud_alexp","date":"2026-06-01","author":"","category":"Termine & RDV","tags":["HRS","ALR","Familie","Mobibus"],"text":"Kennt des Woch Dënschdeg, Mëttwoch, Donneschdeg an nächst Woch all Dag ausser Freiden, e Freiden ass Rdv am HRS, dei Woch drop am ALR. Elteren kréien keen Gespreichsangebot wann de Taxi spillen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_083","studentId":"stud_alexk","date":"2026-06-01","author":"","category":"Diagnostik","tags":["LEM","CTSA","CDA","Dys","Medikation","Dr Pignoloni","Mme Rizzi","CeHJP","CHL"],"text":"Wann den Alex sech net u sai Plang hält kritt en non-excusé, bis elo ass alles entschellegt ginn. Austausch mam Fabrice KERG vun der ATVA a mam Philippe DEMART vum LEM: Promotioun op eng 5PRO, mir schreiwen datt op den Complément au Bulletin als classe visée, hien kritt keng LEM-Zensur. Muer um 11h ass Austausch mam Psychomotoriker vum CeHJP. Clearing beim CTSA ass den 8.06 um 9h00. Feedback RDV beim Dr Pignoloni (CHL): Hëllt säit enger Woch Antidepressiva. Aktuell hu si keen Psycholog, seng Psychologin kënnt réischt a puer Méint zréck. En attentant gi si nächst Woch bei d'Mme Rizzi fir e Suivi. Geschwat gouf och iwwert eventuel Dys'en an datt den Alex déi Tester dann am CDA misst maachen. Beim Dr Ristow beschwätzen mer den Alex.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_084","studentId":"stud_colin","date":"2026-06-01","author":"","category":"Termine & RDV","tags":["LLIS","Ausfluch"],"text":"Vum 08.06-10.06 mam LLIS um Ausfluch.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_085","studentId":"stud_jason","date":"2026-06-01","author":"","category":"Externe Stellen & Netzwerk","tags":["CTSA"],"text":"CTSA wärt eng scolspé ausschwätzen, phase d'observation fënnt awer net mei dëst Schouljoer statt dat ass secher.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_086","studentId":"stud_miguel","date":"2026-06-01","author":"","category":"Risiko & Sorge","tags":["Stage","Familie","HRS","CNI","Vertrauen"],"text":"Feedback Stage: Sinn hien zweemol besiche gaangen, et huet alles gutt geschéngt, positiven Retour. Dënschden Mëtten wärend senger Paus vun 12:00-14:00 wor hien beim Zänndokter a krut eng Zahnspang. Hien huet mir haut matgedeelt dass hien 15€ um Buedem am Pausenraum vum Salon fonnt huet. Hien huet se agestach a sech Panini Stickeren domat kaaf. Wou hien an lescht Woch den Evaluationsfiche siche gangen ass hun si en drop ugeschwat: Si hätten et op der Kamera gesinn a hien soll se zréck ginn soss kritt hien Fiche net a se géifen bei d'Police goen. De Miguel wees net wat hien maache soll well e keng 15€ huet a sech net traut sengen Eltere bescheed ze soen well déi lescht Wochen gutt gelaaf ass a senge Elteren ufänken him rëm méi ze vertrauen. Haut deelt hien dëst senger assistance en famille mat a seet senger Mamm bescheed a frëet si no Geld fir dass hien haut se am Salon ofgëtt. CNI e Mëttwoch um 8h30. Net mei beim HRS am suivi, Dr. Marie-Christine Liegeois-Dom (nach net konfirmiert vun den Elteren).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_087","studentId":"stud_chase","date":"2026-06-01","author":"","category":"Schule","tags":["Reintegration","LTA"],"text":"Ab haut 3x am Lycée.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_088","studentId":"stud_ben","date":"2026-06-01","author":"","category":"Stage & Berufsorientierung","tags":["Liewenshaff","Stage","Familie","RDV"],"text":"Visite vum Liewenshaff ass ofgesot haut well den Joey krank ass, neie Rdv ass nächste Meinden um 13h30, de Foyer relanceiert bei den Elteren. Mobibus ufroen fir de Stage beim Hein (Datum?).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_089","studentId":"stud_mia","date":"2026-06-01","author":"","category":"Anwesenheit & Mobibus","tags":["Cloture"],"text":"Cloture ass gemach, se kommen des Woch dem Mia seng Saachen sichen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_090","studentId":"stud_lilly","date":"2026-06-01","author":"","category":"Risiko & Sorge","tags":["Orthophonistin","CNI","Medikation","Familie","Signalement","RDV"],"text":"Lilly kennt muer den 02.06 net an d'Schoul wéinst 2 Dokter RDV. Austausch mat der Dr Bertholdt den 4.06. Feedback Orthoponistin: Si fënnt dem Lilly säin Fall alarmant an konnt net schlofen well deen Fall hir souvill Suerge gemach huet. Ze gesinn dass en 14 jähregt Meedchen kaum liesen an schreiwen kann, wier ongewinnt. Si fënnt dass d'Elteren vill Excusen riets a lénks siche ginn, mee dat wier keng Begrënnung fir dem Lilly seng Lacunen. Si hat dunn een Suivi firgeschloen vun 2x30 Minutten wöchentlech. D'Elteren haten dat awer ofgelehnt wéinst finanziellen Grënn. Ech hat virun der Vakanz den Elteren ugeruff an hinen ze verstoen ginn dass dat net geet an dass mir grad 0 Konditiounen vun der CNI géingen erfëllen. Meng Obligatioun wier et dofir gleich ze signaléieren. D'RDV bei der Orthophonistin sinn elo finalement fest. Den Antidepresseur ass net dem Lilly säint, Si hunn naischt esou am Haus, d'Lilly hätt sech gemellt gehat well do 10mg stoung an hatt gemengt huet et wier säin Medikinet.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_091","studentId":"stud_jayson","date":"2026-06-01","author":"","category":"Stage & Berufsorientierung","tags":["Ofbroch","Ausbildung","ATVA"],"text":"Schouljoer net gepackt, denkt iwwer Ofbroch no; eventuell eng nei Ausbildung; Telefonéieren haut nach eemol; aktuell keng Ënnerstëtzung méi vun der ATVA.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_092","studentId":"stud_levi","date":"2026-06-01","author":"","category":"Stage & Berufsorientierung","tags":["Contrat d'apprentissage","Kontrolldokter"],"text":"Krut säi contrat d'apprentissage gekënnegt, hien geht des Woch nach eemol bei de Kontrolldokter.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_093","studentId":"stud_alexp","date":"2026-06-07","author":"","category":"Therapie & Suivi","tags":["HRS","Dr Meinhardt","ALR","SCAS","Mobibus","Autonomie","Familie","Reintegration"],"text":"Kennt des Woch all Dag ausser haut. Rapport vum RDV de Freiden: D'Alex bléift bis de Freide vollstationär an duerno 2 Wochen Hôpital du jour, Ufank Juli wäert d'Ofschlossgespréich stattfannen. Den Dr. Meinhardt ass ganz zefridden mam Alex senger Entwécklung, hat kann besser verbaliséieren wat hat brauch. Et ass ganz kloer gesot ginn dass d'Alex bei eis an der Annexe bleift fir d'nächst Schouljoer an am Laf vum Joer kéint een un eng Reintegratioun nodenken. Nom Ofschlossgespréich wäert d'Alex weiderhin vu senger Therapeutin suivéiert ginn, den Här Schmalen vum ONE huet annoncéiert dass hien sech zeréckzitt (net optimal). D'Alex soll weiderhin seng Medikatioun (Stëmmungsophëllend) huelen bis sech alles stabiliséiert huet. Den Dr. Meinhardt bleift Pedopsychiater. D'Elteren wëllen dass d'Alex d'Joer redoubléiert an dës Woch ass RDV am Réidener Lycée. D'Elteren goufen kloer dorop higewisen dass si d'Alex mussen ënnerstëtzen an senger Autonomie an net bei all Schwieregkeet déi schützend Hand ausstrecken. Wat den Transport ugeet hunn d'Elteren mam Averständnis vun der Psychologin gehandelt an d'Alex bruecht. Leider gëtt et keen Opfangnetz am Fall wou d'Alex am September net méi kënnt. Vir d'Elteren kënnt en Internat net a Fro, dat heescht an dem Fall wäert d'Affaire iwwert SCAS/Geriicht verlafen. Ech telefonéieren dës Woch mam Här Tissier.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_094","studentId":"stud_colin","date":"2026-06-07","author":"","category":"Externe Stellen & Netzwerk","tags":["LLIS","Ausfluch"],"text":"Vum 08.06-10.06 mam LLIS um Ausfluch.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_095","studentId":"stud_jason","date":"2026-06-07","author":"","category":"Externe Stellen & Netzwerk","tags":["CTSA","phase d'observation"],"text":"CTSA wärt eng scolspé ausschwätzen, phase d'observation fënnt awer net mei dëst Schouljoer statt dat ass secher.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_096","studentId":"stud_miguel","date":"2026-06-07","author":"","category":"Risiko & Sorge","tags":["Stage","HRS","CNI","Familie","Vertrauen"],"text":"Feedback Stage: Sinn hien zweemol besiche gaangen, et huet alles gutt geschéngt, positiven Retour. Dënschden Mëtten wärend senger Paus vun 12:00-14:00 wor hien beim Zänndokter a krut eng Zahnspang. Hien huet mir matgedeelt dass hien 15€ um Buedem am Pausenraum vum Salon fonnt huet, huet se agestach a sech Panini Stickeren domat kaaf. Beim Evaluationsfiche siche goen hun si en drop ugeschwat: si hätten et op der Kamera gesinn a hien soll se zréck ginn soss kritt hien Fiche net a se géifen bei d'Police goen. De Miguel wees net wat maachen, traut sech net sengen Eltere bescheed ze soen well déi lescht Wochen gutt gelaaf ass. Haut deelt hien dëst senger assistance en famille mat. CNI e Mëttwoch um 8h30. Net mei beim HRS am suivi, Dr. Marie-Christine Liegeois-Dom (nach net konfirmiert).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_097","studentId":"stud_chase","date":"2026-06-07","author":"","category":"Schule","tags":["Reintegration","LTA"],"text":"Ab haut 3x am Lycée.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_098","studentId":"stud_ben","date":"2026-06-07","author":"","category":"Stage & Berufsorientierung","tags":["Liewenshaff","Stage","Familie","RDV","Mobibus"],"text":"Visite vum Liewenshaff ass ofgesot haut well den Joey krank ass, neie Rdv ass nächste Meinden um 13h30, de Foyer relanceiert bei den Elteren. Mobibus ufroen fir de Stage beim Hein (Datum?).","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_099","studentId":"stud_mia","date":"2026-06-07","author":"","category":"Anwesenheit & Mobibus","tags":["Cloture"],"text":"Cloture ass gemach, se kommen des Woch dem Mia seng Saachen sichen.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_100","studentId":"stud_lilly","date":"2026-06-07","author":"","category":"Risiko & Sorge","tags":["Orthophonistin","CNI","Medikation","Familie","Signalement","RDV"],"text":"Lilly kennt muer den 02.06 net an d'Schoul wéinst 2 Dokter RDV. Austausch mat der Dr Bertholdt den 4.06. Feedback Orthoponistin: Si fënnt dem Lilly säin Fall alarmant an konnt net schlofen. Ze gesinn dass en 14 jähregt Meedchen kaum liesen an schreiwen kann wier ongewinnt. Si fënnt dass d'Elteren vill Excusen riets a lénks siche ginn, mee dat wier keng Begrënnung fir dem Lilly seng Lacunen. Si hat een Suivi firgeschloen vun 2x30 Minutten wöchentlech, d'Elteren haten ofgelehnt wéinst finanziellen Grënn. Ech hat den Elteren ugeruff an hinen ze verstoen ginn dass mir grad 0 Konditiounen vun der CNI erfëllen a meng Obligatioun wier et gleich ze signaléieren. D'RDV bei der Orthophonistin sinn elo fest. Den Antidepresseur ass net dem Lilly säint, hatt hätt sech gemellt well do 10mg stoung an gemengt huet et wier säin Medikinet.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_101","studentId":"stud_jayson","date":"2026-06-07","author":"","category":"Stage & Berufsorientierung","tags":["Ofbroch","Ausbildung","ATVA"],"text":"Schouljoer net gepackt, denkt iwwer Ofbroch no; eventuell eng nei Ausbildung; Telefonéieren haut nach eemol; aktuell keng Ënnerstëtzung méi vun der ATVA.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}},{"id":"seed_102","studentId":"stud_levi","date":"2026-06-07","author":"","category":"Stage & Berufsorientierung","tags":["Contrat d'apprentissage","Kontrolldokter"],"text":"Krut säi contrat d'apprentissage gekënnegt, hien geht des Woch nach eemol bei de Kontrolldokter.","sliders":{"wellbeing":null,"stability":null,"attendance":null,"risk":null}}]};
+
+var NAV_ITEMS = [
+  { key: 'dashboard', route: '#/dashboard', label: 'Dashboard' },
+  { key: 'search', route: '#/search', label: 'Suche' },
+  { key: 'export', route: '#/export', label: 'PDF-Export' },
+  { key: 'ai-export', route: '#/ai-export', label: 'An externe KI geben' },
+  { key: 'backup', route: '#/backup', label: 'Backup' }
+];
+
+function shellHtml(activeKey, contentHtml) {
+  return '<div class="app-shell">' +
+    '<nav class="sidebar" aria-label="Hauptnavigation">' +
+      '<h1>Dossier <small>Annexe Junglinster &middot; CDSE</small></h1>' +
+      NAV_ITEMS.map(function (item) {
+        return '<button type="button" class="nav-link' + (item.key === activeKey ? ' active' : '') + '" data-route="' + item.route + '">' + escapeHtml(item.label) + '</button>';
+      }).join('') +
+      '<div class="sidebar-footer">Alle Daten bleiben ausschließlich lokal auf diesem Gerät (' +
+        (Storage.mode === 'indexeddb' ? 'IndexedDB' : 'localStorage') +
+        '). Kein Internet-Zugriff, keine Telemetrie, keine externen Schriften.</div>' +
+    '</nav>' +
+    '<main class="main" id="main-content" tabindex="-1">' + contentHtml + '</main>' +
+  '</div>';
+}
+
+/* ---------------- Routing ---------------- */
+
+function parseHash() {
+  var raw = location.hash.replace(/^#\/?/, '');
+  var qIdx = raw.indexOf('?');
+  var path = qIdx === -1 ? raw : raw.slice(0, qIdx);
+  var queryStr = qIdx === -1 ? '' : raw.slice(qIdx + 1);
+  var query = {};
+  queryStr.split('&').forEach(function (pair) {
+    if (!pair) return;
+    var kv = pair.split('=');
+    query[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+  });
+  var parts = path.split('/').filter(Boolean);
+  return { parts: parts, query: query };
+}
+
+function resolveView(parts, query) {
+  if (parts.length === 0 || parts[0] === 'dashboard') return viewDashboard({}, query);
+
+  if (parts[0] === 'student' && parts[1]) {
+    var sParams = { studentId: decodeURIComponent(parts[1]) };
+    if (parts[2] === 'entry' && parts[3]) sParams.focusEntry = decodeURIComponent(parts[3]);
+    return viewStudentDetail(sParams);
+  }
+
+  if (parts[0] === 'entry') {
+    if (parts[1] === 'new') return viewEntryForm({ studentId: parts[2] ? decodeURIComponent(parts[2]) : (query.student || '') });
+    if (parts[1] && parts[2] === 'edit') return viewEntryForm({ entryId: decodeURIComponent(parts[1]) });
+  }
+
+  if (parts[0] === 'search') return viewSearch({}, query);
+  if (parts[0] === 'export') return viewPdfExport({}, query);
+  if (parts[0] === 'ai-export') return viewAiExport({}, query);
+  if (parts[0] === 'backup') return viewBackup();
+
+  return viewDashboard({}, query);
+}
+
+function navigate(hash, replace) {
+  if (replace) {
+    history.replaceState(null, '', hash);
+    render();
+  } else if (location.hash === hash) {
+    render();
+  } else {
+    location.hash = hash;
+  }
+}
+
+function render() {
+  var parsed = parseHash();
+  var view = resolveView(parsed.parts, parsed.query);
+  var root = document.getElementById('app-root');
+  root.innerHTML = shellHtml(view.navKey, view.html);
+  var main = qs('#main-content', root);
+  if (view.afterRender) view.afterRender(main);
+  window.scrollTo(0, 0);
+}
+
+window.addEventListener('hashchange', render);
+
+/* Globale Klick-/Tastatur-Delegation für [data-route]-Elemente
+   (Sidebar, Karten, Buttons) — vermeidet Listener-Wirrwarr pro View. */
+document.addEventListener('click', function (ev) {
+  var el = ev.target.closest && ev.target.closest('[data-route]');
+  if (el) {
+    ev.preventDefault();
+    navigate(el.getAttribute('data-route'));
+  }
+});
+document.addEventListener('keydown', function (ev) {
+  if (ev.key !== 'Enter' && ev.key !== ' ') return;
+  var el = ev.target.closest && ev.target.closest('[data-route][role="button"]');
+  if (el) {
+    ev.preventDefault();
+    navigate(el.getAttribute('data-route'));
+  }
+});
+
+/* ---------------- Datenschutz-Hinweis (beim ersten Start) ---------------- */
+
+function maybeShowPrivacyBanner() {
+  var root = document.getElementById('banner-root');
+  if (localStorage.getItem(LS_PREFIX + 'banner_dismissed')) return;
+  root.innerHTML =
+    '<div class="privacy-banner">' +
+      '<div><strong>Alle Daten bleiben auf diesem Gerät.</strong>' +
+      'Diese App läuft vollständig offline in Ihrem Browser. Es werden keinerlei Daten an externe Server gesendet, ' +
+      'es gibt keine Cloud-Anbindung und keine Telemetrie. Sicherungen erstellen Sie selbst über „Backup exportieren"; ' +
+      'der anonymisierte KI-Export (siehe Seitenleiste) landet ausschließlich in Ihrer Zwischenablage — niemals automatisch irgendwo sonst.</div>' +
+      '<button type="button" id="banner-dismiss-btn">Verstanden</button>' +
+    '</div>';
+  qs('#banner-dismiss-btn', root).addEventListener('click', function () {
+    try { localStorage.setItem(LS_PREFIX + 'banner_dismissed', '1'); } catch (e) {}
+    root.innerHTML = '';
+  });
+}
+
+/* ---------------- Bootstrap ---------------- */
+
+Repo.init()
+  .then(function () {
+    maybeShowPrivacyBanner();
+    render();
+  })
+  .catch(function (err) {
+    document.getElementById('app-root').innerHTML =
+      '<div class="empty-state">Fehler beim Initialisieren der lokalen Datenbank: ' + escapeHtml(err && err.message ? err.message : String(err)) +
+      '<br>Bitte laden Sie die Seite neu. Falls das Problem bestehen bleibt, prüfen Sie, ob Ihr Browser IndexedDB / localStorage erlaubt.</div>';
+  });
+
+</script>
+</body>
+</html>
