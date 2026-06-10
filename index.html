@@ -908,6 +908,64 @@
         <!-- QUERY BUILDER                                                -->
         <!-- ============================================================ -->
         <section x-show="view === 'query'" style="display:none">
+
+          <!-- Natural-language query bar — top-billed feature.
+               Pure pattern matching, no LLM, no network. -->
+          <div class="mb-10">
+            <div class="flex items-baseline justify-between mb-3">
+              <div>
+                <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Ask in plain English</div>
+                <h2 class="mt-1 text-xl"><span class="font-serif-i">Type</span> a question</h2>
+              </div>
+              <div class="text-xs text-muted dark:text-muted-dark italic">
+                Everything stays in this browser. Nothing is sent to a server.
+              </div>
+            </div>
+
+            <div class="relative">
+              <input
+                type="text"
+                x-model="naturalQuestion"
+                @keydown.enter="runNaturalQuery()"
+                placeholder="e.g. average IQ of girls with ADHD in DIR Esch"
+                class="w-full bg-paper dark:bg-paper-dark border border-line dark:border-line-dark rounded-lg pl-4 pr-32 py-3.5 text-base outline-none focus:border-primary dark:focus:border-ink-dark transition"
+              />
+              <button
+                @click="runNaturalQuery()"
+                :disabled="!naturalQuestion.trim()"
+                :class="!naturalQuestion.trim() ? 'opacity-40' : ''"
+                class="absolute right-1.5 top-1/2 -translate-y-1/2 btn btn-primary text-sm"
+              >Run ↵</button>
+            </div>
+
+            <!-- Live interpretation -->
+            <div x-show="naturalQuestion.trim()" class="mt-2 px-1 text-xs flex items-start gap-2" style="display:none">
+              <span class="text-muted dark:text-muted-dark italic">I understand:</span>
+              <span
+                x-text="naturalParse.sentence"
+                :class="{
+                  'text-ink dark:text-ink-dark': naturalParse.confidence === 'high',
+                  'text-muted dark:text-muted-dark': naturalParse.confidence !== 'high',
+                }"
+              ></span>
+              <span x-show="naturalParse.confidence === 'high'"  class="text-primary dark:text-ink-dark text-[10px] uppercase tracking-widest ml-auto pl-2">match</span>
+              <span x-show="naturalParse.confidence === 'medium'" class="text-muted dark:text-muted-dark text-[10px] uppercase tracking-widest ml-auto pl-2">partial</span>
+              <span x-show="naturalParse.confidence === 'low' || naturalParse.confidence === 'none'" class="text-accent text-[10px] uppercase tracking-widest ml-auto pl-2">unsure</span>
+            </div>
+
+            <!-- Example chips -->
+            <div class="mt-3 flex flex-wrap gap-1.5 items-center">
+              <span class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mr-1">try</span>
+              <template x-for="ex in NATURAL_EXAMPLES" :key="ex">
+                <button
+                  @click="setNaturalExample(ex)"
+                  class="chip-toggle text-[11px]"
+                  x-text="ex"
+                ></button>
+              </template>
+            </div>
+          </div>
+
           <!-- Presets — typical state-asked questions -->
           <div class="mb-10">
             <div class="flex items-baseline justify-between mb-3">

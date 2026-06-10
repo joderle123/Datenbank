@@ -35,7 +35,8 @@ import {
   formatNumber,
 } from './query-engine.js';
 
-import { presetsForField } from './presets.js';
+import { presetsForField, LYCEES_LUXEMBOURG } from './presets.js';
+import { parseQuestion, NATURAL_EXAMPLES } from './query-parser.js';
 
 // ----------------------------------------------------------------------------
 
@@ -294,7 +295,7 @@ function makeApp() {
         id: 'tutelle',
         label: 'Cases under foyer guardianship',
         description: 'How many pupils have a foyer as one of their guardianship holders?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'contains', value: 'Foyer' }], groupBy: 'dir' },
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'has', value: 'Foyer' }], groupBy: 'dir' },
       },
       {
         id: 'iq_distribution',
@@ -1634,6 +1635,43 @@ function makeApp() {
     queueRun() {
       clearTimeout(this._runTimer);
       this._runTimer = setTimeout(() => this.runCurrentQuery(), 250);
+    },
+
+    // ====================================================================
+    // Natural-language query bar — pattern-based, fully local (DSGVO-safe).
+    // ====================================================================
+    naturalQuestion: '',
+    NATURAL_EXAMPLES,
+
+    /** Live parse of whatever the user has typed so far. Cheap — runs on
+     *  every keystroke because the parser is pure regex work, no I/O. */
+    get naturalParse() {
+      return parseQuestion(this.naturalQuestion || '', {
+        fieldDefs: FIELD_DEFS,
+        numericFields: NUMERIC_FIELDS,
+        dirOptions: (FIELD_DEFS.find((f) => f.key === 'dir')?.options) || [],
+        schoolPresets: LYCEES_LUXEMBOURG,
+      });
+    },
+
+    /** Push the parsed config into the existing Query Builder state and run. */
+    runNaturalQuery() {
+      const r = this.naturalParse;
+      if (!r.understood && !this.naturalQuestion.trim()) return;
+      this.query = JSON.parse(JSON.stringify(r.config));
+      this.editingSavedQueryId = null;
+      this.saveQueryName = '';
+      this.queryMatches = null;
+      this.runCurrentQuery();
+      window.Alpine.nextTick(() => {
+        const el = document.getElementById('queryResultAnchor');
+        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    },
+
+    setNaturalExample(text) {
+      this.naturalQuestion = text;
+      this.runNaturalQuery();
     },
 
     runPreset(id) {

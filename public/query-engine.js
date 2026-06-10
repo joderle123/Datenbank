@@ -146,7 +146,19 @@ function evaluateFilter(record, filter) {
     case 'notempty': return !isEmpty(v);
     case 'eq':       return String(v ?? '') === String(value ?? '');
     case 'neq':      return String(v ?? '') !== String(value ?? '');
-    case 'contains': return typeof v === 'string' && v.toLowerCase().includes(String(value).toLowerCase());
+    case 'contains': {
+      // Polymorphic 'contains':
+      //   strings → case-insensitive substring match (original behaviour)
+      //   arrays  → case-insensitive substring against ANY element, so a case
+      //             tagged ['F90.0 — ADHD, combined type'] matches 'adhd'.
+      // The 'tutelle: Foyer' built-in chart and the natural-language query
+      // parser both rely on this. The strict-equality alternative is 'has'.
+      if (value == null || value === '') return true;
+      const needle = String(value).toLowerCase();
+      if (typeof v === 'string') return v.toLowerCase().includes(needle);
+      if (Array.isArray(v)) return v.some((x) => String(x ?? '').toLowerCase().includes(needle));
+      return false;
+    }
     case 'gt':       return v != null && Number(v) > Number(value);
     case 'gte':      return v != null && Number(v) >= Number(value);
     case 'lt':       return v != null && Number(v) < Number(value);

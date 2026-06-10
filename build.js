@@ -23,6 +23,7 @@ const ORDER = [
   'fields.js',
   'presets.js',
   'query-engine.js',
+  'query-parser.js',  // depends on fields + query-engine; must precede app
   'repository.js',
   'app.js',
 ];
@@ -58,9 +59,13 @@ const wrappedScript = `<script>\n(function () {\n"use strict";\n${bundle}\n})();
 const indexPath = path.join(ROOT, 'index.html');
 let html = fs.readFileSync(indexPath, 'utf-8');
 
+// IMPORTANT: pass a function instead of a string. String.prototype.replace
+// interprets '$&', '$1', etc. inside the replacement string — so any source
+// file containing '$&' (e.g. the regex-escape utility in query-parser.js)
+// would corrupt the output bundle. The function form sidesteps that entirely.
 let replaced = html.replace(
   /<script\s+type="module"\s+src=["']\.\/public\/app\.js["']\s*><\/script>/,
-  wrappedScript,
+  () => wrappedScript,
 );
 
 if (replaced === html) {
@@ -81,22 +86,25 @@ function inlineStyle(srcPath, label) {
   return `<style>/* ${label} (inlined) */\n${code}\n</style>`;
 }
 
+// Same '$&'-safety as above: vendor bundles will inevitably contain those
+// sequences, so all inliners use the function-replacer form.
+const chartJs = inlineScript('chart.umd.js', 'Chart.js 4.4.4');
 replaced = replaced.replace(
   /<script\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js[^"]+"\s*><\/script>/,
-  inlineScript('chart.umd.js', 'Chart.js 4.4.4'),
+  () => chartJs,
 );
 
+const alpineJs = inlineScript('alpine.min.js', 'Alpine.js 3.14.1');
 replaced = replaced.replace(
   /<script\s+defer\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/alpinejs[^"]+"\s*><\/script>/,
-  inlineScript('alpine.min.js', 'Alpine.js 3.14.1'),
+  () => alpineJs,
 );
 
 // Replace the Tailwind play CDN + inline config with the precompiled CSS.
-// One regex consumes both the loader and the tailwind.config script that
-// follows it, so the output HTML has neither.
+const tailwindCss = inlineStyle('tailwind.compiled.css', 'Tailwind CSS (compiled from tailwind.config.cjs)');
 replaced = replaced.replace(
   /<script\s+src="https:\/\/cdn\.tailwindcss\.com"\s*><\/script>\s*<script>[\s\S]*?tailwind\.config[\s\S]*?<\/script>/,
-  inlineStyle('tailwind.compiled.css', 'Tailwind CSS (compiled from tailwind.config.cjs)'),
+  () => tailwindCss,
 );
 
 // Add a small "generated, do not edit" banner at the top of the file
