@@ -624,8 +624,10 @@
                             <template x-for="y in tl.years" :key="y.label">
                               <div class="absolute top-0 bottom-0 border-l border-line dark:border-line-dark" :style="`left: ${(y.x * 100).toFixed(2)}%`"></div>
                             </template>
-                            <!-- today line -->
-                            <div class="absolute top-0 bottom-0 border-l-2 border-accent" :style="`left: ${(tl.todayPct * 100).toFixed(2)}%`" title="today"></div>
+                            <!-- today line (hidden when today is outside the range) -->
+                            <template x-if="tl.todayPct !== null">
+                              <div class="absolute top-0 bottom-0 border-l-2 border-accent" :style="`left: ${(tl.todayPct * 100).toFixed(2)}%`" title="today"></div>
+                            </template>
                             <!-- the bar -->
                             <div
                               class="absolute top-1 bottom-1 rounded"
@@ -643,7 +645,9 @@
                         <div></div>
                         <div class="relative h-4">
                           <template x-for="y in tl.years" :key="y.label">
-                            <div class="absolute top-0 text-[10px] text-muted dark:text-muted-dark font-mono tnum -translate-x-1/2"
+                            <!-- center labels normally; pin to the edge near 0%/100% so they never overflow -->
+                            <div class="absolute top-0 text-[10px] text-muted dark:text-muted-dark font-mono tnum"
+                                 :class="y.x < 0.04 ? '' : (y.x > 0.96 ? '-translate-x-full' : '-translate-x-1/2')"
                                  :style="`left: ${(y.x * 100).toFixed(2)}%`" x-text="y.label"></div>
                           </template>
                         </div>
@@ -2399,6 +2403,19 @@ class LocalStorageCaseRepository extends CaseRepository {
       lastSyncedBy: remoteEditedBy || null,
     });
   }
+  /**
+   * Conflict resolution "keep mine": make sure our next export carries a
+   * revision STRICTLY ABOVE the remote one we just rejected — otherwise the
+   * colleague's import would classify our overwrite as stale and silently
+   * ignore it. Lamport-style: revision = max(local, remote) + 1.
+   */
+  async alignRevisionPast(remoteRevision) {
+    const meta = this._readSyncMeta();
+    meta.revision = Math.max(meta.revision || 0, remoteRevision || 0) + 1;
+    this._writeSyncMeta(meta);
+    return meta.revision;
+  }
+
   /** Mark the current local state as exported (sets lastSyncedRevision = revision). */
   async markExported(currentUser) {
     const meta = this._readSyncMeta();
@@ -2856,7 +2873,7 @@ function makeApp() {
     view: 'dashboard',
     theme: 'light',
     now: '',
-    buildTag: '260604T1202',
+    buildTag: '260610T1618',
 
     // -- session user (NOT auth, just for the audit log) ------------------
     user: '',
@@ -3071,7 +3088,9 @@ function makeApp() {
     ],
 
     get currentNav() {
-      return this.nav.find((n) => n.id === this.view) || this.nav[0];
+      // detail + form are sub-views of the cases registry, not of the dashboard
+      const id = (this.view === 'detail' || this.view === 'form') ? 'cases' : this.view;
+      return this.nav.find((n) => n.id === id) || this.nav[0];
     },
 
     // ====================================================================
@@ -3299,8 +3318,14 @@ function makeApp() {
       this.conflictModal = null;
       await this._applyRemoteSync(remote);
     },
-    resolveConflictKeepMine() {
+    async resolveConflictKeepMine() {
+      // Bump our revision past the rejected remote one, so our next export is
+      // seen as NEWER by colleagues — otherwise their import would classify
+      // our overwrite as stale and silently skip it.
+      const remoteRev = this.conflictModal?.remoteRevision || 0;
       this.conflictModal = null;
+      await cases.alignRevisionPast(remoteRev);
+      this.syncMeta = await cases.getSyncMeta();
       this.notify('Your local changes are kept. Click Export to overwrite the sync file when ready.');
     },
     closeConflictModal() {
@@ -3583,7 +3608,9 @@ function makeApp() {
       const maxDate = new Date(max); maxDate.setMonth(maxDate.getMonth() + 6);
       const span = maxDate - minDate || 1;
       const project = (iso) => ((new Date(iso) - minDate) / span);
-      const todayPct = project(new Date().toISOString().slice(0, 10));
+      // null when today falls outside the padded range — template hides the line
+      const todayRaw = project(new Date().toISOString().slice(0, 10));
+      const todayPct = (todayRaw >= 0 && todayRaw <= 1) ? todayRaw : null;
       const lanes = ranges.map((r) => {
         const sIso = r.start || r.end;
         const eIso = r.end || r.start;
@@ -3595,10 +3622,13 @@ function makeApp() {
           endLabel: r.end || (r.start ? '…' : '—'),
         };
       });
-      // X-axis: year ticks
+      // X-axis: year ticks — only those that fall INSIDE the padded range,
+      // otherwise the Jan-1 tick of the first year projects to a negative x
+      // and its label escapes the chart into the surrounding layout.
       const years = [];
-      for (let y = minDate.getFullYear(); y <= maxDate.getFullYear(); y++) {
-        years.push({ label: y, x: project(`${y}-01-01`) });
+      for (let y = minDate.getFullYear(); y <= maxDate.getFullYear() + 1; y++) {
+        const x = project(`${y}-01-01`);
+        if (x >= 0 && x <= 1) years.push({ label: y, x });
       }
       return { lanes, years, todayPct };
     },

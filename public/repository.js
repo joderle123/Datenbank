@@ -169,6 +169,19 @@ export class LocalStorageCaseRepository extends CaseRepository {
       lastSyncedBy: remoteEditedBy || null,
     });
   }
+  /**
+   * Conflict resolution "keep mine": make sure our next export carries a
+   * revision STRICTLY ABOVE the remote one we just rejected — otherwise the
+   * colleague's import would classify our overwrite as stale and silently
+   * ignore it. Lamport-style: revision = max(local, remote) + 1.
+   */
+  async alignRevisionPast(remoteRevision) {
+    const meta = this._readSyncMeta();
+    meta.revision = Math.max(meta.revision || 0, remoteRevision || 0) + 1;
+    this._writeSyncMeta(meta);
+    return meta.revision;
+  }
+
   /** Mark the current local state as exported (sets lastSyncedRevision = revision). */
   async markExported(currentUser) {
     const meta = this._readSyncMeta();

@@ -369,7 +369,9 @@ function makeApp() {
     ],
 
     get currentNav() {
-      return this.nav.find((n) => n.id === this.view) || this.nav[0];
+      // detail + form are sub-views of the cases registry, not of the dashboard
+      const id = (this.view === 'detail' || this.view === 'form') ? 'cases' : this.view;
+      return this.nav.find((n) => n.id === id) || this.nav[0];
     },
 
     // ====================================================================
@@ -597,8 +599,14 @@ function makeApp() {
       this.conflictModal = null;
       await this._applyRemoteSync(remote);
     },
-    resolveConflictKeepMine() {
+    async resolveConflictKeepMine() {
+      // Bump our revision past the rejected remote one, so our next export is
+      // seen as NEWER by colleagues — otherwise their import would classify
+      // our overwrite as stale and silently skip it.
+      const remoteRev = this.conflictModal?.remoteRevision || 0;
       this.conflictModal = null;
+      await cases.alignRevisionPast(remoteRev);
+      this.syncMeta = await cases.getSyncMeta();
       this.notify('Your local changes are kept. Click Export to overwrite the sync file when ready.');
     },
     closeConflictModal() {
@@ -881,7 +889,9 @@ function makeApp() {
       const maxDate = new Date(max); maxDate.setMonth(maxDate.getMonth() + 6);
       const span = maxDate - minDate || 1;
       const project = (iso) => ((new Date(iso) - minDate) / span);
-      const todayPct = project(new Date().toISOString().slice(0, 10));
+      // null when today falls outside the padded range — template hides the line
+      const todayRaw = project(new Date().toISOString().slice(0, 10));
+      const todayPct = (todayRaw >= 0 && todayRaw <= 1) ? todayRaw : null;
       const lanes = ranges.map((r) => {
         const sIso = r.start || r.end;
         const eIso = r.end || r.start;
@@ -893,10 +903,13 @@ function makeApp() {
           endLabel: r.end || (r.start ? '…' : '—'),
         };
       });
-      // X-axis: year ticks
+      // X-axis: year ticks — only those that fall INSIDE the padded range,
+      // otherwise the Jan-1 tick of the first year projects to a negative x
+      // and its label escapes the chart into the surrounding layout.
       const years = [];
-      for (let y = minDate.getFullYear(); y <= maxDate.getFullYear(); y++) {
-        years.push({ label: y, x: project(`${y}-01-01`) });
+      for (let y = minDate.getFullYear(); y <= maxDate.getFullYear() + 1; y++) {
+        const x = project(`${y}-01-01`);
+        if (x >= 0 && x <= 1) years.push({ label: y, x });
       }
       return { lanes, years, todayPct };
     },

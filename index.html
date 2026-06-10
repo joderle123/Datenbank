@@ -645,8 +645,10 @@
                             <template x-for="y in tl.years" :key="y.label">
                               <div class="absolute top-0 bottom-0 border-l border-line dark:border-line-dark" :style="`left: ${(y.x * 100).toFixed(2)}%`"></div>
                             </template>
-                            <!-- today line -->
-                            <div class="absolute top-0 bottom-0 border-l-2 border-accent" :style="`left: ${(tl.todayPct * 100).toFixed(2)}%`" title="today"></div>
+                            <!-- today line (hidden when today is outside the range) -->
+                            <template x-if="tl.todayPct !== null">
+                              <div class="absolute top-0 bottom-0 border-l-2 border-accent" :style="`left: ${(tl.todayPct * 100).toFixed(2)}%`" title="today"></div>
+                            </template>
                             <!-- the bar -->
                             <div
                               class="absolute top-1 bottom-1 rounded"
@@ -664,7 +666,9 @@
                         <div></div>
                         <div class="relative h-4">
                           <template x-for="y in tl.years" :key="y.label">
-                            <div class="absolute top-0 text-[10px] text-muted dark:text-muted-dark font-mono tnum -translate-x-1/2"
+                            <!-- center labels normally; pin to the edge near 0%/100% so they never overflow -->
+                            <div class="absolute top-0 text-[10px] text-muted dark:text-muted-dark font-mono tnum"
+                                 :class="y.x < 0.04 ? '' : (y.x > 0.96 ? '-translate-x-full' : '-translate-x-1/2')"
                                  :style="`left: ${(y.x * 100).toFixed(2)}%`" x-text="y.label"></div>
                           </template>
                         </div>
