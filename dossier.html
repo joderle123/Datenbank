@@ -213,6 +213,49 @@ mark{background:#ffe9a8; padding:0 2px; border-radius:2px;}
   .print-sheet h2{font-size:14px; color:#444; font-weight:400;}
 }
 
+/* ---------- Themen-Analyse ---------- */
+.theme-mark{padding:0 2px; border-radius:3px; font-weight:600;}
+.theme-mark.sev-3{background:#f6dcd5; color:#7c2d1c; box-shadow:inset 0 -2px 0 #b3432d;}
+.theme-mark.sev-2{background:#f7ead2; color:#6b4a16; box-shadow:inset 0 -2px 0 #c07f1f;}
+.theme-mark.sev-1{background:#e3ecf4; color:#2a4257;}
+.theme-chip{border:1px solid transparent; cursor:pointer;}
+.theme-chip.sev-3{background:#f6dcd5; color:#7c2d1c;}
+.theme-chip.sev-2{background:#f7ead2; color:#6b4a16;}
+.theme-chip.sev-1{background:#e3ecf4; color:#2a4257;}
+.theme-chip:hover{border-color:currentColor;}
+
+.detected-themes{margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-height:1.2em;}
+
+.legend-row{display:flex; flex-wrap:wrap; gap:16px; margin-top:4px;}
+.legend-item{display:inline-flex; align-items:center; gap:6px; font-size:.78rem; color:var(--text-muted);}
+.legend-dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+
+.theme-bars{display:flex; flex-direction:column; gap:4px;}
+.theme-bar-row{
+  display:grid; grid-template-columns:210px 1fr minmax(220px,auto); align-items:center; gap:10px;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:7px 12px; cursor:pointer; text-align:left; font-size:.84rem; width:100%;
+}
+.theme-bar-row:hover{border-color:var(--accent);}
+.theme-bar-row.selected{border-color:var(--accent); background:var(--accent-soft);}
+.theme-bar-label{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.theme-bar-track{background:#eef0f3; border-radius:999px; height:12px; overflow:hidden;}
+.theme-bar-fill{display:block; height:100%; border-radius:999px;}
+.theme-bar-count{font-size:.76rem; color:var(--text-muted); white-space:nowrap;}
+@media (max-width:880px){
+  .theme-bar-row{grid-template-columns:1fr; gap:4px;}
+}
+
+.heatmap-table{border-collapse:collapse; font-size:.74rem;}
+.heatmap-table th{padding:4px 6px; font-weight:600; color:var(--text-muted); text-align:left; white-space:nowrap;}
+.heatmap-table td{padding:2px 3px; text-align:center;}
+.heatmap-table .heat-theme{cursor:pointer; max-width:180px; overflow:hidden; text-overflow:ellipsis;}
+.heatmap-table .heat-theme:hover, .heatmap-table .heat-theme.selected{color:var(--accent);}
+.heat-cell{
+  display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:22px;
+  border-radius:4px; color:#fff; font-weight:700;
+}
+
 /* ---------- Misc ---------- */
 .kbd{font-family:ui-monospace,monospace; background:#eef0f3; border:1px solid var(--border); border-radius:4px; padding:0 5px; font-size:.78rem;}
 .section-title{font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin:24px 0 8px;}
@@ -263,18 +306,26 @@ var CATEGORY_COLORS = {
 };
 function categoryColor(cat){ return CATEGORY_COLORS[cat] || 'hsl(210, 15%, 45%)'; }
 
-/* Grundvokabular für Tag-Autovervollständigung (lernt aus Eingaben dazu) */
+/* Grundvokabular für Tag-Autovervollständigung.
+   Lernt automatisch dazu: jeder Tag, der in einem Eintrag gespeichert wird,
+   erscheint ab dann in der Autovervollständigung (siehe Repo.tagVocabulary). */
 var SEED_TAGS = [
   // Institutionen
   'HRS','CTSA','ATVA','CNI','LEM','CDA','CHL','CeHJP','Foyer','Liewenshaff','CISP',
-  'SCAS','LTA','LTEtt','ALR','LJBM','Ermesinde',
+  'SCAS','LTA','LTEtt','ALR','LJBM','Ermesinde','ONE','CPI','IMP','ESEB','ADEM','SNJ','SCAP',
   // Personen / Behandler
   'Dr Meinhardt','Dr Pignoloni','Dr Ristow','Dr Bertholdt','Dr Königs','Dr Karst',
   'Dr Tomozei','Mme Rizzi','Mme Karp','Mme Leber','Här Tissier','Fabrice Kerg','Mediation scolaire',
   // Themen
   'Reintegration','Stage','Vape','Medikation','Asperger/ASS','Hochbegabung','Dys',
   'Selbstverletzung','Suizidalität','Selbstgefährdung','Schlof','Promotioun','Zensur',
-  'Signalement','Mobibus','RDV','Familie','Autonomie'
+  'Signalement','Mobibus','RDV','Familie','Autonomie',
+  'Internat','Statioun','Hospitalisierung','Dagesklinik','HPG','PEI','CIP','DAP',
+  'Contrat d\'apprentissage','Berufsorientierung','Ofbroch','Cloture',
+  'Orthophonie','Psychomotorik','Therapie','Antidepressiva','ADHS','Depression',
+  'Anwesenheit','Absenzen','Schoulwiessel','Schoulverweigerung','Mobbing','Aggression',
+  'Krise','Vertrauen','Scheedung','Konflikt','Geld','Police','Theater','Sport','Musek',
+  'Kontrolldokter','Zänndokter','Wochenziel','Eltere-Gespréich','Avis d\'orientation'
 ];
 
 /* Institutionskürzel — werden im KI-Export ggf. zu "Stell N" anonymisiert */
@@ -357,6 +408,54 @@ var SLIDER_DEFS = [
 ];
 function sliderDef(key){ return SLIDER_DEFS.filter(function(s){ return s.key === key; })[0]; }
 
+/* ============================================================
+   Themen-Lexikon für die automatische Analyse.
+   Rein lexikalische Schlagwort-Erkennung (Luxemburgisch/Deutsch/
+   Französisch gemischt, wie die Eintragstexte). Die App bewertet
+   NICHT fachlich — sie markiert und zählt nur Stichwort-Treffer;
+   die Einschätzung bleibt beim Team.
+
+   severity: 3 = sensibles Schlagwort (rot markiert)
+             2 = erhöhte Aufmerksamkeit (orange)
+             1 = dokumentarisch (blau)
+   ============================================================ */
+var THEME_LEXICON = [
+  // --- Stufe 3 ---
+  { key: 'Suizidalität',            group: 'Risiko & Schutz', severity: 3, patterns: ['suizid'] },
+  { key: 'Selbstverletzung',        group: 'Risiko & Schutz', severity: 3, patterns: ['selbstverletz', 'ritzt', 'skillsrank', 'bläistëft an d.hand', 'haut vu sengen? fanger', 'bluddeg'] },
+  { key: 'Selbstgefährdung',        group: 'Risiko & Schutz', severity: 3, patterns: ['selbstgef', 'täschemesser', 'leatherman', 'um balken'] },
+  { key: 'Krise & Aggression',      group: 'Risiko & Schutz', severity: 3, patterns: ['aggressiv', 'roose? ginn', 'gestiermt', 'ausfaalend', 'minikrisen', '\\bkrisen?\\b', 'eskal'] },
+  { key: 'Signalement & Justiz',    group: 'Risiko & Schutz', severity: 3, patterns: ['signalement', 'signal[eé]ier', '\\bjuge\\b', 'geriicht', 'police', '\\bscas\\b'] },
+  { key: 'Mobbing',                 group: 'Risiko & Schutz', severity: 3, patterns: ['mobbing'] },
+  // --- Stufe 2 ---
+  { key: 'Vape & Konsum',           group: 'Gesundheit', severity: 2, patterns: ['vape', 'vapen', 'nikotin'] },
+  { key: 'Medikation',              group: 'Gesundheit', severity: 2, patterns: ['medikat', 'medikament', 'elvanse', 'medikinet', 'risperdal', 'antidepress', 'ordonnance'] },
+  { key: 'Schlaf',                  group: 'Gesundheit', severity: 2, patterns: ['schlof', 'schléift', 'aschlof', 'owesritual', 'verschloof'] },
+  { key: 'Klinik & Hospitalisierung', group: 'Gesundheit', severity: 2, patterns: ['hospitalis', 'statioun', 'dagesklinik', '\\bklinik', 'vollstationär', 'hôpital'] },
+  { key: 'Absenzen & Anwesenheit',  group: 'Schule', severity: 2, patterns: ['\\babsen[tzc]', 'non.?excusé', 'ofgemellt', 'net gepackt', 'net komm', 'net.{0,12}an d.schoul'] },
+  { key: 'Verweigerung & Vermeidung', group: 'Schule', severity: 2, patterns: ['refus[eé]', 'vermeid', 'verweiger', 'net wëll', 'wëll net', 'wollt net'] },
+  { key: 'Familienkonflikt',        group: 'Familie & Umfeld', severity: 2, patterns: ['scheedung', 'sträit', 'konflikt', '\\bcpi\\b', 'vertrauensbasis'] },
+  { key: 'Vertrauen',               group: 'Familie & Umfeld', severity: 2, patterns: ['vertrauen', 'vertraut', 'traut sech net'] },
+  // --- Stufe 1 ---
+  { key: 'Therapie & Suivi',        group: 'Betreuung', severity: 1, patterns: ['therap', '\\bsuivi\\b', 'psycholog', 'pedopsych', 'psychiater', 'psychomot', 'orthophon'] },
+  { key: 'Diagnostik & Testung',    group: 'Betreuung', severity: 1, patterns: ['diagnos', 'clearing', 'testing', '\\bwisc\\b', 'bestandsopnahm'] },
+  { key: 'Autismus / ASS',          group: 'Betreuung', severity: 1, patterns: ['autis', 'asperger'] },
+  { key: 'Hochbegabung',            group: 'Betreuung', severity: 1, patterns: ['hochbegab', 'hautt?potentiel', 'haut potentiel', 'underachiev', 'twice exceptional'] },
+  { key: 'Dys & Teilleistung',      group: 'Betreuung', severity: 1, patterns: ['\\bdys', 'dyspraxie', 'léierschwier', 'teilleistung'] },
+  { key: 'Stage & Praktikum',       group: 'Beruf & Zukunft', severity: 1, patterns: ['\\bstagen?\\b', '\\bpatron\\b', 'convention de stage'] },
+  { key: 'Ausbildung & Arbeit',     group: 'Beruf & Zukunft', severity: 1, patterns: ['\\bdap\\b', '\\bcisp\\b', 'apprentissage', 'ausbildung', 'schaffen? goen', 'aarbecht', '\\badem\\b', '\\bsnj\\b'] },
+  { key: 'Reintegration',           group: 'Schule', severity: 1, patterns: ['reintegrat', 'schoulversuch', 'lycéeswiessel', 'neiorientatioun', 'schoulwiessel'] },
+  { key: 'Leistung & Module',       group: 'Schule', severity: 1, patterns: ['zensur', '\\bmodul', 'promotioun', 'prüfung', 'bulletin', '\\bsemester'] },
+  { key: 'Termine & RDV',           group: 'Organisation', severity: 1, patterns: ['\\brdv\\b', 'rendez.?vous'] },
+  { key: 'Transport & Mobibus',     group: 'Organisation', severity: 1, patterns: ['mobibus', '\\btaxi\\b'] }
+];
+
+var SEVERITY_META = {
+  3: { label: 'Sensibles Schlagwort', color: '#b3432d' },
+  2: { label: 'Erhöhte Aufmerksamkeit', color: '#c07f1f' },
+  1: { label: 'Dokumentarisch', color: '#3a5a78' }
+};
+
 /* Feste KI-Aufgaben-Bausteine (§4) */
 var AI_PROMPT_OPTIONS = [
   'Fasse den Verlauf zusammen',
@@ -376,6 +475,20 @@ var AI_PROMPT_OPTIONS = [
 var DB_NAME = 'cdse_dossier_db';
 var DB_VERSION = 1;
 var LS_PREFIX = 'cdse_dossier_v1_';
+
+/* Schreibfehler dürfen NIE still verschluckt werden — sonst glaubt
+   das Team, ein Eintrag sei gespeichert, obwohl er beim Neuladen
+   verloren geht. Höchstens 1 Meldung pro 10 s, um Toast-Fluten
+   zu vermeiden. */
+var _lastWriteErrorAt = 0;
+function reportStorageWriteError(err) {
+  var now = Date.now();
+  if (now - _lastWriteErrorAt < 10000) return;
+  _lastWriteErrorAt = now;
+  if (typeof showToast === 'function') {
+    showToast('Achtung: Speichern fehlgeschlagen (' + (err && err.name ? err.name : 'Speicherfehler') + ') — Änderung geht beim Neuladen evtl. verloren!', { error: true, duration: 6000 });
+  }
+}
 
 var Storage = {
   mode: null, // 'indexeddb' | 'localstorage'
@@ -443,7 +556,10 @@ var Storage = {
     if (this.mode === 'localstorage') {
       try {
         localStorage.setItem(LS_PREFIX + store, JSON.stringify(items));
-      } catch (e) { /* quota or unavailable — silently ignore, in-memory state remains */ }
+      } catch (e) {
+        reportStorageWriteError(e);
+        return Promise.reject(e);
+      }
       return Promise.resolve();
     }
     return new Promise(function (resolve, reject) {
@@ -468,7 +584,7 @@ var Storage = {
       var tx = self._tx([store], 'readwrite');
       tx.objectStore(store).put(item);
       tx.oncomplete = function () { resolve(); };
-      tx.onerror = function () { reject(tx.error); };
+      tx.onerror = function () { reportStorageWriteError(tx.error); reject(tx.error); };
     });
   },
 
@@ -1061,6 +1177,143 @@ function buildAiExportText(opts) {
 'use strict';
 
 /* ============================================================
+   Automatische Themen-Analyse (rein lexikalisch).
+   Erkennt Schlagwörter aus THEME_LEXICON in Eintragstexten —
+   ohne dass Tags gesetzt sein müssen — und macht sie
+   quantitativ (Häufigkeit, Verlauf) und qualitativ (Belege,
+   Stufen-Markierung) sichtbar.
+
+   Wichtig (§7 der Anforderungen): Die App nimmt KEINE fachliche
+   Bewertung, Diagnose oder Alarmierung vor. Sie zählt und
+   markiert ausschließlich Stichwort-Treffer als Lesehilfe.
+   ============================================================ */
+
+var _compiledLexicon = null;
+
+function compiledLexicon() {
+  if (!_compiledLexicon) {
+    _compiledLexicon = THEME_LEXICON.map(function (theme) {
+      return {
+        key: theme.key,
+        group: theme.group,
+        severity: theme.severity,
+        regex: new RegExp('(' + theme.patterns.join('|') + ')', 'gi')
+      };
+    });
+  }
+  return _compiledLexicon;
+}
+
+/**
+ * Analysiert einen einzelnen Text.
+ * @returns Array von { key, group, severity, count, terms[] } — nur Themen mit Treffern.
+ */
+function analyzeText(text) {
+  if (!text) return [];
+  var results = [];
+  compiledLexicon().forEach(function (theme) {
+    theme.regex.lastIndex = 0;
+    var m, count = 0, terms = {};
+    while ((m = theme.regex.exec(text)) !== null) {
+      count++;
+      terms[m[0].toLowerCase()] = true;
+      if (theme.regex.lastIndex === m.index) theme.regex.lastIndex++;
+    }
+    if (count > 0) {
+      results.push({ key: theme.key, group: theme.group, severity: theme.severity, count: count, terms: Object.keys(terms) });
+    }
+  });
+  return results.sort(function (a, b) { return b.severity - a.severity || b.count - a.count; });
+}
+
+/**
+ * Findet alle Treffer-Positionen aller Themen in einem Text
+ * (für die farbige Hervorhebung). Überlappungen werden entfernt:
+ * höhere Stufe gewinnt, sonst der frühere Treffer.
+ */
+function findThemeMatches(text) {
+  var matches = [];
+  compiledLexicon().forEach(function (theme) {
+    theme.regex.lastIndex = 0;
+    var m;
+    while ((m = theme.regex.exec(text)) !== null) {
+      matches.push({ start: m.index, end: m.index + m[0].length, term: m[0], key: theme.key, severity: theme.severity });
+      if (theme.regex.lastIndex === m.index) theme.regex.lastIndex++;
+    }
+  });
+  matches.sort(function (a, b) { return a.start - b.start || b.severity - a.severity || a.end - b.end; });
+  var kept = [];
+  var lastEnd = -1;
+  matches.forEach(function (m) {
+    if (m.start >= lastEnd) { kept.push(m); lastEnd = m.end; }
+  });
+  return kept;
+}
+
+/**
+ * Escaped einen Text als HTML und hebt alle Lexikon-Treffer als
+ * <mark class="theme-mark sev-N"> hervor (Tooltip = Themen-Name).
+ */
+function highlightThemesHtml(text) {
+  var matches = findThemeMatches(text);
+  if (!matches.length) return escapeHtml(text);
+  var out = '';
+  var pos = 0;
+  matches.forEach(function (m) {
+    out += escapeHtml(text.slice(pos, m.start));
+    out += '<mark class="theme-mark sev-' + m.severity + '" title="Thema: ' + escapeAttr(m.key) + '">' + escapeHtml(m.term) + '</mark>';
+    pos = m.end;
+  });
+  out += escapeHtml(text.slice(pos));
+  return out;
+}
+
+/**
+ * Aggregiert die Analyse über eine Menge von Einträgen.
+ * @returns Map key -> {
+ *   key, group, severity,
+ *   entryCount   — in wie vielen Einträgen das Thema vorkommt,
+ *   matchCount   — Gesamtzahl der Stichwort-Treffer,
+ *   students     — Map studentId -> Trefferzahl,
+ *   weeks        — Map date(ISO) -> Trefferzahl (für Heatmap/Verlauf),
+ *   evidence     — [{ entryId, studentId, date, terms, snippet }]
+ * }
+ */
+function analyzeEntries(entries) {
+  var agg = {};
+  entries.forEach(function (e) {
+    var found = analyzeText(e.text);
+    found.forEach(function (f) {
+      var a = agg[f.key];
+      if (!a) {
+        a = agg[f.key] = { key: f.key, group: f.group, severity: f.severity, entryCount: 0, matchCount: 0, students: {}, weeks: {}, evidence: [] };
+      }
+      a.entryCount++;
+      a.matchCount += f.count;
+      a.students[e.studentId] = (a.students[e.studentId] || 0) + f.count;
+      a.weeks[e.date] = (a.weeks[e.date] || 0) + f.count;
+      a.evidence.push({
+        entryId: e.id,
+        studentId: e.studentId,
+        date: e.date,
+        terms: f.terms,
+        snippet: snippetAround(e.text, f.terms[0], 80)
+      });
+    });
+  });
+  return agg;
+}
+
+/** Sortierte Liste der aggregierten Themen: Stufe zuerst, dann Häufigkeit. */
+function sortedThemeAggregates(agg) {
+  return Object.keys(agg).map(function (k) { return agg[k]; })
+    .sort(function (a, b) { return b.severity - a.severity || b.entryCount - a.entryCount || a.key.localeCompare(b.key, 'de'); });
+}
+
+
+'use strict';
+
+/* ============================================================
    Ansicht A — Dashboard
    ============================================================ */
 
@@ -1255,7 +1508,7 @@ function viewStudentDetail(params) {
         (e.author ? '<span class="author">Kürzel: ' + escapeHtml(e.author) + '</span>' : '<span class="author muted">kein Autor erfasst</span>') +
       '</div>' +
       '<div class="entry-body" ' + (open ? '' : 'hidden') + '>' +
-        '<div class="text">' + escapeHtml(e.text) + '</div>' +
+        '<div class="text">' + highlightThemesHtml(e.text) + '</div>' +
         '<div class="entry-actions">' +
           '<button type="button" class="btn btn-sm" data-route="#/entry/' + e.id + '/edit">Bearbeiten</button>' +
           '<button type="button" class="btn btn-sm btn-danger" data-action="delete-entry" data-id="' + e.id + '">Löschen</button>' +
@@ -1275,6 +1528,18 @@ function viewStudentDetail(params) {
   var institutions = deriveInstitutionTags(allEntries);
   var persons = derivePersonTags(allEntries);
   var themes = deriveCurrentThemes(allEntries);
+  var autoThemes = sortedThemeAggregates(analyzeEntries(allEntries));
+
+  function autoThemesHtml() {
+    if (!autoThemes.length) return '<p class="muted">Keine Treffer</p>';
+    return '<div class="chip-row">' + autoThemes.slice(0, 10).map(function (a) {
+      return '<button type="button" class="chip theme-chip sev-' + a.severity + '" ' +
+        'data-route="#/themes?student=' + encodeURIComponent(student.id) + '&theme=' + encodeURIComponent(a.key) + '" ' +
+        'title="' + escapeAttr(a.key + ': ' + a.entryCount + ' Einträge, ' + a.matchCount + ' Treffer — klicken für Belege') + '">' +
+        escapeHtml(a.key) + ' <strong>' + a.entryCount + '</strong></button>';
+    }).join('') + '</div>' +
+    '<p class="hint" style="margin-top:6px;">Automatische Stichwort-Erkennung — Zahl = Einträge mit Treffern. Klick öffnet die Belege.</p>';
+  }
 
   var html =
     '<div class="page-head">' +
@@ -1291,6 +1556,9 @@ function viewStudentDetail(params) {
       '<div class="info-block"><h4>Beteiligte Behandler / Mitarbeiter</h4>' + (persons.length ? '<div class="chip-row">' + persons.map(function (i) { return '<span class="chip">' + escapeHtml(i) + '</span>'; }).join('') + '</div>' : '<p class="muted">Keine erkannt</p>') + '</div>' +
       '<div class="info-block"><h4>Laufende Themen</h4>' + (themes.length ? '<div class="chip-row">' + themes.map(function (i) { return '<span class="chip">' + escapeHtml(i) + '</span>'; }).join('') + '</div>' : '<p class="muted">Keine erkannt</p>') + '</div>' +
     '</div>' +
+
+    '<h3 class="section-title">Automatisch erkannte Themen (aus den Texten, ohne Tags)</h3>' +
+    '<div class="card" style="padding:14px 16px; margin-bottom:6px;">' + autoThemesHtml() + '</div>' +
 
     '<h3 class="section-title">Verlauf</h3>' +
     chartsHtml() +
@@ -1453,13 +1721,14 @@ function viewEntryForm(params) {
         '</div>' +
       '</div>' +
       '<div class="field">' +
-        '<label for="tag-input">Themen-Tags <span class="hint">(0..n, Enter oder Komma zum Hinzufügen)</span></label>' +
+        '<label for="tag-input">Themen-Tags <span class="hint">(0..n, Enter oder Komma zum Hinzufügen — neue Tags landen automatisch im Vorschlags-Vokabular)</span></label>' +
         '<div class="tag-input-wrap" id="tag-wrap">' + tagsWrapHtml() + '</div>' +
         '<datalist id="tag-suggestions">' + vocabulary.map(function (t) { return '<option value="' + escapeAttr(t) + '">'; }).join('') + '</datalist>' +
       '</div>' +
       '<div class="field">' +
         '<label for="f-text">Eintragstext (Luxemburgisch — Originaltext, nicht übersetzen)</label>' +
         '<textarea id="f-text" rows="8" required>' + escapeHtml(existing ? existing.text : '') + '</textarea>' +
+        '<div id="detected-themes" class="detected-themes" aria-live="polite"></div>' +
       '</div>' +
       '<div class="field">' +
         '<label>Verlaufs-Slider <span class="hint">(optional, 1–10 — bleiben „nicht bewertet“, wenn nicht angehakt)</span></label>' +
@@ -1520,6 +1789,40 @@ function viewEntryForm(params) {
         });
       }
       wireTagInput();
+
+      /* Live-Erkennung: Themen aus dem Text vorschlagen, per Klick als Tag übernehmen */
+      var textArea = qs('#f-text', form);
+      var detectedWrap = qs('#detected-themes', form);
+      var detectTimer = null;
+
+      function renderDetectedThemes() {
+        var found = analyzeText(textArea.value);
+        var suggestions = found.filter(function (f) { return formState.tags.indexOf(f.key) === -1; });
+        if (!suggestions.length) {
+          detectedWrap.innerHTML = found.length
+            ? '<span class="hint">Alle erkannten Themen sind bereits als Tag gesetzt.</span>'
+            : '';
+          return;
+        }
+        detectedWrap.innerHTML =
+          '<span class="hint">Im Text erkannte Themen (klicken = als Tag übernehmen):</span> ' +
+          suggestions.map(function (f) {
+            return '<button type="button" class="chip theme-chip sev-' + f.severity + '" data-add-theme="' + escapeAttr(f.key) + '" ' +
+              'title="Treffer: ' + escapeAttr(f.terms.join(', ')) + '">+ ' + escapeHtml(f.key) + '</button>';
+          }).join(' ');
+        qsa('[data-add-theme]', detectedWrap).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            addTag(btn.getAttribute('data-add-theme'));
+            renderDetectedThemes();
+          });
+        });
+      }
+
+      textArea.addEventListener('input', function () {
+        clearTimeout(detectTimer);
+        detectTimer = setTimeout(renderDetectedThemes, 350);
+      });
+      renderDetectedThemes();
 
       qsa('.slider-field', form).forEach(function (field) {
         var toggle = qs('[data-role="rated-toggle"]', field);
@@ -2321,6 +2624,170 @@ function viewBackup() {
 'use strict';
 
 /* ============================================================
+   Ansicht — Themen-Analyse
+   Macht automatisch erkannte Themen (lexikalische Schlagwort-
+   Treffer, kein manuelles Tagging nötig) sichtbar:
+   - quantitativ: Häufigkeits-Balken + Wochen-Heatmap
+   - qualitativ: Stufen-Markierung + Original-Belege pro Thema
+   ============================================================ */
+
+function viewThemeAnalysis(params, query) {
+  var students = Repo.listStudents();
+
+  var state = {
+    studentId: query.student || '',
+    from: query.from || '',
+    to: query.to || '',
+    selectedTheme: query.theme || ''
+  };
+
+  function filteredEntries() {
+    return Repo.listEntries().filter(function (e) {
+      if (state.studentId && e.studentId !== state.studentId) return false;
+      if (state.from && e.date < state.from) return false;
+      if (state.to && e.date > state.to) return false;
+      return true;
+    });
+  }
+
+  function controlsHtml() {
+    return '<div class="card export-config no-print" style="margin-bottom:18px;">' +
+      '<div class="row">' +
+        '<div class="field"><label for="th-student">Schüler</label>' +
+          '<select id="th-student"><option value="">Alle Schüler</option>' + optionsHtml(students.map(function (s) { return { value: s.id, label: s.name }; }), state.studentId) + '</select></div>' +
+        '<div class="field"><label for="th-from">Zeitraum von</label><input type="date" id="th-from" value="' + escapeAttr(state.from) + '"></div>' +
+        '<div class="field"><label for="th-to">Zeitraum bis</label><input type="date" id="th-to" value="' + escapeAttr(state.to) + '"></div>' +
+      '</div>' +
+      '<div class="legend-row">' +
+        [3, 2, 1].map(function (sev) {
+          return '<span class="legend-item"><span class="legend-dot" style="background:' + SEVERITY_META[sev].color + '"></span>' + escapeHtml(SEVERITY_META[sev].label) + '</span>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }
+
+  function barsHtml(aggList, entryTotal) {
+    if (!aggList.length) return '<div class="empty-state">Keine Themen-Treffer im gewählten Bereich.</div>';
+    var maxCount = aggList[0] ? Math.max.apply(null, aggList.map(function (a) { return a.entryCount; })) : 1;
+    return '<div class="theme-bars">' + aggList.map(function (a) {
+      var pct = Math.max(3, Math.round(100 * a.entryCount / maxCount));
+      var selected = state.selectedTheme === a.key;
+      var studentCount = Object.keys(a.students).length;
+      return '<button type="button" class="theme-bar-row' + (selected ? ' selected' : '') + '" data-theme="' + escapeAttr(a.key) + '">' +
+        '<span class="theme-bar-label">' + escapeHtml(a.key) + '</span>' +
+        '<span class="theme-bar-track"><span class="theme-bar-fill" style="width:' + pct + '%; background:' + SEVERITY_META[a.severity].color + '"></span></span>' +
+        '<span class="theme-bar-count">' + a.entryCount + '/' + entryTotal + ' Einträge · ' + a.matchCount + ' Treffer · ' + pluralize(studentCount, 'Schüler', 'Schüler') + '</span>' +
+      '</button>';
+    }).join('') + '</div>';
+  }
+
+  function heatmapHtml(aggList, entries) {
+    if (!aggList.length) return '';
+    var weekSet = {};
+    entries.forEach(function (e) { weekSet[e.date] = true; });
+    var weeks = Object.keys(weekSet).sort();
+    if (weeks.length < 2) return '';
+    var topThemes = aggList.slice(0, 14);
+    var maxCell = 1;
+    topThemes.forEach(function (a) { weeks.forEach(function (w) { if ((a.weeks[w] || 0) > maxCell) maxCell = a.weeks[w]; }); });
+
+    var head = '<tr><th></th>' + weeks.map(function (w) { return '<th>' + escapeHtml(formatDateShort(w)) + '</th>'; }).join('') + '</tr>';
+    var rows = topThemes.map(function (a) {
+      var cells = weeks.map(function (w) {
+        var c = a.weeks[w] || 0;
+        if (!c) return '<td></td>';
+        var alpha = 0.18 + 0.82 * (c / maxCell);
+        return '<td><span class="heat-cell" style="background:' + SEVERITY_META[a.severity].color + '; opacity:' + alpha.toFixed(2) + '" title="' + escapeAttr(a.key + ' — ' + formatDate(w) + ': ' + c + ' Treffer') + '">' + c + '</span></td>';
+      }).join('');
+      return '<tr><th class="heat-theme' + (state.selectedTheme === a.key ? ' selected' : '') + '" data-theme="' + escapeAttr(a.key) + '">' + escapeHtml(a.key) + '</th>' + cells + '</tr>';
+    }).join('');
+
+    return '<h3 class="section-title">Verlauf über die Wochen (Heatmap)</h3>' +
+      '<div class="card" style="padding:14px; overflow-x:auto;">' +
+        '<table class="heatmap-table"><thead>' + head + '</thead><tbody>' + rows + '</tbody></table>' +
+        '<p class="hint" style="margin:8px 0 0;">Zahl = Stichwort-Treffer in der Woche. Zeile anklicken, um die Belege unten zu sehen.</p>' +
+      '</div>';
+  }
+
+  function evidenceHtml(agg) {
+    if (!state.selectedTheme) {
+      return '<div class="empty-state">Thema oben anklicken, um die Original-Textstellen (Belege) zu sehen.</div>';
+    }
+    var a = agg[state.selectedTheme];
+    if (!a) return '<div class="empty-state">Keine Belege für „' + escapeHtml(state.selectedTheme) + '" im gewählten Bereich.</div>';
+    var items = a.evidence.slice().sort(function (x, y) { return x.date < y.date ? -1 : (x.date > y.date ? 1 : 0); });
+    return '<div class="search-results">' + items.map(function (ev) {
+      var student = Repo.getStudent(ev.studentId);
+      var snippetHtml = escapeHtml(ev.snippet);
+      ev.terms.forEach(function (t) {
+        try {
+          var re = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+          snippetHtml = snippetHtml.replace(re, '<mark class="theme-mark sev-' + a.severity + '">$1</mark>');
+        } catch (err) { /* Tooltip-Hervorhebung ist optional */ }
+      });
+      return '<article class="card search-result" data-route="#/student/' + ev.studentId + '/entry/' + ev.entryId + '">' +
+        '<div class="meta"><strong>' + escapeHtml(student ? student.name : ev.studentId) + '</strong><span>' + escapeHtml(formatDate(ev.date)) + '</span>' +
+          '<span class="muted">Treffer: ' + escapeHtml(ev.terms.join(', ')) + '</span></div>' +
+        '<div class="snippet">' + snippetHtml + '</div>' +
+      '</article>';
+    }).join('') + '</div>';
+  }
+
+  function bodyHtml() {
+    var entries = filteredEntries();
+    var agg = analyzeEntries(entries);
+    var aggList = sortedThemeAggregates(agg);
+    return '<h3 class="section-title">Häufigkeit (' + pluralize(entries.length, 'Eintrag', 'Einträge') + ' im gewählten Bereich)</h3>' +
+      barsHtml(aggList, entries.length) +
+      heatmapHtml(aggList, entries) +
+      '<h3 class="section-title">Belege' + (state.selectedTheme ? ': ' + escapeHtml(state.selectedTheme) : '') + '</h3>' +
+      evidenceHtml(agg);
+  }
+
+  var html =
+    '<div class="page-head"><div><h2>Themen-Analyse</h2>' +
+      '<p class="muted">Automatisch erkannte Themen aus allen Eintragstexten — ohne dass Tags gesetzt sein müssen.</p></div></div>' +
+    '<div class="warn-banner" style="background:#eef3f7; border-color:#c6d6e3; color:#2a4257;">' +
+      'Diese Analyse ist eine rein <strong>lexikalische Stichwort-Zählung</strong> als Lese- und Suchhilfe. ' +
+      'Sie ist keine fachliche Bewertung, Diagnose oder Alarmierung — die Einschätzung bleibt beim Team.' +
+    '</div>' +
+    controlsHtml() +
+    '<div id="th-body">' + bodyHtml() + '</div>';
+
+  return {
+    navKey: 'themes',
+    html: html,
+    afterRender: function (root) {
+      var body = qs('#th-body', root);
+      function rerender() { body.innerHTML = bodyHtml(); wireBody(); }
+
+      qs('#th-student', root).addEventListener('change', function (e) { state.studentId = e.target.value; rerender(); });
+      qs('#th-from', root).addEventListener('change', function (e) { state.from = e.target.value; rerender(); });
+      qs('#th-to', root).addEventListener('change', function (e) { state.to = e.target.value; rerender(); });
+
+      function wireBody() {
+        qsa('[data-theme]', body).forEach(function (el) {
+          el.addEventListener('click', function () {
+            var key = el.getAttribute('data-theme');
+            state.selectedTheme = state.selectedTheme === key ? '' : key;
+            rerender();
+          });
+        });
+      }
+      wireBody();
+
+      if (state.selectedTheme) {
+        var sel = qs('.theme-bar-row.selected', body);
+        if (sel) sel.scrollIntoView({ block: 'center' });
+      }
+    }
+  };
+}
+
+
+'use strict';
+
+/* ============================================================
    App-Shell, Routing, Bootstrap
    ============================================================ */
 
@@ -2329,6 +2796,7 @@ window.SEED_DATA = {"students":[{"id":"stud_alexp","name":"Alex P.","anonLabel":
 var NAV_ITEMS = [
   { key: 'dashboard', route: '#/dashboard', label: 'Dashboard' },
   { key: 'search', route: '#/search', label: 'Suche' },
+  { key: 'themes', route: '#/themes', label: 'Themen-Analyse' },
   { key: 'export', route: '#/export', label: 'PDF-Export' },
   { key: 'ai-export', route: '#/ai-export', label: 'An externe KI geben' },
   { key: 'backup', route: '#/backup', label: 'Backup' }
@@ -2381,6 +2849,7 @@ function resolveView(parts, query) {
   }
 
   if (parts[0] === 'search') return viewSearch({}, query);
+  if (parts[0] === 'themes') return viewThemeAnalysis({}, query);
   if (parts[0] === 'export') return viewPdfExport({}, query);
   if (parts[0] === 'ai-export') return viewAiExport({}, query);
   if (parts[0] === 'backup') return viewBackup();
@@ -2433,7 +2902,9 @@ document.addEventListener('keydown', function (ev) {
 
 function maybeShowPrivacyBanner() {
   var root = document.getElementById('banner-root');
-  if (localStorage.getItem(LS_PREFIX + 'banner_dismissed')) return;
+  var dismissed = false;
+  try { dismissed = !!localStorage.getItem(LS_PREFIX + 'banner_dismissed'); } catch (e) { /* Storage blockiert — Banner einfach zeigen */ }
+  if (dismissed) return;
   root.innerHTML =
     '<div class="privacy-banner">' +
       '<div><strong>Alle Daten bleiben auf diesem Gerät.</strong>' +
@@ -2448,11 +2919,41 @@ function maybeShowPrivacyBanner() {
   });
 }
 
+/* Prüft beim Start, ob lokale Speicherung tatsächlich funktioniert.
+   Wenn nicht (z. B. blockiert durch Browser-Einstellungen oder
+   privates Fenster), wird ein deutlicher Warnhinweis gezeigt —
+   sonst gingen Änderungen beim Schließen still verloren. */
+function checkPersistenceAndWarn() {
+  var ok = false;
+  if (Storage.mode === 'indexeddb') {
+    ok = true; // open() war erfolgreich — Schreibfehler melden die Views per Toast
+  } else {
+    try {
+      localStorage.setItem(LS_PREFIX + '_write_test', '1');
+      ok = localStorage.getItem(LS_PREFIX + '_write_test') === '1';
+      localStorage.removeItem(LS_PREFIX + '_write_test');
+    } catch (e) { ok = false; }
+  }
+  if (!ok) {
+    var root = document.getElementById('banner-root');
+    var warn = document.createElement('div');
+    warn.className = 'privacy-banner';
+    warn.style.background = '#f6e7e3';
+    warn.style.borderColor = '#dcb4a8';
+    warn.style.color = '#6e2a1a';
+    warn.innerHTML = '<div><strong>Achtung: Lokale Speicherung ist in diesem Browser blockiert.</strong>' +
+      'Einträge können erfasst, aber nicht dauerhaft gespeichert werden — beim Neuladen gehen Änderungen verloren. ' +
+      'Bitte öffnen Sie die Datei in einem normalen Browserfenster (kein privater Modus) bzw. erlauben Sie Website-Daten für lokale Dateien.</div>';
+    root.appendChild(warn);
+  }
+}
+
 /* ---------------- Bootstrap ---------------- */
 
 Repo.init()
   .then(function () {
     maybeShowPrivacyBanner();
+    checkPersistenceAndWarn();
     render();
   })
   .catch(function (err) {
