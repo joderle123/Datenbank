@@ -61,9 +61,10 @@ export const DIR_LEGACY_MAP = {
   'DIR Mersch': 'DR 12 Mersch',
   'DIR Redange/Rambrouch': 'DR 13 Rédange/Attert',
   'DIR Diekirch/Vianden': 'DR 14 Diekirch',
+  'DIR Clervaux/Wiltz': 'DR 15 Wiltz',
   'DIR Wiltz': 'DR 15 Wiltz',
-  // 'DIR Capellen', 'DIR Clervaux/Wiltz', 'DIR Luxembourg-Est',
-  // 'DIR Luxembourg-Ouest', 'DIR Strassen' are ambiguous → Settings → Clean up
+  // 'DIR Capellen', 'DIR Luxembourg-Est', 'DIR Luxembourg-Ouest' and
+  // 'DIR Strassen' are ambiguous → Settings → Clean up (same rule as the Hub)
 };
 
 /** CST groups as listed on the Fiche de renseignement. */
