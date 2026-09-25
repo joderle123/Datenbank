@@ -16,9 +16,12 @@
 //     bare codes can still type them.
 // ----------------------------------------------------------------------------
 
-// All Luxembourg secondary establishments (public + main private), plus the
-// European Schools and ISL, and the cycle-4 fondamental option for younger
-// referrals. Not exhaustive — extend on demand.
+import { CC_OPTIONS } from './fields.js';
+
+// Default school suggestions: Luxembourg secondary schools (public + main
+// private), the European Schools and ISL. Suggestions only — the list is
+// edited under Settings → Lists (écoles fondamentales can be added there),
+// and any other name can be typed in the form.
 export const LYCEES_LUXEMBOURG = [
   // Public — Luxembourg-Ville
   'Athénée de Luxembourg',
@@ -27,10 +30,10 @@ export const LYCEES_LUXEMBOURG = [
   'Lycée Michel-Rodange Luxembourg (LMRL)',
   'Lycée Robert-Schuman',
   'Lycée Technique du Centre',
-  'Lycée Technique des Arts et Métiers',
+  'Lycée des Arts et Métiers (LAM)',
   'Lycée Technique de Bonnevoie',
   'Lycée Technique École de Commerce et de Gestion (ECG)',
-  'Lycée Technique Michel-Lucius',
+  'Lycée Michel-Lucius (LML)',
   'Lycée Technique pour Professions de Santé (LTPS)',
   'Sportlycée Luxembourg',
 
@@ -74,25 +77,9 @@ export const LYCEES_LUXEMBOURG = [
   'International School of Luxembourg (ISL)',
   'St George\'s International School',
 
-  // Younger referrals
-  'Enseignement fondamental — Cycle 4',
 ];
 
-// Centres de compétences spécialisés (référencement officiel MENJE)
-// Used for the `scolarisation_specialisee` field.
-export const INSTITUTIONS_SPECIALISEES = [
-  'Centre de Logopédie (CL)',
-  'Centre pour le Développement Intellectuel (CDI)',
-  'Centre pour le Développement Moteur (CDM)',
-  'Centre pour le Développement des Apprentissages (CDA Schweech)',
-  'Centre pour le Développement Socio-Émotionnel (CDSE)',
-  'Centre pour le Développement des Compétences relatives à la Vue (CDV)',
-  'Centre pour le Développement des Compétences relatives à l\'Ouïe (CDA)',
-  'Centre pour Enfants et Jeunes Présentant un Trouble du Spectre de l\'Autisme (CTSA)',
-  'Institut Robert-Schuman',
-  'Institut pour Enfants Autistiques et Psychotiques (IEAP)',
-  'École Spécialisée Différenciée',
-];
+// The other Centres de compétences — see CC_OPTIONS in fields.js.
 
 // Common social services / referrers in Luxembourg
 export const AUTRES_SERVICES_COMMUNS = [
@@ -105,7 +92,7 @@ export const AUTRES_SERVICES_COMMUNS = [
   'Inter-Actions',
   'ANCES — Aide à l\'Enfance',
   'Pro Familia',
-  'SPOS — Service Psycho-Social et d\'Orientation Scolaire',
+  'SePAS — Service psycho-social et d\'accompagnement scolaires',
   'Maison Relais',
   'Foyer de jour',
   'Médecin scolaire',
@@ -193,10 +180,10 @@ export const MESURES_FAMILLE_COMMUNS = [
 ];
 
 // Mapping from field key → preset list. Consumed by the form UI.
+// Shown as clickable chips above the input. Long lists (schools, ateliers)
+// are offered as type-ahead suggestions instead — see DEFAULT_LISTS.
 export const FIELD_PRESETS = {
-  ecole_lycee:               LYCEES_LUXEMBOURG,
-  previous_school:           LYCEES_LUXEMBOURG,
-  scolarisation_specialisee: INSTITUTIONS_SPECIALISEES,
+  autres_cc:                 CC_OPTIONS,
   autres_services:           AUTRES_SERVICES_COMMUNS,
   diagnostics:               DIAGNOSTICS_COMMUNS,
   verdachtsdiagnosen_profil: VERDACHTSDIAGNOSEN_COMMUNS,
@@ -207,3 +194,12 @@ export const FIELD_PRESETS = {
 export function presetsForField(fieldKey) {
   return FIELD_PRESETS[fieldKey] || [];
 }
+
+// Editable lists (Settings → Lists). Until someone edits a list, these are
+// the suggestions. Ateliers and rééducation types start empty: the CDSE
+// fills in its own offer.
+export const DEFAULT_LISTS = {
+  schools: LYCEES_LUXEMBOURG,
+  ateliers: [],
+  reeducation: [],
+};

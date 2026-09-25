@@ -14,6 +14,18 @@ import {
   getEditableFields,
   validateCase,
   computeAge,
+  fieldVisible,
+  categoryVisible,
+  hasMeasure,
+  specTypeOf,
+  MEASURES,
+  MEASURE_KEYS,
+  measureInfo,
+  DR_OPTIONS,
+  DIR_LEGACY_MAP,
+  CC_OPTIONS,
+  CST_GROUPS,
+  CG_TYPES,
 } from './fields.js';
 
 import {
@@ -22,6 +34,7 @@ import {
   vocab,
   savedQueries,
   sessionUser,
+  lists,
 } from './repository.js';
 
 import {
@@ -32,29 +45,83 @@ import {
   FILTERABLE_FIELDS,
   AGGREGATIONS,
   operatorsFor,
+  filterTypeOf,
   formatNumber,
 } from './query-engine.js';
 
-import { presetsForField, LYCEES_LUXEMBOURG } from './presets.js';
+import { presetsForField, DEFAULT_LISTS } from './presets.js';
+import { readSpreadsheet, guessMapping, convertRows, toIsoDate, IMPORT_TARGETS } from './importer.js';
 import { parseQuestion, NATURAL_EXAMPLES } from './query-parser.js';
 
 // ----------------------------------------------------------------------------
 
 const VOCAB_HINT_BY_FIELD = {
   ecole_lycee: 'ecoles',
+  previous_school: 'ecoles',
   ds_realise_par: 'staff',
   isa_realise_par: 'staff',
   cg_realise_par: 'staff',
-  scolarisation_specialisee: 'institutions',
-  autre_cc_implique: 'staff',
+  atelier_realise_par: 'staff',
+  reeducation_realise_par: 'staff',
+  atelier_type: 'ateliers',
+  reeducation_type: 'reeducation',
   diagnostics: 'diagnostics',
   verdachtsdiagnosen_profil: 'verdachts',
   autres_services: 'autres_services',
 };
 
+const AGE_BANDS = ['up to 9', '10–11', '12–13', '14–15', '16 and older'];
+
+// Colours of the CDSE product family (Hub, ELDiB, Toolbox)
+const CHART_COLORS = ['#2E3A9C', '#1F6B6F', '#B4533A', '#8A6414', '#6E4A7E', '#3E6FB0', '#2F855A', '#7A8396', '#C9A227', '#A03E6B'];
+
+let _uid = 0;
+function uid() { _uid += 1; return 'q' + Date.now().toString(36) + _uid; }
+
+/** Queries saved by an older version lack the newer keys — fill them in. */
+function normalizeQuery(q) {
+  const c = JSON.parse(JSON.stringify(q || {}));
+  c.aggregations = Array.isArray(c.aggregations) && c.aggregations.length ? c.aggregations : [{ fn: 'count', field: null }];
+  c.filters = (Array.isArray(c.filters) ? c.filters : []).map((f) => ({ value2: '', ...f, _id: f._id || uid() }));
+  c.groupBy = c.groupBy || '';
+  c.groupBy2 = c.groupBy2 || '';
+  c.match = c.match === 'any' ? 'any' : 'all';
+  // Older configs grouped by the first measure slot only
+  return c;
+}
+
+// Line icons of the sidebar (same drawing style as the CDSE Hub)
+const svgIcon = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const NAV_ICONS = {
+  dashboard: svgIcon('<rect x="3.5" y="3.5" width="7" height="8" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.6"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.6"/><rect x="3.5" y="14.5" width="7" height="6" rx="1.6"/>'),
+  cases:     svgIcon('<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6"/><path d="M17.5 14.8c1.7.6 2.7 2.2 3 4.7"/>'),
+  query:     svgIcon('<path d="M4 20V11"/><path d="M9.5 20V5"/><path d="M15 20v-6"/><path d="M20.5 20V8"/>'),
+  io:        svgIcon('<path d="M7 4v12"/><path d="m3.5 12.5 3.5 3.5 3.5-3.5"/><path d="M17 20V8"/><path d="m13.5 11.5 3.5-3.5 3.5 3.5"/>'),
+  audit:     svgIcon('<path d="M7 3.5h8l4 4v13H7z"/><path d="M15 3.5v4h4"/><path d="M10 12h6M10 15.5h6"/><path d="M4.5 7v13.5H15" opacity=".6"/>'),
+  settings:  svgIcon('<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2.1 1.2M17.7 15.3l2.1 1.2M4.2 16.5l2.1-1.2M17.7 8.7l2.1-1.2"/><circle cx="12" cy="12" r="7.2"/>'),
+};
+
 const LIST_DEFAULT_COLUMNS = [
   'matricule', 'nom', 'prenom', 'sexe', 'age', 'dir', 'ecole_lycee',
-  'mesure_cdse_1', 'iq',
+  'measures_all', 'iq',
+];
+
+// Editable pick lists (Settings → Lists) and the fields that use them.
+const LIST_META = [
+  { key: 'schools',     label: 'Schools',           fields: ['ecole_lycee', 'previous_school'],
+    help: 'Suggested when typing a school. Add the écoles fondamentales you work with; use the full official name.' },
+  { key: 'ateliers',    label: 'Ateliers',          fields: ['atelier_type'],
+    help: 'The CDSE’s Ateliers d’apprentissage spécifique — offered under “Which atelier”.' },
+  { key: 'reeducation', label: 'Rééducation types', fields: ['reeducation_type'],
+    help: 'Kinds of rééducation — offered under “Which rééducation”.' },
+];
+
+// Fields offered in Settings → Clean up (fields where spelling variants and
+// older values pile up).
+const CLEANUP_FIELDS = [
+  'dir', 'ecole_lycee', 'previous_school', 'mesure_cdse_1', 'mesure_cdse_2', 'mesure_cdse_3',
+  'atelier_type', 'reeducation_type', 'cst_groupe', 'autres_cc', 'autres_services',
+  'diagnostics', 'verdachtsdiagnosen_profil', 'tutelle', 'mesures_famille',
 ];
 
 // Fields shown by default in the form's "Essentials" block. New cases start
@@ -64,6 +131,7 @@ const ESSENTIAL_FIELD_KEYS = new Set([
   'matricule', 'nom', 'prenom',
   'sexe', 'date_naissance',
   'dir', 'ecole_lycee',
+  'mesure_cdse_1',
 ]);
 
 function blankCase() {
@@ -176,7 +244,7 @@ function makeApp() {
 
     // -- list view --------------------------------------------------------
     search: '',
-    quickFilters: { dir: '', sexe: '', mesure_cdse_1: '', ecole_lycee: '' },
+    quickFilters: { dir: '', sexe: '', measure: '', ecole_lycee: '' },
     sortField: 'updated_at',
     sortDir: 'desc',
     visibleColumns: [...LIST_DEFAULT_COLUMNS],
@@ -186,6 +254,7 @@ function makeApp() {
     formMode: 'create',
     formData: blankCase(),
     formErrors: {},
+    formExtraSections: {},     // measure sections opened with "+ add" (not in a slot)
     editingId: null,
     formCategoryOpen: {},
     tagDraft: {},
@@ -206,134 +275,77 @@ function makeApp() {
     query: {
       aggregations: [{ field: 'iq', fn: 'mean' }],
       filters: [],
+      match: 'all',
       groupBy: '',
+      groupBy2: '',
     },
+    matchColumns: null,        // columns of the "matching cases" table (null = list columns)
+    crossAggIdx: 0,            // which measure the two-variable table shows
     queryResult: null,
     queryMatches: null,
 
     // -- preset library — typical state-asked questions -------------------
     QUERY_PRESETS: [
-      {
-        id: 'count_by_sexe',
-        label: 'Distribution by sex',
-        description: 'Number of cases, girls vs boys.',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'sexe' },
-      },
-      {
-        id: 'count_by_dir',
-        label: 'Cases by DIR',
-        description: 'How many cases per regional directorate?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir' },
-      },
-      {
-        id: 'avg_age',
-        label: 'Overall average age',
-        description: 'Average age across all cases.',
-        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: '' },
-      },
-      {
-        id: 'avg_age_by_sexe',
-        label: 'Average age by sex',
-        description: 'Average age broken down by sex.',
-        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'sexe' },
-      },
-      {
-        id: 'avg_age_by_dir',
-        label: 'Average age by DIR',
-        description: 'Average age in each directorate.',
-        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'dir' },
-      },
-      {
-        id: 'avg_iq',
-        label: 'Overall average IQ',
-        description: 'Average IQ across all cases.',
-        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: '' },
-      },
-      {
-        id: 'avg_iq_by_sexe',
-        label: 'Average IQ by sex',
-        description: 'Average IQ broken down by sex.',
-        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'sexe' },
-      },
-      {
-        id: 'avg_iq_by_school',
-        label: 'Average IQ by school',
-        description: 'Average IQ per school.',
-        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'ecole_lycee' },
-      },
-      {
-        id: 'mesures_distribution',
-        label: 'CDSE Measures distribution',
-        description: 'How many cases per primary measure type?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'mesure_cdse_1' },
-      },
-      {
-        id: 'mesures_by_dir',
-        label: 'Measures by DIR',
-        description: 'Which measure dominates in each directorate?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir' },
-      },
-      {
-        id: 'languages',
-        label: 'Languages spoken',
-        description: 'Distribution of the first language.',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'langue_1' },
-      },
-      {
-        id: 'parents',
-        label: 'Parental structure',
-        description: 'Together / Separated / Other.',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'parents' },
-      },
-      {
-        id: 'scas',
-        label: 'Cases with SCAS',
-        description: 'How many and by directorate?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'scas', op: 'eq', value: 'Yes' }], groupBy: 'dir' },
-      },
-      {
-        id: 'tutelle',
-        label: 'Cases under foyer guardianship',
-        description: 'How many pupils have a foyer as one of their guardianship holders?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'has', value: 'Foyer' }], groupBy: 'dir' },
-      },
-      {
-        id: 'iq_distribution',
-        label: 'IQ distribution',
-        description: 'Histogram of IQ across all cases.',
-        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: '' },
-      },
-      {
-        id: 'age_distribution',
-        label: 'Age distribution',
-        description: 'Histogram of age across all cases.',
-        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: '' },
-      },
-      {
-        id: 'diagnostics_distribution',
-        label: 'Diagnoses — distribution',
-        description: 'How often does each diagnosis appear? Cases with multiple diagnoses are counted in each.',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'diagnostics' },
-      },
-      {
-        id: 'avg_iq_by_diagnosis',
-        label: 'Average IQ by diagnosis',
-        description: 'Mean IQ in each diagnosis bucket.',
-        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'diagnostics' },
-      },
-      {
-        id: 'avg_age_by_diagnosis',
-        label: 'Average age by diagnosis',
-        description: 'Mean age in each diagnosis bucket.',
-        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'diagnostics' },
-      },
-      {
-        id: 'suspected_distribution',
-        label: 'Suspected profiles — distribution',
-        description: 'How often does each suspected diagnosis or clinical profile appear?',
-        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'verdachtsdiagnosen_profil' },
-      },
+      // -- Measures and durations ------------------------------------------
+      { id: 'mesures_distribution', group: 'Measures and durations', label: 'CDSE measures — how often', description: 'Every measure of every case: DS, ISA, C&G, Atelier, Rééducation, Annexe, CST, CdP.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'measures_all' } },
+      { id: 'running_now', group: 'Measures and durations', label: 'Measures running today', description: 'Started and not yet ended.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'measures_running' } },
+      { id: 'dur_each', group: 'Measures and durations', label: 'Average duration of each measure', description: 'Months per measure. A measure still running counts until today.',
+        config: { aggregations: ['dur_isa', 'dur_cg', 'dur_atelier', 'dur_reeducation', 'dur_annexe', 'dur_cst', 'dur_cdp'].map((f) => ({ fn: 'mean', field: f })), filters: [], groupBy: '' } },
+      { id: 'dur_isa_profile', group: 'Measures and durations', label: 'ISA duration by profile', description: 'Average and median months of ISA per profile / suspected diagnosis.',
+        config: { aggregations: [{ fn: 'mean', field: 'dur_isa' }, { fn: 'median', field: 'dur_isa' }], filters: [{ field: 'measures_all', op: 'has', value: 'ISA' }], groupBy: 'verdachtsdiagnosen_profil' } },
+      { id: 'dur_total_school', group: 'Measures and durations', label: 'Time with the CDSE by school', description: 'Average months from the first start to the last end, per school.',
+        config: { aggregations: [{ fn: 'mean', field: 'dur_total' }], filters: [{ field: 'dur_total', op: 'notempty' }], groupBy: 'ecole_lycee' } },
+      { id: 'dur_total_dir', group: 'Measures and durations', label: 'Time with the CDSE by DR', description: 'Average months per Direction de région.',
+        config: { aggregations: [{ fn: 'mean', field: 'dur_total' }], filters: [{ field: 'dur_total', op: 'notempty' }], groupBy: 'dir' } },
+      { id: 'dur_per_pupil', group: 'Measures and durations', label: 'Durations per pupil', description: 'List of pupils with the months of each measure.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'measures_all', op: 'notempty' }], groupBy: '' },
+        columns: ['nom', 'prenom', 'measures_all', 'dur_isa', 'dur_cg', 'dur_atelier', 'dur_reeducation', 'dur_cst', 'dur_cdp', 'dur_annexe', 'dur_total'] },
+      { id: 'mesures_by_dir', group: 'Measures and durations', label: 'Measures per DR', description: 'Two variables: Direction de région × measure.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir', groupBy2: 'measures_all' } },
+
+      // -- Pupils -------------------------------------------------------------
+      { id: 'count_by_dir', group: 'Pupils', label: 'Cases by Direction de région', description: 'How many cases per DR 01–15?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir' } },
+      { id: 'sex_by_dir', group: 'Pupils', label: 'Girls and boys per DR', description: 'Two variables: DR × sex.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'dir', groupBy2: 'sexe' } },
+      { id: 'count_by_sexe', group: 'Pupils', label: 'Distribution by sex', description: 'Number of cases, girls vs boys.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'sexe' } },
+      { id: 'age_by_sex', group: 'Pupils', label: 'Age groups by sex', description: 'Two-year age groups × sex.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'age_band', groupBy2: 'sexe' } },
+      { id: 'avg_age_by_dir', group: 'Pupils', label: 'Average age by DR', description: 'Average age in each Direction de région.',
+        config: { aggregations: [{ fn: 'mean', field: 'age' }], filters: [], groupBy: 'dir' } },
+      { id: 'languages', group: 'Pupils', label: 'Languages spoken', description: 'Distribution of the first language.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'langue_1' } },
+      { id: 'scas', group: 'Pupils', label: 'Cases with SCAS', description: 'How many, and in which DR?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'scas', op: 'eq', value: 'Yes' }], groupBy: 'dir' } },
+      { id: 'tutelle', group: 'Pupils', label: 'Cases under foyer guardianship', description: 'Pupils with a foyer among the guardianship holders.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [{ field: 'tutelle', op: 'has', value: 'Foyer' }], groupBy: 'dir' } },
+
+      // -- Clinical profile and ELDiB -------------------------------------------
+      { id: 'diagnostics_distribution', group: 'Clinical profile and ELDiB', label: 'Diagnoses — distribution', description: 'How often each diagnosis appears. Cases with several are counted in each.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'diagnostics' } },
+      { id: 'suspected_distribution', group: 'Clinical profile and ELDiB', label: 'Profiles — distribution', description: 'Suspected diagnoses and clinical profiles.',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'verdachtsdiagnosen_profil' } },
+      { id: 'eldib_by_measure', group: 'Clinical profile and ELDiB', label: 'ELDiB stages by measure', description: 'Average stage in each ELDiB area, for each measure.',
+        config: { aggregations: [{ fn: 'mean', field: 'eldib_v' }, { fn: 'mean', field: 'eldib_k' }, { fn: 'mean', field: 'eldib_soz' }, { fn: 'mean', field: 'eldib_kog' }], filters: [], groupBy: 'measures_all' } },
+      { id: 'cc_involved', group: 'Clinical profile and ELDiB', label: 'Other competence centres', description: 'Which other CC are involved, and how often?',
+        config: { aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: 'autres_cc' } },
+      { id: 'avg_iq_by_diagnosis', group: 'Clinical profile and ELDiB', label: 'Average IQ by diagnosis', description: 'Mean IQ in each diagnosis.',
+        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: 'diagnostics' } },
+      { id: 'iq_distribution', group: 'Clinical profile and ELDiB', label: 'IQ distribution', description: 'Histogram of IQ across all cases.',
+        config: { aggregations: [{ fn: 'mean', field: 'iq' }], filters: [], groupBy: '' } },
     ],
+    get presetGroups() {
+      const out = [];
+      for (const p of this.QUERY_PRESETS) {
+        let g = out.find((x) => x.name === p.group);
+        if (!g) { g = { name: p.group, items: [] }; out.push(g); }
+        g.items.push(p);
+      }
+      return out;
+    },
     savedQueriesList: [],
     saveQueryName: '',
     editingSavedQueryId: null,
@@ -344,6 +356,20 @@ function makeApp() {
     importMode: 'merge',
     importPreview: null,
     importError: '',
+    importSheet: null,         // { fileName, sheets, sheetIdx, mapping } while columns are being assigned
+    importStep: '',            // '' | 'map' | 'preview' — objects stay set, so templates never read null
+    importBusy: false,
+
+    // -- editable lists and clean-up (Settings) ---------------------------
+    LIST_META,
+    CLEANUP_FIELDS,
+    listsState: { schools: null, ateliers: null, reeducation: null },
+    listDraft: { schools: '', ateliers: '', reeducation: '' },
+    cleanupField: 'dir',
+    cleanupValues: [],
+    cleanupTargets: {},
+    cleanupLoaded: false,
+    whatsNewHidden: (typeof localStorage !== 'undefined' && localStorage.getItem('cdse_whatsnew_v2') === 'hidden'),
 
     // -- audit log --------------------------------------------------------
     auditEntries: [],
@@ -361,13 +387,14 @@ function makeApp() {
 
     // -- nav meta ---------------------------------------------------------
     nav: [
-      { id: 'dashboard', label: 'Dashboard',       kicker: 'Overview',       title: 'Dash',       accent: 'board' },
-      { id: 'cases',     label: 'Cases',           kicker: 'Registry',       title: 'Cases',      accent: '' },
-      { id: 'query',     label: 'Queries',         kicker: 'Analysis',       title: 'Queries',    accent: '' },
-      { id: 'io',        label: 'Import / Export', kicker: 'Exchange',       title: 'Import',     accent: ' / Export' },
-      { id: 'audit',     label: 'Audit log',       kicker: 'Traceability',   title: 'Audit',      accent: ' log' },
-      { id: 'settings',  label: 'Settings',        kicker: 'Configuration',  title: 'Settings',   accent: '' },
+      { id: 'dashboard', label: 'Dashboard',       kicker: 'Overview',      section: 'Statistics' },
+      { id: 'cases',     label: 'Cases',           kicker: 'Registry' },
+      { id: 'query',     label: 'Queries',         kicker: 'Analysis' },
+      { id: 'io',        label: 'Import / Export', kicker: 'Exchange',      section: 'Data' },
+      { id: 'audit',     label: 'Audit log',       kicker: 'Traceability' },
+      { id: 'settings',  label: 'Settings',        kicker: 'Configuration' },
     ],
+    navIcon(id) { return NAV_ICONS[id] || ''; },
 
     get currentNav() {
       // detail + form are sub-views of the cases registry, not of the dashboard
@@ -399,6 +426,9 @@ function makeApp() {
 
       // Open identification category by default in the form
       for (const c of CATEGORIES) this.formCategoryOpen[c.key] = c.key === 'identification';
+
+      // Editable lists (schools, ateliers, rééducation types)
+      this.loadLists();
 
       // dashboard charts: render whenever we land on dashboard or data changes.
       // Use the GLOBAL Alpine.watch / Alpine.nextTick (not this.$watch / window.Alpine.nextTick).
@@ -438,6 +468,9 @@ function makeApp() {
       });
       A.watch(() => JSON.stringify(this.query), () => {
         if (this.view === 'query') this.queueRun();
+      });
+      A.watch(() => this.crossAggIdx, () => {
+        if (this.view === 'query' && this.queryResult) scheduleQuery();
       });
 
       // Autosave the form to localStorage on every change while the form is open.
@@ -668,8 +701,49 @@ function makeApp() {
     },
     fieldsOf(catKey) { return getFieldsByCategory(catKey); },
     fieldByKey(k)    { return getField(k); },
-    labelOf(k)       { return getField(k)?.label || k; },
-    optionsOf(k)     { return getField(k)?.options || []; },
+    labelOf(k)       { return getField(k)?.label || NUMERIC_FIELDS.find((f) => f.key === k)?.label || k; },
+    /** Values offered in query filters: the choices of a select field, the
+     *  measure keys for measure lists, otherwise the values found in the data. */
+    optionsOf(k) {
+      const def = getField(k);
+      if (!def) return [];
+      if (def.type === 'select') return def.options || [];
+      if (k === 'measures_all' || k === 'measures_running') return MEASURE_KEYS;
+      if (k === 'age_band') return AGE_BANDS;
+      const seen = new Set();
+      for (const c of this.allCases) {
+        const v = c[k];
+        for (const x of Array.isArray(v) ? v : [v]) if (x !== null && x !== undefined && x !== '') seen.add(String(x));
+      }
+      return [...seen].sort((a, b) => a.localeCompare(b, 'fr'));
+    },
+    /** Choices for a select in the form — an older stored value stays visible. */
+    formOptionsOf(f) {
+      const cur = this.formData?.[f.key];
+      const opts = f.options || [];
+      return cur && !opts.includes(cur) ? [...opts, cur] : opts;
+    },
+    isOldValue(f, v) { return !!v && f?.type === 'select' && !(f.options || []).includes(v); },
+    /** The field that says precisely which measure it is (which atelier …),
+     *  shown right under the measure chosen in a slot. */
+    measureDetailOf(slotKey) {
+      const m = measureInfo(this.formData?.[slotKey]);
+      return m && m.detail ? getField(m.detail) : null;
+    },
+    measureLabel(key) { return measureInfo(key)?.label || key; },
+    /** Type-ahead suggestions: the editable list (schools, ateliers …) plus
+     *  what has been typed before. */
+    suggestionsFor(fieldKey) {
+      const def = getField(fieldKey);
+      const out = [];
+      if (def?.listKey) out.push(...this.listValues(def.listKey));
+      out.push(...this.vocabFor(fieldKey));
+      return [...new Set(out.filter(Boolean))];
+    },
+    listValues(key) {
+      const v = this.listsState?.[key];
+      return Array.isArray(v) ? v : (DEFAULT_LISTS[key] || []);
+    },
     vocabFor(fieldKey) {
       const cat = VOCAB_HINT_BY_FIELD[fieldKey];
       if (!cat) return [];
@@ -746,16 +820,21 @@ function makeApp() {
       for (const c of this.allCases) {
         if (c.sexe) bySexe[c.sexe] = (bySexe[c.sexe] || 0) + 1;
         if (c.ecole_lycee) bySchool[c.ecole_lycee] = (bySchool[c.ecole_lycee] || 0) + 1;
-        for (const k of ['mesure_cdse_1', 'mesure_cdse_2', 'mesure_cdse_3']) {
-          if (c[k]) byMesure[c[k]] = (byMesure[c[k]] || 0) + 1;
-        }
+        for (const k of c.measures_all || []) byMesure[k] = (byMesure[k] || 0) + 1;
         for (const d of c.diagnostics || []) byDiag[d] = (byDiag[d] || 0) + 1;
       }
+      const nRunning = this.allCases.filter((c) => (c.measures_running || []).length > 0).length;
+      const nWithMeasure = this.allCases.filter((c) => (c.measures_all || []).length > 0).length;
+      const durs = this.allCases.map((c) => c.dur_total).filter((v) => Number.isFinite(v));
+      const avgDurTotal = durs.length ? durs.reduce((a, b) => a + b, 0) / durs.length : null;
       const top = (obj, n2 = 5) =>
         Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n2);
 
       return {
         n,
+        nRunning,
+        nWithMeasure,
+        avgDurTotal, nDurTotal: durs.length,
         avgAge, avgIq,
         nAge: ages.length, nIq: iqs.length,
         sexe: top(bySexe, 5),
@@ -777,26 +856,44 @@ function makeApp() {
           if (!haystack.includes(q)) return false;
         }
         for (const [key, val] of Object.entries(f)) {
-          if (val && c[key] !== val) return false;
+          if (!val) continue;
+          if (key === 'measure') { if (!(c.measures_all || []).includes(val)) return false; }
+          else if (c[key] !== val) return false;
         }
         return true;
       });
     },
 
+    /** Choices of the quick filters above the case list. */
     get distinctValues() {
-      const sets = { dir: new Set(), sexe: new Set(), mesure_cdse_1: new Set(), ecole_lycee: new Set() };
+      const sets = { dir: new Set(), sexe: new Set(), measure: new Set(), ecole_lycee: new Set() };
       for (const c of this.allCases) {
         if (c.dir) sets.dir.add(c.dir);
         if (c.sexe) sets.sexe.add(c.sexe);
-        if (c.mesure_cdse_1) sets.mesure_cdse_1.add(c.mesure_cdse_1);
+        for (const m of c.measures_all || []) sets.measure.add(m);
         if (c.ecole_lycee) sets.ecole_lycee.add(c.ecole_lycee);
       }
+      const byOrder = (order) => (a, b) => {
+        const ia = order.indexOf(a); const ib = order.indexOf(b);
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b, 'fr');
+      };
       return {
-        dir: [...sets.dir].sort(),
+        dir: [...sets.dir].sort(byOrder(DR_OPTIONS)),
         sexe: [...sets.sexe].sort(),
-        mesure_cdse_1: [...sets.mesure_cdse_1].sort(),
+        measure: [...sets.measure].sort(byOrder(MEASURE_KEYS)),
         ecole_lycee: [...sets.ecole_lycee].sort((a, b) => a.localeCompare(b, 'fr')),
       };
+    },
+    quickFilterLabel(key) { return { measure: 'Measure', dir: 'DR' }[key] || this.labelOf(key); },
+    resetQuickFilters() {
+      this.search = '';
+      this.quickFilters = { dir: '', sexe: '', measure: '', ecole_lycee: '' };
+    },
+
+    /** Columns offered in the case list: every field, calculated values
+     *  included; older fields only when some case still holds a value. */
+    get columnChoices() {
+      return FIELD_DEFS.filter((f) => !f.legacy || this.allCases.some((c) => hasValue(c[f.key])));
     },
 
     setSort(field) {
@@ -828,13 +925,16 @@ function makeApp() {
     measuresOf(c) {
       const out = [];
       const today = new Date().toISOString().slice(0, 10);
-      const spec = [
-        { key: 'ISA',         label: 'ISA',         start: c.debut_isa,         end: c.fin_isa,         who: c.isa_realise_par },
-        { key: 'CG',          label: 'C&G',         start: c.debut_cg,          end: c.fin_cg,          who: c.cg_realise_par },
-        { key: 'ScolSpe',     label: 'Spec. School.',  start: c.debut_scol_spe,    end: c.fin_scol_spe,    who: c.scolarisation_specialisee },
-        { key: 'Autre',       label: c.autre_mesure || 'Other', start: c.debut_autre_mesure, end: c.fin_autre_mesure, who: null },
-        { key: 'DS',          label: 'DS',          start: c.date_ds,            end: c.date_ds,         who: c.ds_realise_par, singleDay: true },
-      ];
+      const spec = MEASURES.map((m) => {
+        const detail = m.detail ? c[m.detail] : '';
+        const label = m.key === 'Other' ? (c.autre_mesure || 'Other')
+          : detail && m.key !== 'CdP' ? `${m.key} · ${detail}` : m.key;
+        return { key: m.key, label, start: c[m.start], end: c[m.end], who: m.who ? c[m.who] : null, singleDay: !!m.singleDay };
+      });
+      // An older "specialized schooling" entry that could not be assigned to Annexe / CST / CdP
+      if ((c.debut_scol_spe || c.fin_scol_spe) && !specTypeOf(c.scolarisation_specialisee || c.spec_school)) {
+        spec.push({ key: 'ScolSpe', label: 'Spec. schooling (older entry)', start: c.debut_scol_spe, end: c.fin_scol_spe, who: c.scolarisation_specialisee });
+      }
       for (const m of spec) {
         if (!m.start && !m.end) continue;
         let status = null;
@@ -927,6 +1027,38 @@ function makeApp() {
       this.visibleColumns = [...LIST_DEFAULT_COLUMNS];
     },
 
+    /** Detail view: the sections that apply to this case — a measure's
+     *  section only when the case has that measure, older fields only when
+     *  they hold a value, calculated durations only when they can be worked out. */
+    detailSections(c) {
+      if (!c) return [];
+      return CATEGORIES
+        .filter((cat) => cat.computedOnly || categoryVisible(cat, c))
+        .map((cat) => ({
+          key: cat.key,
+          label: cat.computedOnly ? 'Duration of measures (calculated)' : cat.label,
+          fields: getFieldsByCategory(cat.key).filter((f) => {
+            if (f.legacy) return hasValue(c[f.key]);
+            if (f.showIf) return fieldVisible(f, c) && hasValue(c[f.key]);
+            if (cat.computedOnly) return hasValue(c[f.key]) && c[f.key] !== 0;
+            return true;
+          }),
+        }))
+        .filter((s) => s.fields.length);
+    },
+    /** A value as shown in the detail view (full measure names). */
+    displayValue(c, key) {
+      const def = getField(key);
+      const v = c?.[key];
+      if (def?.measureSlot && v) {
+        const m = measureInfo(v);
+        const detail = m?.detail && m.key !== 'Other' ? c[m.detail] : '';
+        return (m ? m.label : v) + (detail ? ` · ${detail}` : '') + (v === 'Other' && c.autre_mesure ? ` · ${c.autre_mesure}` : '');
+      }
+      if (def?.type === 'computed' && def.numeric && key !== 'age' && key !== 'n_measures' && Number.isFinite(v)) return `${formatNumber(v, 1)} months`;
+      return this.cellValue(c, key);
+    },
+
     // ====================================================================
     // Detail view
     // ====================================================================
@@ -938,7 +1070,7 @@ function makeApp() {
     },
 
     backToList() {
-      this.detailCase = null;
+      // detailCase stays set: the detail template is hidden, not torn down
       this.view = 'cases';
     },
 
@@ -962,6 +1094,7 @@ function makeApp() {
       this.editingId = null;
       this.formData = blankCase();
       this.formErrors = {};
+      this.formExtraSections = {};
       this.tagDraft = {};
       this.showAdvanced = false;  // start with essentials only
       this.formCategoryOpen = { _essentials: true };
@@ -980,12 +1113,15 @@ function makeApp() {
       this.formMode = 'edit';
       this.editingId = id;
       const blank = blankCase();
-      this.formData = { ...blank, ...c };
+      const editable = {};
+      for (const [k, v] of Object.entries(c)) if (getField(k)?.type !== 'computed') editable[k] = v;
+      this.formData = { ...blank, ...editable };
       for (const f of getEditableFields()) {
         if (f.type === 'tags' && !Array.isArray(this.formData[f.key])) this.formData[f.key] = [];
         if (f.type !== 'tags' && this.formData[f.key] == null) this.formData[f.key] = '';
       }
       this.formErrors = {};
+      this.formExtraSections = {};
       this.tagDraft = {};
       // When editing, auto-expand the advanced section if the case has any
       // non-essential fields already filled, so users see all their data.
@@ -1062,9 +1198,44 @@ function makeApp() {
       catch { return ''; }
     },
 
-    /** The 7 fields shown in the always-visible "Essentials" block. */
+    /** The fields shown in the always-visible "Essentials" block. */
     essentialFields() {
       return getEditableFields().filter((f) => ESSENTIAL_FIELD_KEYS.has(f.key));
+    },
+    /** Is this field shown in the form? Conditional fields ("Other" texts),
+     *  older fields only with a value, and a measure's detail field is shown
+     *  right under the measure slot instead of twice. */
+    formFieldShown(f) {
+      if (f.type === 'computed' && f.key !== 'age') return false;
+      if (!fieldVisible(f, this.formData)) return false;
+      // The fields of a measure chosen in a slot are shown right under the slot
+      const shownUnderSlot = MEASURES.some((m) => m.category === f.category && hasMeasure(this.formData, m.key));
+      return !shownUnderSlot;
+    },
+    /** The fields of the measure chosen in a slot (which one, dates, staff) —
+     *  shown under the slot. Empty when an earlier slot has the same measure. */
+    slotFields(slotKey) {
+      const key = this.formData?.[slotKey];
+      const m = measureInfo(key);
+      if (!m) return [];
+      const slots = ['mesure_cdse_1', 'mesure_cdse_2', 'mesure_cdse_3'];
+      const idx = slots.indexOf(slotKey);
+      if (slots.slice(0, idx).some((s2) => this.formData?.[s2] === key)) return [];
+      const fields = getFieldsByCategory(m.category).filter((f) => f.type !== 'computed' && !f.legacy);
+      return [...fields.filter((f) => f.key === m.detail), ...fields.filter((f) => f.key !== m.detail)];
+    },
+    /** Label of a choice in the form (full measure names; older values marked). */
+    optionLabel(f, o) {
+      const base = f?.measureSlot ? this.measureLabel(o) : o;
+      return this.isOldValue(f, o) ? `${base} (older value)` : base;
+    },
+    /** "Show all fields": open every section that already holds a value. */
+    toggleAdvanced() {
+      this.showAdvanced = !this.showAdvanced;
+      if (!this.showAdvanced) return;
+      for (const c of CATEGORIES) {
+        if (getFieldsByCategory(c.key).some((f) => f.type !== 'computed' && hasValue(this.formData[f.key]))) this.formCategoryOpen[c.key] = true;
+      }
     },
     /** Non-essential fields in a category (used by the advanced accordion). */
     nonEssentialFieldsOf(catKey) {
@@ -1082,17 +1253,33 @@ function makeApp() {
         return [{
           key: '_essentials',
           label: 'Essentials',
-          _fields: this.essentialFields(),
+          _fields: this.essentialFields().filter((f) => this.formFieldShown(f)),
         }];
       }
-      return CATEGORIES.map((c) => ({
-        key: c.key,
-        label: c.label,
-        _fields: getFieldsByCategory(c.key),
-      }));
+      return CATEGORIES
+        .filter((c) => !c.computedOnly && (categoryVisible(c, this.formData) || this.formExtraSections[c.key]))
+        .map((c) => ({
+          key: c.key,
+          label: c.label,
+          _fields: getFieldsByCategory(c.key).filter((f) => this.formFieldShown(f)),
+        }))
+        .filter((c) => c._fields.length);
     },
     get nonEssentialFieldCount() {
-      return getEditableFields().length - this.essentialFields().length;
+      return getEditableFields().filter((f) => !f.legacy && !f.showIf && !ESSENTIAL_FIELD_KEYS.has(f.key) && categoryVisible(CATEGORIES.find((c) => c.key === f.category), this.formData)).length;
+    },
+    /** Measure sections that are not shown yet (the case has more measures
+     *  than the three slots) — offered as "+ add" buttons. */
+    get hiddenMeasureSections() {
+      if (!this.showAdvanced) return [];
+      return MEASURES.filter((m) => !this.formExtraSections[m.category] && !categoryVisible(CATEGORIES.find((c) => c.key === m.category), this.formData));
+    },
+    /** Show a measure section although it is not chosen in a slot. */
+    openMeasureSection(key) {
+      const m = measureInfo(key);
+      if (!m) return;
+      this.formExtraSections = { ...this.formExtraSections, [m.category]: true };
+      this.formCategoryOpen[m.category] = true;
     },
 
     addTag(fieldKey) {
@@ -1109,17 +1296,9 @@ function makeApp() {
     },
 
     crossFieldErrors(data) {
+      // Start/end order, "Other" texts … are checked in validateCase (fields.js).
       const e = {};
-      const pairs = [
-        ['debut_isa', 'fin_isa'],
-        ['debut_cg', 'fin_cg'],
-        ['debut_scol_spe', 'fin_scol_spe'],
-        ['debut_autre_mesure', 'fin_autre_mesure'],
-      ];
-      for (const [s, ed] of pairs) {
-        const a = data[s], b = data[ed];
-        if (a && b && a > b) e[ed] = `Must be ≥ ${this.labelOf(s)} (${a}).`;
-      }
+      if (data.debut_scol_spe && data.fin_scol_spe && data.debut_scol_spe > data.fin_scol_spe) e.fin_scol_spe = 'The end lies before the start.';
       return e;
     },
 
@@ -1139,6 +1318,7 @@ function makeApp() {
         this.formErrors = allErrors;
         const firstBadCat = getEditableFields().find((f) => allErrors[f.key])?.category;
         if (firstBadCat) this.formCategoryOpen[firstBadCat] = true;
+        if (Object.keys(allErrors).some((k) => !ESSENTIAL_FIELD_KEYS.has(k))) this.showAdvanced = true;
         this.notify('Please fix the errors.', 'err');
         return;
       }
@@ -1224,10 +1404,40 @@ function makeApp() {
       if (!this.query.aggregations.length) this.query.aggregations.push({ fn: 'count', field: null });
     },
     addFilter() {
-      this.query.filters.push({ field: 'sexe', op: 'eq', value: '', value2: '' });
+      this.query.filters.push({ _id: uid(), field: 'sexe', op: 'eq', value: '', value2: '' });
     },
     removeFilter(i) {
       this.query.filters.splice(i, 1);
+    },
+    filterType(k) { return filterTypeOf(k); },
+    opOf(f) { return operatorsFor(f.field).find((o) => o.key === f.op) || null; },
+    /** Change of operator: "is one of" works on a list of values, the others on one value. */
+    onFilterOpChange(i) {
+      const f = this.query.filters[i];
+      const op = this.opOf(f);
+      if (op?.multi && !Array.isArray(f.value)) f.value = f.value !== '' && f.value != null ? [String(f.value)] : [];
+      if (op && !op.multi && Array.isArray(f.value)) f.value = f.value[0] || '';
+    },
+    toggleFilterValue(i, v) {
+      const f = this.query.filters[i];
+      const cur = Array.isArray(f.value) ? f.value : [];
+      f.value = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
+    },
+    filterValueSummary(f) {
+      const v = Array.isArray(f.value) ? f.value : [];
+      if (!v.length) return 'choose…';
+      return v.length <= 2 ? v.join(', ') : `${v.slice(0, 2).join(', ')} +${v.length - 2}`;
+    },
+    /** Filters that are complete enough to apply. */
+    cleanFilters() {
+      return (this.query.filters || []).filter((f) => {
+        const op = this.opOf(f);
+        if (!op) return false;
+        if (op.multi) return Array.isArray(f.value) && f.value.length > 0;
+        if (op.needsValue && (f.value === '' || f.value === null || f.value === undefined)) return false;
+        if (op.needsValue2 && (f.value2 === '' || f.value2 === null || f.value2 === undefined)) return false;
+        return true;
+      });
     },
     operatorsForField(k) { return operatorsFor(k); },
     fmt(n, digits) { return formatNumber(n, digits ?? 1); },
@@ -1242,7 +1452,7 @@ function makeApp() {
       const f = this.query.filters[i];
       const ops = operatorsFor(f.field);
       if (!ops.find((o) => o.key === f.op)) f.op = ops[0]?.key || 'eq';
-      f.value = '';
+      f.value = ops.find((o) => o.key === f.op)?.multi ? [] : '';
       f.value2 = '';
     },
 
@@ -1254,21 +1464,40 @@ function makeApp() {
       clearTimeout(this._runTimer);
 
       // Drop incomplete filters silently
-      const clean = (this.query.filters || []).filter((f) => {
-        const op = operatorsFor(f.field).find((o) => o.key === f.op);
-        if (!op) return false;
-        if (op.needsValue && (f.value === '' || f.value === null || f.value === undefined)) return false;
-        if (op.needsValue2 && (f.value2 === '' || f.value2 === null || f.value2 === undefined)) return false;
-        return true;
-      });
+      const clean = this.cleanFilters();
       const cleanAggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || !!a.field);
       const cfg = {
         filters: clean,
+        match: this.query.match || 'all',
         aggregations: cleanAggs.length ? cleanAggs : [{ fn: 'count', field: null }],
         groupBy: this.query.groupBy || null,
+        groupBy2: (this.query.groupBy && this.query.groupBy2) || null,
       };
+      if (this.crossAggIdx >= cfg.aggregations.length) this.crossAggIdx = 0;
       this.queryResult = runQuery(this.allCases, cfg);
       (this._scheduleQuery || (() => window.Alpine.nextTick(() => this.renderQueryChart())))();
+    },
+
+    /** One cell of the two-variable table. */
+    crossCell(row, col) {
+      const r = this.queryResult;
+      const cell = r?.cross?.cells?.[row]?.[col];
+      const a = (this.query.aggregations || [])[this.crossAggIdx] || { fn: 'count' };
+      if (!cell) return a.fn === 'count' ? '0' : '—';
+      return this.fmt(cell.values[this.crossAggIdx], 1);
+    },
+    /** Light shading: the larger the value, the darker the cell. */
+    crossCellStyle(row, col) {
+      const r = this.queryResult;
+      if (!r?.cross) return '';
+      let max = 0;
+      for (const rw of r.cross.rows) for (const c of r.cross.cols) {
+        const v = r.cross.cells[rw]?.[c]?.values[this.crossAggIdx];
+        if (Number.isFinite(v) && v > max) max = v;
+      }
+      const v = r.cross.cells[row]?.[col]?.values[this.crossAggIdx];
+      if (!Number.isFinite(v) || !max || v <= 0) return '';
+      return `background: rgb(var(--c-primary) / ${(0.06 + 0.3 * (v / max)).toFixed(3)})`;
     },
 
     renderQueryChart() {
@@ -1298,20 +1527,45 @@ function makeApp() {
       };
 
       try {
+        // 0. two variables → grouped bars (first measure), one colour per column
+        if (r.cross && r.cross.rows.length) {
+          const cols = r.cross.cols.slice(0, CHART_COLORS.length);
+          const isCount = (effectiveAggs[this.crossAggIdx] || effectiveAggs[0]).fn === 'count';
+          this._chart = new window.Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: r.cross.rows.map((k) => (k.length > 28 ? k.slice(0, 26) + '…' : k)),
+              datasets: cols.map((col, idx) => ({
+                label: col,
+                data: r.cross.rows.map((row) => r.cross.cells[row]?.[col]?.values[this.crossAggIdx] ?? null),
+                backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+                borderRadius: 3,
+                stack: isCount ? 's' : undefined,
+              })),
+            },
+            options: {
+              ...baseOpts,
+              plugins: { ...baseOpts.plugins, legend: { display: true, position: 'bottom', labels: { boxWidth: 12 } } },
+              scales: isCount ? { ...baseOpts.scales, x: { ...(baseOpts.scales?.x || {}), stacked: true }, y: { ...(baseOpts.scales?.y || {}), stacked: true } } : baseOpts.scales,
+            },
+          });
+          return;
+        }
         // 1. group-by → bar chart (or doughnut for count-only with few groups)
         if (r.groupBy && r.groups.length) {
           const labels = r.groups.map((g) => g.key);
           const datasets = effectiveAggs.map((a, idx) => ({
             label: this.aggLabel(a),
             data: r.groups.map((g) => g.values[idx]),
-            backgroundColor: idx === 0 ? '#0F3D3E' : idx === 1 ? '#B85C38' : '#6B6358',
+            backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+            borderRadius: 3,
           }));
           const isCountOnly = effectiveAggs.length === 1 && effectiveAggs[0].fn === 'count';
           const useDoughnut = isCountOnly && labels.length <= 8;
           this._chart = new window.Chart(ctx, {
             type: useDoughnut ? 'doughnut' : 'bar',
             data: useDoughnut
-              ? { labels, datasets: [{ data: datasets[0].data, backgroundColor: ['#0F3D3E', '#B85C38', '#6B6358', '#143F40', '#C16C48', '#8B7E6C', '#3F5F5E', '#A04A2A'], borderColor: 'transparent' }] }
+              ? { labels, datasets: [{ data: datasets[0].data, backgroundColor: CHART_COLORS, borderColor: 'transparent' }] }
               : { labels, datasets },
             options: useDoughnut ? doughnutOpts : baseOpts,
           });
@@ -1328,7 +1582,8 @@ function makeApp() {
               datasets: [{
                 label: this.aggLabel(effectiveAggs[0]) + ' (distribution)',
                 data: bins.map((b) => b.count),
-                backgroundColor: '#0F3D3E',
+                backgroundColor: CHART_COLORS[0],
+                borderRadius: 3,
               }],
             },
             options: baseOpts,
@@ -1370,17 +1625,25 @@ function makeApp() {
         return;
       }
 
-      const opts = chartOptions(this.theme);
-      const optsNoLegend = { ...opts, plugins: { ...opts.plugins, legend: { display: false } } };
-      // Doughnut charts must NOT carry x/y scales — otherwise Chart.js
-      // draws an axis next to the ring (the "half-circle ruler" bug).
-      const optsDoughnut = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: opts.plugins,
-        cutout: '60%',
+      // Fresh option objects for every chart: Chart.js writes resolved scale
+      // types into the objects it is given, so sharing one object between a
+      // vertical and a horizontal bar chart turned the horizontal one around.
+      const theme = this.theme;
+      const noLegend = (extra = {}) => {
+        const o = chartOptions(theme);
+        return { ...o, ...extra, plugins: { ...o.plugins, legend: { display: false }, ...(extra.plugins || {}) } };
       };
-      const palette = ['#0F3D3E', '#B85C38', '#6B6358', '#143F40', '#C16C48', '#8B7E6C', '#3F5F5E', '#A04A2A'];
+      const doughnut = (legendPos = 'right') => {
+        const o = chartOptions(theme);
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          cutout: '62%',
+          plugins: { ...o.plugins, legend: { position: legendPos, labels: { ...o.plugins.legend.labels, boxWidth: 12, boxHeight: 12, padding: 10 } } },
+        };
+      };
+      const palette = CHART_COLORS;
 
       const make = (id, config) => {
         const el = document.getElementById(id);
@@ -1392,23 +1655,23 @@ function makeApp() {
         }
       };
 
-      // 1. Sexe doughnut
+      // 1. Sex doughnut
       const sexeCounts = countBy(this.allCases, (c) => c.sexe);
+      const SEX_LABEL = { F: 'Girls', M: 'Boys', D: 'Diverse' };
+      const sexKeys = ['F', 'M', 'D'].filter((k) => sexeCounts[k]).concat(Object.keys(sexeCounts).filter((k) => !['F', 'M', 'D'].includes(k)));
       make('dashSexe', {
         type: 'doughnut',
         data: {
-          labels: Object.keys(sexeCounts),
-          datasets: [{ data: Object.values(sexeCounts), backgroundColor: palette, borderColor: 'transparent' }],
+          labels: sexKeys.map((k) => SEX_LABEL[k] || k),
+          datasets: [{ data: sexKeys.map((k) => sexeCounts[k]), backgroundColor: ['#B4533A', '#2E3A9C', '#1F6B6F', '#7A8396'], borderColor: 'transparent' }],
         },
-        options: optsDoughnut,
+        options: doughnut('right'),
       });
 
-      // 2. Mesures doughnut (all three slots combined)
+      // 2. Measures doughnut (every measure of every case)
       const mesureCounts = {};
       for (const c of this.allCases) {
-        for (const k of ['mesure_cdse_1', 'mesure_cdse_2', 'mesure_cdse_3']) {
-          if (c[k]) mesureCounts[c[k]] = (mesureCounts[c[k]] || 0) + 1;
-        }
+        for (const k of c.measures_all || []) mesureCounts[k] = (mesureCounts[k] || 0) + 1;
       }
       const mesureEntries = Object.entries(mesureCounts).sort((a, b) => b[1] - a[1]);
       make('dashMesures', {
@@ -1417,30 +1680,62 @@ function makeApp() {
           labels: mesureEntries.map(([k]) => k),
           datasets: [{ data: mesureEntries.map(([, v]) => v), backgroundColor: palette, borderColor: 'transparent' }],
         },
-        options: optsDoughnut,
+        options: doughnut('right'),
       });
 
-      // 3. Top schools horizontal bar (up to 8)
+      // 3. Cases by Direction de région (natural order DR 01 … 15)
+      const drCounts = countBy(this.allCases, (c) => c.dir);
+      const drLabels = [...DR_OPTIONS.filter((d) => drCounts[d]), ...Object.keys(drCounts).filter((d) => !DR_OPTIONS.includes(d))];
+      make('dashDr', {
+        type: 'bar',
+        data: {
+          labels: drLabels.map((d) => d.replace(/^DR /, '')),
+          datasets: [{ data: drLabels.map((d) => drCounts[d]), backgroundColor: CHART_COLORS[0], borderColor: 'transparent', borderRadius: 4, maxBarThickness: 16 }],
+        },
+        options: noLegend({ indexAxis: 'y', scales: { ...chartOptions(theme).scales, y: { ...chartOptions(theme).scales.y, ticks: { ...chartOptions(theme).scales.y.ticks, autoSkip: false, font: { family: CHART_FONT, size: 11 } } } } }),
+      });
+
+      // 4. Measures running today
+      const runCounts = {};
+      for (const c of this.allCases) for (const k of c.measures_running || []) runCounts[k] = (runCounts[k] || 0) + 1;
+      const runKeys = MEASURE_KEYS.filter((k) => runCounts[k]);
+      make('dashRunning', {
+        type: 'bar',
+        data: {
+          labels: runKeys,
+          datasets: [{ data: runKeys.map((k) => runCounts[k]), backgroundColor: CHART_COLORS[1], borderColor: 'transparent', borderRadius: 4, maxBarThickness: 38 }],
+        },
+        options: noLegend(),
+      });
+
+      // 5. Average duration per measure (months)
+      const durKeys = [['ISA', 'dur_isa'], ['C&G', 'dur_cg'], ['Atelier', 'dur_atelier'], ['Rééducation', 'dur_reeducation'], ['Annexe', 'dur_annexe'], ['CST', 'dur_cst'], ['CdP', 'dur_cdp']]
+        .map(([k, f]) => {
+          const v = this.allCases.map((c) => c[f]).filter((x) => Number.isFinite(x));
+          return [k, v.length ? v.reduce((a, b) => a + b, 0) / v.length : null, v.length];
+        })
+        .filter(([, m]) => m !== null);
+      make('dashDur', {
+        type: 'bar',
+        data: {
+          labels: durKeys.map(([k]) => k),
+          datasets: [{ data: durKeys.map(([, m]) => Math.round(m * 10) / 10), backgroundColor: CHART_COLORS[4], borderColor: 'transparent', borderRadius: 4, maxBarThickness: 38 }],
+        },
+        options: noLegend({ plugins: { tooltip: { callbacks: { label: (it) => `${it.parsed.y} months (n = ${durKeys[it.dataIndex][2]})` } } } }),
+      });
+
+      // 6. Top schools — full names, no codes
       const schoolEntries = topEntries(countBy(this.allCases, (c) => c.ecole_lycee), 8);
       make('dashSchools', {
         type: 'bar',
         data: {
-          labels: schoolEntries.map(([k]) => shortLabelOf(k)),
-          datasets: [{ data: schoolEntries.map(([, v]) => v), backgroundColor: '#0F3D3E', borderColor: 'transparent' }],
+          labels: schoolEntries.map(([k]) => wrapLabel(k, 26)),
+          datasets: [{ data: schoolEntries.map(([, v]) => v), backgroundColor: CHART_COLORS[0], borderColor: 'transparent', borderRadius: 4, maxBarThickness: 18 }],
         },
-        options: {
-          ...optsNoLegend,
-          indexAxis: 'y',
-          plugins: {
-            ...optsNoLegend.plugins,
-            tooltip: {
-              callbacks: { title: (items) => schoolEntries[items[0].dataIndex][0] },
-            },
-          },
-        },
+        options: noLegend({ indexAxis: 'y', plugins: { tooltip: { callbacks: { title: (items) => schoolEntries[items[0].dataIndex][0] } } } }),
       });
 
-      // 4. Top diagnoses horizontal bar (up to 10)
+      // 7. Top diagnoses horizontal bar (up to 10)
       const diagCounts = {};
       for (const c of this.allCases) {
         for (const d of c.diagnostics || []) diagCounts[d] = (diagCounts[d] || 0) + 1;
@@ -1450,21 +1745,12 @@ function makeApp() {
         type: 'bar',
         data: {
           labels: diagEntries.map(([k]) => shortLabelOf(k)),
-          datasets: [{ data: diagEntries.map(([, v]) => v), backgroundColor: '#B85C38', borderColor: 'transparent' }],
+          datasets: [{ data: diagEntries.map(([, v]) => v), backgroundColor: CHART_COLORS[2], borderColor: 'transparent', borderRadius: 4, maxBarThickness: 18 }],
         },
-        options: {
-          ...optsNoLegend,
-          indexAxis: 'y',
-          plugins: {
-            ...optsNoLegend.plugins,
-            tooltip: {
-              callbacks: { title: (items) => diagEntries[items[0].dataIndex][0] },
-            },
-          },
-        },
+        options: noLegend({ indexAxis: 'y', plugins: { tooltip: { callbacks: { title: (items) => diagEntries[items[0].dataIndex][0] } } } }),
       });
 
-      // 5. Age histogram
+      // Age histogram
       const ages = this.allCases.map((c) => c.age).filter((v) => Number.isFinite(v));
       if (ages.length) {
         const bins = histogram(ages, Math.min(12, Math.max(4, Math.ceil(Math.sqrt(ages.length)))));
@@ -1472,13 +1758,13 @@ function makeApp() {
           type: 'bar',
           data: {
             labels: bins.map((b) => `${Math.round(b.from)}–${Math.round(b.to)}`),
-            datasets: [{ data: bins.map((b) => b.count), backgroundColor: '#0F3D3E', borderColor: 'transparent' }],
+            datasets: [{ data: bins.map((b) => b.count), backgroundColor: CHART_COLORS[0], borderColor: 'transparent', borderRadius: 3 }],
           },
-          options: optsNoLegend,
+          options: noLegend(),
         });
       }
 
-      // 6. IQ histogram
+      // IQ histogram
       const iqs = this.allCases.map((c) => Number(c.iq)).filter((v) => Number.isFinite(v));
       if (iqs.length) {
         const bins = histogram(iqs, Math.min(12, Math.max(4, Math.ceil(Math.sqrt(iqs.length)))));
@@ -1486,9 +1772,9 @@ function makeApp() {
           type: 'bar',
           data: {
             labels: bins.map((b) => `${Math.round(b.from)}–${Math.round(b.to)}`),
-            datasets: [{ data: bins.map((b) => b.count), backgroundColor: '#B85C38', borderColor: 'transparent' }],
+            datasets: [{ data: bins.map((b) => b.count), backgroundColor: CHART_COLORS[2], borderColor: 'transparent', borderRadius: 3 }],
           },
-          options: optsNoLegend,
+          options: noLegend(),
         });
       }
     },
@@ -1496,19 +1782,27 @@ function makeApp() {
     // ====================================================================
     // Query Builder: show matching cases
     // ====================================================================
-    showMatchingCases() {
-      const clean = (this.query.filters || []).filter((f) => {
-        const op = operatorsFor(f.field).find((o) => o.key === f.op);
-        if (!op) return false;
-        if (op.needsValue && (f.value === '' || f.value === null || f.value === undefined)) return false;
-        if (op.needsValue2 && (f.value2 === '' || f.value2 === null || f.value2 === undefined)) return false;
-        return true;
-      });
-      this.queryMatches = filterRecords(this.allCases, clean);
+    showMatchingCases(columns) {
+      if (Array.isArray(columns)) this.matchColumns = columns;
+      this.queryMatches = filterRecords(this.allCases, this.cleanFilters(), this.query.match || 'all');
     },
 
     hideMatchingCases() {
       this.queryMatches = null;
+      this.matchColumns = null;
+    },
+
+    get matchTableColumns() {
+      return this.matchColumns || this.visibleColumns;
+    },
+
+    exportMatchesCSV() {
+      if (!this.queryMatches) return;
+      const cols = this.matchTableColumns;
+      const rows = this.queryMatches.map((c) => cols.map((k) => (Array.isArray(c[k]) ? c[k].join('; ') : c[k] ?? '')));
+      const csv = [cols.map((k) => this.labelOf(k)), ...rows].map((row) => row.map(csvEscape).join(';')).join('\r\n');
+      downloadBlob(`cdse-cases-${Date.now()}.csv`, '\uFEFF' + csv, 'text/csv;charset=utf-8');
+      audit.record({ action: 'export', user: this.user, summary: `Matching cases (CSV) — ${this.queryMatches.length} cases` });
     },
 
     aggLabel(a) {
@@ -1533,7 +1827,7 @@ function makeApp() {
     loadSavedQuery(id) {
       const q = this.savedQueriesList.find((x) => x.id === id);
       if (!q) return;
-      this.query = JSON.parse(JSON.stringify(q.config));
+      this.query = normalizeQuery(q.config);
       this.saveQueryName = q.name;
       this.editingSavedQueryId = q.id;
       this.runCurrentQuery();
@@ -1553,27 +1847,15 @@ function makeApp() {
     // ====================================================================
     /** Variables exposed in filter / group-by selects, grouped by category
      *  so the dropdowns are scannable instead of a wall of 38 options. */
+    /** Variables exposed in the filter select, grouped by form section. */
     get filterableByCategory() {
-      const out = [];
-      for (const cat of CATEGORIES) {
-        const fields = FIELD_DEFS.filter((f) => f.category === cat.key && f.type !== 'computed');
-        if (cat.key === 'demographics') fields.splice(fields.length, 0, { key: 'age', label: 'Age (computed)', type: 'number', category: 'demographics' });
-        if (fields.length) out.push({ ...cat, fields });
-      }
-      return out;
+      return groupFieldsByCategory(FILTERABLE_FIELDS);
     },
 
+    /** Variables a result can be grouped by — multi-value ones (diagnoses,
+     *  measures …) fan out, one bucket per value. */
     get groupableByCategory() {
-      const out = [];
-      for (const cat of CATEGORIES) {
-        // Tags fields (diagnostics, guardianship, family measures, …) are
-        // now groupable too — the engine fans them out, one bucket per tag.
-        const fields = FIELD_DEFS.filter(
-          (f) => f.category === cat.key && (f.type === 'select' || f.type === 'text' || f.type === 'tags'),
-        );
-        if (fields.length) out.push({ ...cat, fields });
-      }
-      return out;
+      return groupFieldsByCategory(GROUPABLE_FIELDS);
     },
 
     /** Build the current query as a readable English sentence. */
@@ -1587,16 +1869,8 @@ function makeApp() {
         sum:    'the sum',
         stddev: 'the std. deviation',
       };
-      // Keep all-caps abbreviations as-is, otherwise leave the label's case alone
-      // (so 'IQ' stays IQ, 'DIR' stays DIR, 'School' stays as written).
       const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || a.field);
-      const filters = (this.query.filters || []).filter((f) => {
-        const ops = operatorsFor(f.field);
-        const op = ops.find((o) => o.key === f.op);
-        if (!op) return false;
-        if (op.needsValue && (f.value === '' || f.value == null)) return false;
-        return true;
-      });
+      const filters = this.cleanFilters();
 
       let measure;
       if (!aggs.length) {
@@ -1614,18 +1888,20 @@ function makeApp() {
 
       if (filters.length) {
         const fp = filters.map((f) => {
-          const op = operatorsFor(f.field).find((o) => o.key === f.op);
+          const op = this.opOf(f);
           const label = this.labelOf(f.field);
           if (!op.needsValue) return `${label} ${op.label}`;
-          let val = f.value;
-          if (op.needsValue2) val = `${f.value} and ${f.value2}`;
-          return `${label} ${op.label} “${val}”`;
+          if (op.multi) return `${label} ${op.label} ${(f.value || []).map((v) => `“${v}”`).join(', ')}`;
+          if (op.needsValue2) return `${label} ${op.label} “${f.value}” and “${f.value2}”`;
+          return `${label} ${op.label} “${f.value}”`;
         });
-        body += ' where ' + fp.join(' and ');
+        const joiner = this.query.match === 'any' ? ' or ' : ' and ';
+        body += (filters.length > 1 && this.query.match === 'any' ? ' where at least one holds: ' : ' where ') + fp.join(joiner);
       }
 
       if (this.query.groupBy) {
         body += `, grouped by ${this.labelOf(this.query.groupBy)}`;
+        if (this.query.groupBy2 && this.query.groupBy2 !== this.query.groupBy) body += ` and by ${this.labelOf(this.query.groupBy2)}`;
       }
 
       return body + '.';
@@ -1649,8 +1925,24 @@ function makeApp() {
       return parseQuestion(this.naturalQuestion || '', {
         fieldDefs: FIELD_DEFS,
         numericFields: NUMERIC_FIELDS,
-        dirOptions: (FIELD_DEFS.find((f) => f.key === 'dir')?.options) || [],
-        schoolPresets: LYCEES_LUXEMBOURG,
+        groupableFields: GROUPABLE_FIELDS,
+        dirOptions: DR_OPTIONS,
+        schoolPresets: this.listValues('schools'),
+      });
+    },
+
+    /** Put a query into the builder, run it and scroll to the result. */
+    _loadAndRun(config, columns) {
+      this.query = normalizeQuery(config);
+      this.editingSavedQueryId = null;
+      this.saveQueryName = '';
+      this.queryMatches = null;
+      this.matchColumns = null;
+      this.runCurrentQuery();
+      if (Array.isArray(columns)) this.showMatchingCases(columns);
+      window.Alpine.nextTick(() => {
+        const el = document.getElementById('queryResultAnchor');
+        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     },
 
@@ -1658,15 +1950,7 @@ function makeApp() {
     runNaturalQuery() {
       const r = this.naturalParse;
       if (!r.understood && !this.naturalQuestion.trim()) return;
-      this.query = JSON.parse(JSON.stringify(r.config));
-      this.editingSavedQueryId = null;
-      this.saveQueryName = '';
-      this.queryMatches = null;
-      this.runCurrentQuery();
-      window.Alpine.nextTick(() => {
-        const el = document.getElementById('queryResultAnchor');
-        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      this._loadAndRun(r.config);
     },
 
     setNaturalExample(text) {
@@ -1677,33 +1961,55 @@ function makeApp() {
     runPreset(id) {
       const p = this.QUERY_PRESETS.find((x) => x.id === id);
       if (!p) return;
-      this.query = JSON.parse(JSON.stringify(p.config));
-      this.editingSavedQueryId = null;
-      this.saveQueryName = '';
-      this.queryMatches = null;
-      this.runCurrentQuery();
-      window.Alpine.nextTick(() => {
-        const el = document.getElementById('queryResultAnchor');
-        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      this._loadAndRun(p.config, p.columns);
     },
 
     newQuery() {
-      this.query = { aggregations: [{ field: 'iq', fn: 'mean' }], filters: [], groupBy: '' };
+      this.query = normalizeQuery({ aggregations: [{ fn: 'count', field: null }], filters: [], groupBy: '' });
       this.editingSavedQueryId = null;
       this.saveQueryName = '';
       this.queryResult = null;
+      this.queryMatches = null;
+      this.matchColumns = null;
       if (this._chart) { this._chart.destroy(); this._chart = null; }
+    },
+
+    /** Result as rows for CSV / PDF. With two variables: one row per first
+     *  value, one column per second value (first measure of the query). */
+    _resultTable() {
+      const r = this.queryResult;
+      const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || !!a.field);
+      const effectiveAggs = aggs.length ? aggs : [{ fn: 'count', field: null }];
+      const num = (v) => (v == null ? '' : (typeof v === 'number' && !Number.isInteger(v) ? Math.round(v * 10) / 10 : v));
+      if (r.cross) {
+        const tables = effectiveAggs.map((a, ai) => ({
+          title: `${this.aggLabel(a)} — ${this.labelOf(r.groupBy)} × ${this.labelOf(r.groupBy2)}`,
+          header: [this.labelOf(r.groupBy), ...r.cross.cols, 'All'],
+          rows: r.cross.rows.map((row) => [
+            row,
+            ...r.cross.cols.map((col) => num(r.cross.cells[row]?.[col]?.values[ai] ?? (a.fn === 'count' ? 0 : null))),
+            num(r.groups.find((g) => g.key === row)?.values[ai]),
+          ]),
+        }));
+        return tables;
+      }
+      return [{
+        title: '',
+        header: [r.groupBy ? this.labelOf(r.groupBy) : 'Group', 'n', ...effectiveAggs.map((a) => this.aggLabel(a))],
+        rows: r.groups.map((g) => [g.key, g.n, ...g.values.map(num)]),
+      }];
     },
 
     exportQueryCSV() {
       const r = this.queryResult;
       if (!r) return;
-      const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || !!a.field);
-      const effectiveAggs = aggs.length ? aggs : [{ fn: 'count', field: null }];
-      const header = ['Group', 'n', ...effectiveAggs.map((a) => this.aggLabel(a))];
-      const rows = r.groups.map((g) => [g.key, g.n, ...g.values.map((v) => v ?? '')]);
-      const csv = [header, ...rows].map((row) => row.map(csvEscape).join(';')).join('\n');
+      const lines = [[this.questionPreview]];
+      for (const t of this._resultTable()) {
+        lines.push([]);
+        if (t.title) lines.push([t.title]);
+        lines.push(t.header, ...t.rows);
+      }
+      const csv = lines.map((row) => row.map(csvEscape).join(';')).join('\r\n');
       downloadBlob(`cdse-query-${Date.now()}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
       audit.record({ action: 'export', user: this.user, summary: 'Query result (CSV)' });
     },
@@ -1720,62 +2026,61 @@ function makeApp() {
       if (!r) return;
       const canvas = document.getElementById('queryChart');
       const chartUrl = (canvas && canvas.width > 0) ? canvas.toDataURL('image/png') : null;
-      const aggs = (this.query.aggregations || []).filter((a) => a.fn === 'count' || !!a.field);
-      const effectiveAggs = aggs.length ? aggs : [{ fn: 'count', field: null }];
-      const headers = ['Group', 'n', ...effectiveAggs.map((a) => this.aggLabel(a))];
-      const rows = r.groups.map((g) => [g.key, g.n, ...g.values.map((v) => v == null ? '' : (typeof v === 'number' ? Number(v).toFixed(1) : v))]);
       const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
       const sentence = this.questionPreview || 'Query result';
       const fanout = r.fannedOut
-        ? '<p class="caption">Multi-value field — a case with several tags is counted in each bucket, so the bucket totals can exceed the case count.</p>'
+        ? '<p class="caption">Multi-value variable — a case with several values is counted once for each, so the totals can exceed the number of cases.</p>'
         : '';
+      const tables = this._resultTable().map((t) => `
+${t.title ? `<h2>${escapeHtml(t.title)}</h2>` : ''}
+<table>
+  <thead><tr>${t.header.map((h) => `<th>${escapeHtml(String(h))}</th>`).join('')}</tr></thead>
+  <tbody>
+    ${t.rows.map((row) => `<tr>${row.map((c, i) => `<td${i === 0 ? '' : ' class="num"'}>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('')}
+  </tbody>
+</table>`).join('');
       const html = `<!doctype html><html><head><meta charset="utf-8">
 <title>CDSE Statistics — ${escapeHtml(sentence)}</title>
 <style>
-  @page { margin: 22mm 18mm; size: A4 portrait; }
-  body { font-family: "Schibsted Grotesk", system-ui, sans-serif; color: #1A1814; }
-  header { display:flex; align-items:flex-start; gap:14px; padding-bottom:14px; border-bottom:1px solid #E5DFD2; margin-bottom:18px; }
-  .mark { width:34px;height:34px;border:1px solid #E5DFD2;border-radius:999px;
-          display:inline-flex;align-items:center;justify-content:center;
-          background:rgba(15,61,62,0.05);color:#0F3D3E;
-          font-family:"Instrument Serif",serif;font-style:italic;font-size:22px;padding-bottom:2px;}
-  .brand-title { font-family:"Instrument Serif",serif;font-style:italic;font-size:22px;line-height:1;margin:0; }
-  .brand-sub { font-size:9px;text-transform:uppercase;letter-spacing:0.18em;color:#6B6358;margin-top:4px; }
-  h1 { font-size:18px;margin:8px 0 4px 0;font-weight:500; }
-  .meta { font-size:11px;color:#6B6358;margin-bottom:18px; }
-  .chart-wrap { text-align:center;margin:6px 0 16px 0; }
+  @page { margin: 20mm 18mm; size: A4 portrait; }
+  body { font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif; color: #0E1628; font-size: 12px; }
+  header { display:flex; align-items:center; gap:12px; padding-bottom:12px; border-bottom:2px solid #2E3A9C; margin-bottom:18px; }
+  .mark { width:34px;height:34px;border-radius:9px;background:#2E3A9C;color:#fff;
+          display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;letter-spacing:.02em; }
+  .brand-title { font-size:17px;font-weight:700;line-height:1.1;margin:0; }
+  .brand-sub { font-size:10px;color:#586277;margin-top:2px; }
+  h1 { font-size:17px;margin:6px 0 4px 0;font-weight:600;line-height:1.3; }
+  h2 { font-size:12px;margin:18px 0 4px 0;font-weight:600;color:#2E3A9C; }
+  .meta { font-size:11px;color:#586277;margin-bottom:16px; }
+  .chart-wrap { text-align:center;margin:6px 0 14px 0; }
   .chart-wrap img { max-width:100%;height:auto; }
-  table { width:100%;border-collapse:collapse;font-size:11px;margin-top:8px; }
-  th, td { text-align:left;padding:6px 8px;border-bottom:1px solid #E5DFD2; }
-  th { background:rgba(15,61,62,0.04);font-weight:500;color:#6B6358;text-transform:uppercase;font-size:9px;letter-spacing:0.1em; }
-  td.num { font-variant-numeric: tabular-nums; font-family: "JetBrains Mono",ui-monospace,monospace; text-align:right; }
-  .caption { font-size:10px;color:#6B6358;font-style:italic;margin:6px 0 0 0; }
-  footer { margin-top:24px;padding-top:10px;border-top:1px solid #E5DFD2;
-           font-size:10px;color:#6B6358;display:flex;justify-content:space-between; }
+  table { width:100%;border-collapse:collapse;font-size:11px;margin-top:6px; }
+  th, td { text-align:left;padding:5px 7px;border-bottom:1px solid #E2E6EC; }
+  th { background:#F3F5F9;font-weight:600;color:#586277;font-size:10px; }
+  td.num, th:not(:first-child) { text-align:right; }
+  td.num { font-variant-numeric: tabular-nums; }
+  .caption { font-size:10px;color:#586277;font-style:italic;margin:6px 0 0 0; }
+  footer { margin-top:24px;padding-top:8px;border-top:1px solid #E2E6EC;
+           font-size:10px;color:#586277;display:flex;justify-content:space-between; }
   @media print { .no-print { display:none !important; } }
-  .no-print { text-align:right;margin:0 0 18px 0; }
-  .no-print button { font:inherit;background:#0F3D3E;color:#FAF8F4;border:0;padding:8px 14px;border-radius:6px;cursor:pointer; }
+  .no-print { text-align:right;margin:0 0 16px 0; }
+  .no-print button { font:inherit;background:#2E3A9C;color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer; }
 </style></head><body>
 <div class="no-print"><button onclick="window.print()">Print / save as PDF</button></div>
 <header>
-  <div class="mark">C</div>
+  <div class="mark">CDSE</div>
   <div>
-    <div class="brand-title">Statistics</div>
-    <div class="brand-sub">Centre pour le Développement Social et Éducatif</div>
+    <div class="brand-title">CDSE Statistics</div>
+    <div class="brand-sub">Centre pour le développement socio-émotionnel · Luxembourg</div>
   </div>
 </header>
-<h1>${escapeHtml(sentence)}</h1>
-<div class="meta">On ${r.n} matching case(s) · generated ${today}</div>
+<h1>${escapeHtml(sentence.charAt(0).toUpperCase() + sentence.slice(1))}</h1>
+<div class="meta">${r.n} matching case(s) · generated ${today}</div>
 ${chartUrl ? `<div class="chart-wrap"><img src="${chartUrl}" alt="Chart"/></div>` : ''}
 ${fanout}
-<table>
-  <thead><tr>${headers.map((h) => `<th>${escapeHtml(String(h))}</th>`).join('')}</tr></thead>
-  <tbody>
-    ${rows.map((row) => `<tr>${row.map((c, i) => `<td${i === 0 ? '' : ' class="num"'}>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('')}
-  </tbody>
-</table>
+${tables}
 <footer>
-  <span>CDSE Luxembourg — Statistics</span>
+  <span>CDSE — Statistics · internal use only</span>
   <span>${today}</span>
 </footer>
 <script>window.addEventListener('load', () => setTimeout(() => window.print(), 250));<\/script>
@@ -1884,62 +2189,146 @@ ${fanout}
       return (this.allCases?.length || 0) > 0 && this.backupAgeDays >= 7;
     },
 
+    // -- Import: Excel / CSV / JSON --------------------------------------
+    // Excel and CSV go through a column-assignment step: every column of the
+    // sheet is matched to a field (best guess first, the user can change it),
+    // then values are converted (dates, sex, DR, measures …) and previewed.
+    // Everything happens in this browser — the file is never uploaded.
     async onImportFile(ev) {
       this.importError = '';
-      this.importPreview = null;
+      this.importStep = '';
       const file = ev.target.files?.[0];
+      ev.target.value = '';
       if (!file) return;
+      this.importBusy = true;
       try {
-        const text = await file.text();
-        let records;
         if (file.name.toLowerCase().endsWith('.json')) {
-          records = JSON.parse(text);
-          if (!Array.isArray(records)) throw new Error('The JSON must be an array.');
+          let records = JSON.parse(await file.text());
+          if (records && records.format === 'cdse-sync-v1' && Array.isArray(records.cases)) records = records.cases;
+          if (!Array.isArray(records)) throw new Error('The JSON must be a list of cases (an export of this tool).');
+          this.importSheet = null;
+          await this._prepareImportPreview(records, file.name, [], 0);
         } else {
-          const rows = parseCSV(text.replace(/^﻿/, ''));
-          if (!rows.length) throw new Error('CSV vide.');
-          const header = rows[0].map((h) => h.trim());
-          records = rows.slice(1).map((r) => {
-            const obj = {};
-            header.forEach((h, i) => {
-              const def = getField(h);
-              let v = r[i];
-              if (v === undefined) v = '';
-              if (def?.type === 'tags') v = v ? v.split(/[;|]\s*/).map((s) => s.trim()).filter(Boolean) : [];
-              if (def?.type === 'number' && v !== '') v = Number(v);
-              obj[h] = v;
-            });
-            return obj;
-          });
+          const { sheets } = await readSpreadsheet(file);
+          const best = sheets.reduce((bi, sh, i) => (sh.rows.length > sheets[bi].rows.length ? i : bi), 0);
+          this.importSheet = { fileName: file.name, sheets, sheetIdx: best, mapping: guessMapping(sheets[best].headers) };
+          this.importStep = 'map';
         }
-        const existing = await cases.list();
-        const existingMatricules = new Set(existing.map((c) => c.matricule).filter(Boolean));
-        let willAdd = 0, willConflict = 0;
-        for (const r of records) {
-          if (r.matricule && existingMatricules.has(r.matricule)) willConflict++;
-          else willAdd++;
-        }
-        this.importPreview = { records, willAdd, willConflict, fileName: file.name };
       } catch (e) {
         this.importError = e.message || String(e);
       }
-      ev.target.value = '';
+      this.importBusy = false;
+    },
+
+    get importCurrentSheet() {
+      const s = this.importSheet;
+      return s ? s.sheets[s.sheetIdx] || s.sheets[0] : null;
+    },
+    onImportSheetChange() {
+      const sh = this.importCurrentSheet;
+      if (sh) this.importSheet.mapping = guessMapping(sh.headers);
+    },
+    /** A few example values of a column, so the user recognises it. */
+    importExamples(col) {
+      const sh = this.importCurrentSheet;
+      if (!sh) return '';
+      const out = [];
+      for (const row of sh.rows) {
+        let v = row[col];
+        if (v && typeof v === 'object' && 'excelDate' in v) v = toIsoDate(v) || '';
+        v = String(v ?? '').trim();
+        if (v && !out.includes(v)) out.push(v.length > 28 ? v.slice(0, 26) + '…' : v);
+        if (out.length >= 3) break;
+      }
+      return out.join(' · ');
+    },
+    get importTargetsByCategory() {
+      return groupFieldsByCategory(IMPORT_TARGETS);
+    },
+    get importMappedCount() {
+      return (this.importSheet?.mapping || []).filter(Boolean).length;
+    },
+    /** A field chosen for two columns — only allowed for multi-value fields. */
+    importDuplicate(col) {
+      const m = this.importSheet?.mapping || [];
+      const k = m[col];
+      if (!k || getField(k)?.type === 'tags') return false;
+      return m.indexOf(k) !== col;
+    },
+    async confirmImportMapping() {
+      const sh = this.importCurrentSheet;
+      if (!sh) return;
+      const mapping = [...this.importSheet.mapping];
+      if (!mapping.some(Boolean)) { this.importError = 'Assign at least one column to a field.'; return; }
+      // A second column for the same single-value field is ignored
+      mapping.forEach((k, i) => { if (this.importDuplicate(i)) mapping[i] = ''; });
+      this.importError = '';
+      const { records, problems, skipped } = convertRows(sh.rows, mapping);
+      await this._prepareImportPreview(records, `${this.importSheet.fileName} — ${sh.name}`, problems, skipped);
+    },
+    backToImportMapping() { this.importStep = this.importSheet ? 'map' : ''; },
+
+    /** Count what the import will do. A row without National ID is matched to
+     *  an existing case by last name + first name + date of birth. */
+    async _prepareImportPreview(records, fileName, problems, skipped) {
+      const existing = await cases.list();
+      const byMatricule = new Map(existing.filter((c) => c.matricule).map((c) => [String(c.matricule), c]));
+      const nameKey = (c) => [c.nom, c.prenom, c.date_naissance].map((x) => String(x || '').trim().toLowerCase()).join('|');
+      const byName = new Map(existing.filter((c) => c.nom && c.prenom && c.date_naissance).map((c) => [nameKey(c), c]));
+      // The same pupil on several rows (e.g. one row per measure) → one case
+      const merged = [];
+      const seen = new Map();
+      let mergedRows = 0;
+      for (const r of records) {
+        const k = r.matricule ? 'id:' + String(r.matricule).trim()
+          : (r.nom && r.prenom && r.date_naissance ? 'name:' + nameKey(r) : null);
+        if (k && seen.has(k)) { mergeImportRow(merged[seen.get(k)], r); mergedRows++; continue; }
+        if (k) seen.set(k, merged.length);
+        merged.push({ ...r });
+      }
+      let willAdd = 0, willConflict = 0, noId = 0, noName = 0;
+      const prepared = merged.map((r) => {
+        const rec = { ...r };
+        if (rec.matricule != null) rec.matricule = String(rec.matricule).trim();
+        let match = rec.matricule ? byMatricule.get(rec.matricule) : null;
+        if (!match && !rec.matricule && rec.nom && rec.prenom && rec.date_naissance) match = byName.get(nameKey(rec)) || null;
+        if (match && !rec.id) rec.id = match.id;
+        if (match) willConflict++; else willAdd++;
+        if (!rec.matricule && !match) noId++;
+        if (!rec.nom || !rec.prenom) noName++;
+        return rec;
+      });
+      const cols = ['matricule', 'nom', 'prenom', 'sexe', 'date_naissance', 'dir', 'ecole_lycee', 'mesure_cdse_1']
+        .filter((k) => prepared.some((r) => hasValue(r[k])));
+      const extra = [...new Set(prepared.flatMap((r) => Object.keys(r)))].filter((k) => getField(k) && !cols.includes(k)).slice(0, Math.max(0, 9 - cols.length));
+      this.importPreview = {
+        records: prepared, fileName, willAdd, willConflict, noId, noName, mergedRows,
+        problems: problems || [], skipped: skipped || 0,
+        columns: [...cols, ...extra],
+        sample: prepared.slice(0, 6),
+        fromSheet: !!(this.importSheet && fileName.startsWith(this.importSheet.fileName)),
+      };
+      this.importStep = 'preview';
     },
 
     async runImport() {
       if (!this.importPreview) return;
-      const summary = await cases.importAll(this.importPreview.records, this.importMode);
-      await audit.record({
-        action: 'import',
-        user: this.user,
-        summary: `Import (${this.importMode}) — ${summary.added} added, ${summary.updated} updated, ${summary.skipped} skipped`,
-      });
-      this.notify(`Import : +${summary.added} · ↻${summary.updated} · –${summary.skipped}`);
-      this.importPreview = null;
-      await this.refreshAll();
+      const run = async () => {
+        const summary = await cases.importAll(this.importPreview.records, this.importMode);
+        await audit.record({
+          action: 'import',
+          user: this.user,
+          summary: `Import (${this.importMode}) from ${this.importPreview.fileName} — ${summary.added} added, ${summary.updated} updated, ${summary.skipped} skipped`,
+        });
+        this.notify(`Import: ${summary.added} added · ${summary.updated} updated · ${summary.skipped} skipped`);
+        this.importStep = '';
+        await this.refreshAll();
+      };
+      if (this.importMode === 'replace') this.ask('Replace deletes every case in this browser and loads the file instead. Continue?', run);
+      else await run();
     },
 
-    cancelImport() { this.importPreview = null; this.importError = ''; },
+    cancelImport() { this.importStep = ''; this.importError = ''; },
 
     // ====================================================================
     // Audit
@@ -1963,6 +2352,118 @@ ${fanout}
     // ====================================================================
     // Settings
     // ====================================================================
+    // -- Lists (schools, ateliers, rééducation types) --------------------
+    loadLists() {
+      try { this.listsState = lists ? lists.all() : { schools: null, ateliers: null, reeducation: null }; }
+      catch { this.listsState = { schools: null, ateliers: null, reeducation: null }; }
+      for (const m of LIST_META) this.listDraft[m.key] = this.listValues(m.key).join('\n');
+    },
+    listDraftCount(key) {
+      return String(this.listDraft[key] || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean).length;
+    },
+    listChanged(key) {
+      return this.listDraft[key] !== this.listValues(key).join('\n');
+    },
+    async saveList(key) {
+      if (!lists) return;
+      const meta = LIST_META.find((m) => m.key === key);
+      const values = String(this.listDraft[key] || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+      const before = this.listValues(key);
+      const saved = lists.set(key, values);
+      this.listsState = { ...this.listsState, [key]: saved };
+      this.listDraft[key] = saved.join('\n');
+      const added = saved.filter((v) => !before.includes(v)).length;
+      const removed = before.filter((v) => !saved.includes(v)).length;
+      await audit.record({ action: 'settings', user: this.user, summary: `List “${meta?.label || key}” saved — ${saved.length} entries (+${added} / −${removed})` });
+      this.notify(`List saved: ${saved.length} entries.`);
+    },
+    /** Add every value already typed in the cases to the list draft. */
+    addUsedValuesToList(key) {
+      const meta = LIST_META.find((m) => m.key === key);
+      if (!meta) return;
+      const cur = String(this.listDraft[key] || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+      const seen = new Set(cur.map((x) => x.toLowerCase()));
+      const found = [];
+      for (const c of this.allCases) {
+        for (const f of meta.fields) {
+          const v = String(c[f] || '').trim();
+          if (v && !seen.has(v.toLowerCase())) { seen.add(v.toLowerCase()); found.push(v); }
+        }
+      }
+      found.sort((a, b) => a.localeCompare(b, 'fr'));
+      this.listDraft[key] = [...cur, ...found].join('\n');
+      this.notify(found.length ? `${found.length} value(s) from the cases added — check them, then Save.` : 'No other values found in the cases.');
+    },
+    resetListDraft(key) {
+      this.listDraft[key] = (DEFAULT_LISTS[key] || []).join('\n');
+    },
+
+    // -- Clean up: replace an old or misspelt value in every case ---------
+    get cleanupFieldDef() { return getField(this.cleanupField); },
+    async loadCleanup() {
+      const def = getField(this.cleanupField);
+      const rows = await cases.rawValueCounts(this.cleanupField);
+      const known = this.cleanupKnownValues(def);
+      this.cleanupValues = rows.map((r) => ({
+        ...r,
+        known: known.includes(r.value),
+        mappedTo: this.cleanupField === 'dir' ? (DIR_LEGACY_MAP[r.value] || null) : null,
+      }));
+      const targets = {};
+      for (const r of this.cleanupValues) targets[r.value] = r.mappedTo || '';
+      this.cleanupTargets = targets;
+      this.cleanupLoaded = true;
+    },
+    /** The values that count as correct for a field (its choices or its list). */
+    cleanupKnownValues(def) {
+      if (!def) return [];
+      if (def.type === 'select') return def.options || [];
+      if (def.listKey) return this.listValues(def.listKey);
+      const presets = presetsForField(def.key);
+      return presets.length ? presets : [];
+    },
+    cleanupNote(r) {
+      if (r.mappedTo) return `old DIR name — already shown as “${r.mappedTo}”; replace to store it that way`;
+      const def = getField(this.cleanupField);
+      if (r.known) return '';
+      if (def?.type === 'select') return this.cleanupField === 'dir' ? 'old DIR name — pick the right Direction de région' : 'no longer one of the choices';
+      if (def?.listKey) return 'not in the list (Settings → Lists)';
+      return presetsForField(this.cleanupField).length ? 'not one of the suggestions' : '';
+    },
+    cleanupChoices() {
+      const def = getField(this.cleanupField);
+      const known = this.cleanupKnownValues(def);
+      const used = this.cleanupValues.map((r) => r.value);
+      return [...new Set([...known, ...used])];
+    },
+    applyCleanup(from) {
+      const to = String(this.cleanupTargets[from] ?? '').trim();
+      if (to === from) { this.notify('Pick a different value first.', 'err'); return; }
+      const def = getField(this.cleanupField);
+      const n = this.cleanupValues.find((r) => r.value === from)?.n || 0;
+      const what = to ? `“${from}” → “${to}”` : `remove “${from}”`;
+      this.ask(`${def?.label || this.cleanupField}: ${what} in ${n} case(s)?`, async () => {
+        const before = new Map(this.allCases.map((c) => [c.id, c]));
+        const ids = await cases.replaceValue(this.cleanupField, from, to);
+        for (const id of ids) {
+          const b = before.get(id);
+          await audit.record({
+            action: 'update', caseId: id, user: this.user,
+            summary: `Clean up — ${b ? `${b.prenom || ''} ${b.nom || ''}`.trim() : id}: ${def?.label || this.cleanupField} ${what}`,
+            changes: { [this.cleanupField]: { from, to } },
+          });
+        }
+        await this.refreshAll();
+        await this.loadCleanup();
+        this.notify(`${ids.length} case(s) updated.`);
+      });
+    },
+
+    hideWhatsNew() {
+      this.whatsNewHidden = true;
+      try { localStorage.setItem('cdse_whatsnew_v2', 'hidden'); } catch { /* private mode */ }
+    },
+
     async wipeAll() {
       this.ask('Erase everything? This cannot be undone. Export a backup first.', async () => {
         localStorage.removeItem('cdse_cases_v1');
@@ -1970,6 +2471,8 @@ ${fanout}
         localStorage.removeItem('cdse_saved_queries_v1');
         localStorage.removeItem('cdse_audit_v1');
         localStorage.removeItem('cdse_demo_ids_v1');
+        localStorage.removeItem('cdse_lists_v1');
+        this.loadLists();
         await this.refreshAll();
         this.notify('Data erased.', 'err');
       });
@@ -2102,12 +2605,38 @@ ${fanout}
   };
 }
 
+/** Merge a second sheet row of the same pupil into the first: lists are
+ *  combined, the measures fill the three slots, empty values are filled in. */
+function mergeImportRow(into, row) {
+  const slots = ['mesure_cdse_1', 'mesure_cdse_2', 'mesure_cdse_3'];
+  const measures = [...slots.map((k) => into[k]), ...slots.map((k) => row[k])].filter(Boolean);
+  for (const [k, v] of Object.entries(row)) {
+    if (slots.includes(k)) continue;
+    if (Array.isArray(v)) into[k] = [...new Set([...(Array.isArray(into[k]) ? into[k] : []), ...v])];
+    else if (!hasValue(into[k]) && hasValue(v)) into[k] = v;
+  }
+  const distinct = [...new Set(measures)];
+  slots.forEach((k, i) => { if (distinct[i]) into[k] = distinct[i]; });
+}
+
+/** Fields grouped by form section, for the grouped <select>s. */
+function groupFieldsByCategory(fields) {
+  const out = [];
+  for (const cat of CATEGORIES) {
+    const list = fields.filter((f) => f.category === cat.key);
+    if (list.length) out.push({ key: cat.key, label: cat.computedOnly ? 'Measures and durations (calculated)' : cat.label, fields: list });
+  }
+  return out;
+}
+
 // ----------------------------------------------------------------------------
 // chart helpers
 // ----------------------------------------------------------------------------
+const CHART_FONT = 'Inter, "Segoe UI", system-ui, sans-serif';
+
 function chartOptions(theme) {
-  const text = theme === 'dark' ? '#E8E4DC' : '#1A1814';
-  const grid = theme === 'dark' ? 'rgba(232,228,220,0.08)' : 'rgba(26,24,20,0.08)';
+  const text = theme === 'dark' ? '#DCE1EA' : '#0E1628';
+  const grid = theme === 'dark' ? 'rgba(220,225,234,0.08)' : 'rgba(14,22,40,0.07)';
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -2118,11 +2647,12 @@ function chartOptions(theme) {
     animations: { colors: false, x: false, y: false },
     transitions: { active: { animation: { duration: 0 } } },
     plugins: {
-      legend: { labels: { color: text, font: { family: 'Schibsted Grotesk' } } },
+      legend: { labels: { color: text, font: { family: CHART_FONT } } },
+      tooltip: { titleFont: { family: CHART_FONT }, bodyFont: { family: CHART_FONT } },
     },
     scales: {
-      x: { ticks: { color: text, font: { family: 'JetBrains Mono' } }, grid: { color: grid } },
-      y: { ticks: { color: text, font: { family: 'JetBrains Mono' } }, grid: { color: grid }, beginAtZero: true },
+      x: { ticks: { color: text, font: { family: CHART_FONT }, precision: 0 }, grid: { color: grid } },
+      y: { ticks: { color: text, font: { family: CHART_FONT }, precision: 0 }, grid: { color: grid }, beginAtZero: true },
     },
   };
 }
@@ -2140,6 +2670,22 @@ function shortLabelOf(s) {
   if (acro) return acro[1];
   if (s.length <= 22) return s;
   return s.slice(0, 20) + '…';
+}
+
+/** Split a long label into at most two lines for the chart axis, so full
+ *  school names stay readable (Chart.js draws an array as several lines). */
+function wrapLabel(text, max = 26) {
+  const words = String(text || '').split(/\s+/);
+  const lines = [''];
+  for (const w of words) {
+    const cur = lines[lines.length - 1];
+    if (!cur) lines[lines.length - 1] = w;
+    else if ((cur + ' ' + w).length <= max) lines[lines.length - 1] = cur + ' ' + w;
+    else lines.push(w);
+  }
+  if (lines.length <= 2) return lines.length === 1 ? lines[0] : lines;
+  const second = lines.slice(1).join(' ');
+  return [lines[0], second.length > max ? second.slice(0, max - 1) + '…' : second];
 }
 
 function countBy(items, keyFn) {
@@ -2179,9 +2725,10 @@ function histogram(values, nBins = 10) {
 // Sample data — clearly fictive
 // ----------------------------------------------------------------------------
 function sampleData() {
-  // Clearly-fictive demo set covering enough variation to make every chart
-  // and the query builder meaningful. Names obviously synthetic.
-  const ecoles = [
+  // Clearly fictional demo set: enough variation for every chart, the
+  // durations and the two-variable queries. Names are obviously synthetic;
+  // ateliers and rééducation types are placeholders ("Demo atelier A").
+  const lycees = [
     'Lycée Aline Mayrisch (LAML)',
     'Lënster Lycée International School — Junglinster (LLIS)',
     'Lycée Classique de Diekirch (LCD)',
@@ -2189,98 +2736,100 @@ function sampleData() {
     'Lycée Technique du Centre',
     'Athénée de Luxembourg',
   ];
-  const dirs = [
-    'DIR Capellen', 'DIR Clervaux/Wiltz', 'DIR Diekirch/Vianden', 'DIR Echternach',
-    'DIR Esch-sur-Alzette', 'DIR Grevenmacher',
-    'DIR Luxembourg-Est', 'DIR Luxembourg-Ouest', 'DIR Luxembourg-Ville',
-    'DIR Mersch', 'DIR Pétange', 'DIR Redange/Rambrouch',
-    'DIR Remich', 'DIR Strassen', 'DIR Wiltz',
-  ];
-  const mesures = ['DS', 'ISA', 'C&G', 'Spec. School.', 'Other'];
-  const langs = ['LU', 'FR', 'DE', 'PT', 'EN'];
+  const places = ['Luxembourg', 'Mamer', 'Pétange', 'Differdange', 'Sanem', 'Esch-sur-Alzette', 'Dudelange', 'Bettembourg',
+    'Remich', 'Grevenmacher', 'Echternach', 'Mersch', 'Redange', 'Diekirch', 'Wiltz'];
+  const langs = ['LU', 'FR', 'PT', 'DE', 'LU', 'EN', 'Other'];
   const diags = [
     ['F90.0 — ADHD, predominantly inattentive'],
     ['F84.0 — Childhood autism'],
     ['F90.1 — ADHD, combined type', 'F32.0 — Mild depressive episode'],
     [],
     ['F32.1 — Moderate depressive episode'],
-    ['F84.5 — Asperger syndrome'],
     ['F41.1 — Generalized anxiety'],
-    ['F90.0 — ADHD, predominantly inattentive', 'F41.1 — Generalized anxiety'],
-    ['F81.0 — Dyslexia'],
-    ['F43.2 — Adjustment disorders'],
     ['F90.0 — ADHD, predominantly inattentive', 'F81.0 — Dyslexia'],
-    ['GIP — Gifted / high intellectual potential'],
+    ['F43.2 — Adjustment disorders'],
+    ['F93.0 — Separation anxiety'],
+    [],
   ];
   const profils = [
-    [], ['Mixed profile'], ['Suspected ADHD'], [],
-    ['Attentional profile'], ['School refusal / school phobia'],
+    ['Behavioural disorder'], ['Emotional profile'], ['Suspected ADHD'], [],
+    ['School refusal / school phobia'], ['Social difficulties'], ['Mixed profile'],
   ];
   const services = [
-    [], ['ONE — Office National de l\'Enfance'], [], ['SPOS — Service Psycho-Social et d\'Orientation Scolaire'],
-    ['ALUPSE — Aide aux victimes de maltraitance'], [],
+    [], ['ONE — Office National de l\'Enfance'], [], ['SePAS — Service psycho-social et d\'accompagnement scolaires'],
+    ['ALUPSE — Aide aux victimes de maltraitance'], [], ['Maison Relais'],
+  ];
+  // Measures per case (the first three also go into the three slots)
+  const plans = [
+    ['ISA'], ['DS', 'ISA'], ['C&G'], ['ISA', 'C&G'], ['Atelier'], ['DS', 'Rééducation'],
+    ['CST'], ['Annexe'], ['CdP'], ['ISA', 'Atelier'], ['DS', 'ISA', 'C&G'], ['CST', 'C&G'],
+    ['Rééducation', 'Atelier'], ['ISA'], ['DS'], ['CdP', 'C&G'], ['Annexe', 'ISA'], ['ISA', 'Other'],
+    ['C&G', 'Rééducation'], ['DS', 'CST'],
   ];
 
   const today = new Date();
   const isoOf = (d) => d.toISOString().slice(0, 10);
   const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return isoOf(d); };
   const daysAhead = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return isoOf(d); };
-  const yearOf = (y) => `${today.getFullYear() - y}-${String((y % 12) + 1).padStart(2, '0')}-${String((y * 3 % 27) + 1).padStart(2, '0')}`;
+  const birth = (age, i) => `${today.getFullYear() - age - 1}-${String((i % 12) + 1).padStart(2, '0')}-${String((i * 3 % 27) + 1).padStart(2, '0')}`;
 
   const result = [];
   for (let i = 1; i <= 20; i++) {
-    const sexe = ['F', 'M', 'F', 'M', 'F'][i % 5];
-    const ageTarget = 10 + (i % 6); // 10..15
-    const m1 = mesures[i % mesures.length];
-    const m2 = i % 3 === 0 ? mesures[(i + 2) % mesures.length] : '';
-
-    // sprinkle realistic-looking date pairs so the timeline and badges light up
-    const dates = {};
-    if (m1 === 'ISA' || m2 === 'ISA') {
-      dates.debut_isa = daysAgo(120 + i * 5);
-      dates.fin_isa = i % 4 === 0 ? daysAgo(10) : daysAhead(60 + i * 3);   // some ended, some active
-    }
-    if (m1 === 'C&G' || m2 === 'C&G') {
-      dates.debut_cg = daysAgo(200 + i * 4);
-      dates.fin_cg = i % 5 === 0 ? daysAhead(20) : daysAhead(180);  // a few "ending soon"
-    }
-    if (m1 === 'Spec. School.') {
-      dates.debut_scol_spe = daysAgo(365 + i * 7);
-      dates.fin_scol_spe = '';
-    }
-    if (i % 4 === 0) dates.date_ds = daysAgo(30 + i);
-
-    result.push({
+    const sexe = ['F', 'M', 'M', 'F', 'M'][i % 5];
+    const age = 7 + (i * 7) % 10;                   // 7 … 16
+    const secondary = age >= 13;
+    const dr = DR_OPTIONS[(i * 4) % DR_OPTIONS.length];
+    const plan = plans[i - 1];
+    const rec = {
       matricule: String(2010000000000 + i),
       dossier_mfile: `MF-${1000 + i}`,
-      nom: `Test ${String.fromCharCode(64 + (i % 26) + 1)}`,
+      nom: `Test ${String.fromCharCode(64 + i)}`,
       prenom: `Pupil ${i}`,
       sexe,
-      date_naissance: yearOf(ageTarget),
-      dir: dirs[i % dirs.length],
-      ecole_lycee: ecoles[i % ecoles.length],
-      mesure_cdse_1: m1,
-      mesure_cdse_2: m2,
-      mesure_cdse_3: '',
-      ...dates,
-      iq: 75 + ((i * 7) % 55),
+      date_naissance: birth(age, i),
+      dir: secondary ? '' : dr,
+      ecole_lycee: secondary ? lycees[i % lycees.length] : `École fondamentale ${places[DR_OPTIONS.indexOf(dr)]} (demo)`,
+      school_type: i % 9 === 0 ? 'Privé' : 'Public',
+      mesure_cdse_1: plan[0] || '',
+      mesure_cdse_2: plan[1] || '',
+      mesure_cdse_3: plan[2] || '',
+      iq: 72 + ((i * 7) % 50),
       langue_1: langs[i % langs.length],
       parents: ['Together', 'Separated', 'Together', 'Other'][i % 4],
       scas: i % 3 === 0 ? 'Yes' : 'No',
-      // New tags-style guardianship: most cases keep both parents; every
-      // 5th case has a foyer placement layered on top.
       tutelle: i % 5 === 0 ? ['Mother', 'Foyer'] : (i % 4 === 0 ? ['Father'] : ['Both parents']),
-      mesures_famille: i % 6 === 0 ? ['Assistance familiale (ONE)', 'Suivi SCAS']
-                     : (i % 4 === 0 ? ['Aide éducative en milieu ouvert (AEMO)'] : []),
-      school_type: i % 8 === 0 ? 'Privé' : 'Public',
+      mesures_famille: i % 6 === 0 ? ['Assistance familiale (ONE)', 'Suivi SCAS'] : (i % 4 === 0 ? ['Aide éducative en milieu ouvert (AEMO)'] : []),
       scol_etranger: i % 7 === 0 ? 'Yes' : 'No',
       diagnostics: diags[i % diags.length],
       verdachtsdiagnosen_profil: profils[i % profils.length],
       autres_services: services[i % services.length],
-      ds_realise_par: i % 4 === 0 ? 'Fictional staff A' : '',
-      isa_realise_par: dates.debut_isa ? 'Fictional staff B' : '',
-      cg_realise_par: dates.debut_cg ? 'Fictional staff C' : '',
-    });
+      autres_cc: i % 4 === 1 ? [CC_OPTIONS[(i >> 2) % CC_OPTIONS.length]] : (i % 6 === 0 ? [CC_OPTIONS[5], CC_OPTIONS[0]] : []),
+    };
+    if (rec.langue_1 === 'Other') rec.langue_1_autre = 'Albanian';
+    if (rec.parents === 'Other') rec.parents_autre = 'Lives with the grandparents';
+
+    // Dates: some measures ended, most still running, a few ending soon
+    const s = 90 + (i * 23) % 500;                   // days since the start
+    for (const m of plan) {
+      if (m === 'DS') { rec.date_ds = daysAgo(s + 40); rec.ds_realise_par = 'Fictional staff A'; }
+      if (m === 'ISA') { rec.debut_isa = daysAgo(s); rec.fin_isa = i % 4 === 0 ? daysAgo(20) : (i % 5 === 0 ? daysAhead(20) : ''); rec.isa_realise_par = 'Fictional staff B'; }
+      if (m === 'C&G') { rec.debut_cg = daysAgo(s + 30); rec.fin_cg = i % 3 === 0 ? daysAgo(15) : ''; rec.cg_type = CG_TYPES[i % CG_TYPES.length]; rec.cg_realise_par = 'Fictional staff C'; }
+      if (m === 'Atelier') { rec.debut_atelier = daysAgo(s - 30); rec.fin_atelier = i % 2 === 0 ? daysAhead(60) : ''; rec.atelier_type = i % 2 ? 'Demo atelier A' : 'Demo atelier B'; rec.atelier_realise_par = 'Fictional staff D'; }
+      if (m === 'Rééducation') { rec.debut_reeducation = daysAgo(s - 20); rec.fin_reeducation = i % 3 === 0 ? daysAgo(5) : ''; rec.reeducation_type = i % 2 ? 'Demo rééducation A' : 'Demo rééducation B'; rec.reeducation_realise_par = 'Fictional staff E'; }
+      if (m === 'Annexe') { rec.debut_annexe = daysAgo(s + 200); rec.fin_annexe = ''; }
+      if (m === 'CST') { rec.debut_cst = daysAgo(s + 150); rec.fin_cst = i % 2 === 0 ? daysAgo(30) : ''; rec.cst_groupe = CST_GROUPS[i % CST_GROUPS.length]; }
+      if (m === 'CdP') { rec.debut_cdp = daysAgo(s + 120); rec.fin_cdp = ''; rec.cdp_region = dr; }
+      if (m === 'Other') { rec.autre_mesure = 'Demo other measure'; rec.debut_autre_mesure = daysAgo(s); }
+    }
+    // ELDiB for most pupils with an ISA, Annexe, CST or CdP
+    if (plan.some((m) => ['ISA', 'Annexe', 'CST', 'CdP'].includes(m))) {
+      rec.eldib_date = daysAgo(30 + (i * 11) % 200);
+      rec.eldib_v = String(1 + (i % 4));
+      rec.eldib_k = String(1 + ((i + 1) % 4));
+      rec.eldib_soz = String(1 + ((i + 2) % 3));
+      rec.eldib_kog = String(2 + (i % 3));
+    }
+    result.push(rec);
   }
   return result;
 }

@@ -100,6 +100,9 @@
       validateField,
       validateCase,
       computeAge,
+      getCategory,
+      normalizeCase,
+      durationMonths,
     } from './fields.js';
     import { LocalStorageCaseRepository } from './repository.js';
 
@@ -130,8 +133,15 @@
     // ----- schema --------------------------------------------------------
     group('Schema');
 
-    test('FIELD_DEFS has 38 fields', () => assertEq(FIELD_DEFS.length, 38));
-    test('CATEGORIES has 12 sections', () => assertEq(CATEGORIES.length, 12));
+    test('every field has a key, a label and a known type', () => {
+      const types = new Set(['text', 'number', 'date', 'select', 'tags', 'computed']);
+      const bad = FIELD_DEFS.find((f) => !f.key || !f.label || !types.has(f.type));
+      assertOk(!bad, bad ? `bad field: ${bad.key}` : '');
+    });
+    test('every section has at least one field', () => {
+      const empty = CATEGORIES.find((c) => !getFieldsByCategory(c.key).length);
+      assertOk(!empty, empty ? `empty: ${empty.key}` : '');
+    });
     test('all field keys unique', () => {
       const set = new Set(FIELD_DEFS.map((f) => f.key));
       assertEq(set.size, FIELD_DEFS.length);
@@ -141,10 +151,9 @@
       const orphan = FIELD_DEFS.find((f) => !cats.has(f.category));
       assertOk(!orphan, orphan ? `orphan: ${orphan.key}` : '');
     });
-    test('age is the only computed field', () => {
-      const computed = FIELD_DEFS.filter((f) => f.type === 'computed');
-      assertEq(computed.length, 1);
-      assertEq(computed[0].key, 'age');
+    test('age, durations and measure lists are computed, never stored', () => {
+      const computed = FIELD_DEFS.filter((f) => f.type === 'computed').map((f) => f.key);
+      for (const k of ['age', 'dur_isa', 'dur_total', 'measures_all']) assertOk(computed.includes(k), k);
     });
     test('getField("matricule") returns object', () => {
       assertEq(getField('matricule')?.key, 'matricule');
@@ -152,11 +161,19 @@
     test('getField unknown returns null', () => {
       assertEq(getField('does_not_exist'), null);
     });
-    test('getFieldsByCategory("identification") has 5 fields', () => {
-      assertEq(getFieldsByCategory('identification').length, 5);
+    test('getFieldsByCategory("identification") has 4 fields', () => {
+      assertEq(getFieldsByCategory('identification').length, 4);
     });
     test('getEditableFields excludes computed', () => {
-      assertEq(getEditableFields().length, 37);
+      assertOk(getEditableFields().every((f) => f.type !== 'computed'));
+      assertEq(getEditableFields().length + FIELD_DEFS.filter((f) => f.type === 'computed').length, FIELD_DEFS.length);
+    });
+    test('the 15 Directions de région, in order', () => {
+      assertEq(getField('dir').options.length, 15);
+      assertEq(getField('dir').options[5], 'DR 06 Esch/Alzette');
+    });
+    test('ISA = Intervention spécialisée ambulatoire', () => {
+      assertOk(/Intervention spécialisée ambulatoire/.test(getCategory('isa').label));
     });
 
     // ----- validators ----------------------------------------------------
@@ -259,6 +276,60 @@
     });
     test('delete unknown returns false', async () => {
       assertEq(await repo.delete('nope'), false);
+    });
+
+    // ----- measures, durations and older records --------------------------
+    group('Measures and older records');
+
+    test('Annexe, CST, CdP, Atelier and Rééducation are measures', () => {
+      const opts = getField('mesure_cdse_1').options;
+      for (const k of ['DS', 'ISA', 'C&G', 'Atelier', 'Rééducation', 'Annexe', 'CST', 'CdP', 'Other']) assertOk(opts.includes(k), k);
+    });
+    test('older "Spec. School." with Annexe text → Annexe and its dates', () => {
+      const c = normalizeCase({ mesure_cdse_1: 'Spec. School.', scolarisation_specialisee: 'Annexe Junglinster', debut_scol_spe: '2024-09-15' });
+      assertEq(c.mesure_cdse_1, 'Annexe');
+      assertEq(c.debut_annexe, '2024-09-15');
+    });
+    test('older DIR name → official DR, only when unambiguous', () => {
+      assertEq(normalizeCase({ dir: 'DIR Esch-sur-Alzette' }).dir, 'DR 06 Esch/Alzette');
+      assertEq(normalizeCase({ dir: 'DIR Capellen' }).dir, 'DIR Capellen');
+    });
+    test('older "Other CC" text → list of centres', () => {
+      const c = normalizeCase({ autre_cc_implique: 'CDI, CTSA' });
+      assertEq(c.autres_cc.length, 2);
+      assertOk(c.autres_cc[0].startsWith('CDI —'), c.autres_cc[0]);
+    });
+    test('older values stay valid', () => {
+      assertEq(validateField('dir', 'DIR Capellen'), null);
+      assertEq(validateField('mesure_cdse_1', 'Spec. School.'), null);
+    });
+    test('duration in months; a running measure counts until today', () => {
+      assertEq(durationMonths('2025-01-01', '', new Date('2025-07-02T12:00:00')), 6);
+      assertEq(durationMonths('2025-01-01', '2025-04-02', new Date('2026-01-01T12:00:00')), 3);
+      assertEq(durationMonths('2030-01-01', '', new Date('2026-01-01T12:00:00')), null);
+    });
+    test('measures and durations are added on read', async () => {
+      repo._wipeForTests();
+      const c = await repo.create({ matricule: 'D1', nom: 'D', prenom: 'D', mesure_cdse_1: 'ISA', debut_isa: '2025-01-01', debut_cst: '2024-01-01', fin_cst: '2024-07-01' });
+      assertOk(c.measures_all.includes('ISA') && c.measures_all.includes('CST'), JSON.stringify(c.measures_all));
+      assertOk(c.dur_cst > 5.9 && c.dur_cst < 6.1, String(c.dur_cst));
+      assertOk((await repo.get(c.id)).dur_isa > 0);
+    });
+    test('validateCase: the "Other" measure needs its text', () => {
+      const r = validateCase({ matricule: '1', nom: 'X', prenom: 'Y', mesure_cdse_1: 'Other' });
+      assertOk(!r.valid && r.errors.autre_mesure);
+    });
+    test('validateCase: an end before the start is rejected', () => {
+      const r = validateCase({ matricule: '1', nom: 'X', prenom: 'Y', debut_isa: '2025-05-01', fin_isa: '2025-01-01' });
+      assertOk(!r.valid && r.errors.fin_isa);
+    });
+    test('replaceValue changes every case and returns their ids', async () => {
+      repo._wipeForTests();
+      await repo.create({ matricule: 'R1', nom: 'R', prenom: 'R', ecole_lycee: 'LAML' });
+      await repo.create({ matricule: 'R2', nom: 'S', prenom: 'S', ecole_lycee: 'LAML' });
+      const ids = await repo.replaceValue('ecole_lycee', 'LAML', 'Lycée Aline Mayrisch (LAML)');
+      assertEq(ids.length, 2);
+      assertEq((await repo.rawValueCounts('ecole_lycee'))[0].value, 'Lycée Aline Mayrisch (LAML)');
     });
 
     // ----- import / export ----------------------------------------------

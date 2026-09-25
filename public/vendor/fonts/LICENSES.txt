@@ -1,0 +1,8 @@
+Fonts embedded in CDSE Stats (Latin subsets, variable weight)
+
+- Inter — Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter).
+  SIL Open Font License 1.1.
+- Manrope — Copyright 2018 The Manrope Project Authors (https://github.com/sharanda/manrope).
+  SIL Open Font License 1.1.
+
+The same files are used by the CDSE Hub and the CDSE Toolbox.

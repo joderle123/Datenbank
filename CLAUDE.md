@@ -1,9 +1,43 @@
 # CDSE Stats — Projekt-Kontext
 
-Internes Statistik- und Datenbanktool für das **Centre pour le Développement
-Social et Éducatif (CDSE)** in Luxemburg. Erfasst Fallakten von Jugendlichen
-(10–15 J.) mit sozio-emotionalen Schwierigkeiten und ersetzt eine bisherige
+Internes Statistik- und Datenbanktool für das **Centre pour le développement
+socio-émotionnel (CDSE)** in Luxemburg. Erfasst Fallakten von Kindern und
+Jugendlichen mit sozio-emotionalen Schwierigkeiten und ersetzt eine bisherige
 Excel-Lösung.
+
+## Stand 0.5 (Rückmeldung der Responsables)
+
+- **Offizielle Listen** aus der CDSE-Fiche de renseignement: DR 01–15
+  (`DR_OPTIONS`), CST-Gruppen, Maßnahmen. Alte Werte (erste DIR-Liste,
+  „Spec. School.“, Freitext „Other CC“) bleiben gültig und werden beim Lesen
+  in `normalizeCase` (fields.js) übersetzt — nie destruktiv; gespeichert wird
+  erst beim nächsten Speichern des Falls. Mehrdeutige alte Werte bereinigt
+  Einstellungen → „Clean up values“.
+- **Maßnahmen** (`MEASURES` in fields.js): DS, ISA (= Intervention spécialisée
+  ambulatoire), C&G, Atelier, Rééducation, Annexe, CST, CdP, Other — jede mit
+  eigenem Abschnitt (Details, Daten, Personal). Dauer in Monaten wird
+  berechnet (`dur_*`, `dur_total`, `measures_all`, `measures_running`).
+- **ELDiB-Stufen** 1–5 je Bereich (V, K, SOZ, KOG) + Datum.
+- **Abfragen**: Bedingungen mit und/oder, „is one of“, zweite Gruppierung
+  (Kreuztabelle), Datumsfilter vergleichen ISO-Strings.
+- **Excel-Import** (`public/importer.js`): .xlsx/.csv werden im Browser
+  gelesen (DecompressionStream, kein Upload, keine KI), Spalten zuordnen,
+  Vorschau, doppelte Zeilen desselben Schülers werden zusammengeführt.
+- **Listen** (Schulen, Ateliers, Rééducation) editierbar, Storage-Key
+  `cdse_lists_v1` (über `lists` in repository.js).
+- **Design** wie der CDSE Hub („Klar & präzise“): Farben als CSS-Variablen in
+  index.html (`--c-*`, hell/dunkel), Tailwind-Farben verweisen darauf; Schriften
+  Inter/Manrope aus `public/vendor/fonts` (build.js bettet sie ein).
+
+## Bauen
+
+```bash
+npx tailwindcss@3 -c tailwind.config.cjs -i src.css -o public/vendor/tailwind.compiled.css --minify
+node build.js          # → cdse.html (eine Datei, läuft per Doppelklick)
+```
+
+Tests: `public/repository-test.html` über einen lokalen HTTP-Server öffnen
+(Module brauchen http://), z. B. `python3 -m http.server` im Projektordner.
 
 ## Aktueller Stand: HTML-Prototyp
 
@@ -80,7 +114,7 @@ Minderjährigen (IQ, Diagnosen, SCAS, Tutelle). Anforderungen:
 - **`FIELD_DEFS` in `public/fields.js` ist Single Source of Truth.**
   Form-Sektionen, Liste-Spalten, Validierung, Import/Export, Query-Builder
   — alles liest von dort. Niemals Feldnamen hardcoden.
-- **Versionierte Storage-Keys.** Aktuell `cdse_cases_v1`. Schema-Änderungen,
+- **Versionierte Storage-Keys.** Aktuell `cdse_cases_v1` (+ `cdse_lists_v1`). Schema-Änderungen,
   die migrieren müssen, bekommen `_v2`, mit Migrations-Code, der `_v1`
   ausliest und neu schreibt. So funktionieren auch Browser-Migrations
   ohne Backend.

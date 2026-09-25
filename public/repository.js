@@ -9,7 +9,7 @@
 // rest of the app should ever need.
 // ----------------------------------------------------------------------------
 
-import { computeAge, getField } from './fields.js';
+import { getField, normalizeCase, computedValues } from './fields.js';
 
 /** Contract every concrete repository must implement. */
 export class CaseRepository {
@@ -55,10 +55,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-/** Hydrate a stored case with derived (read-only) fields like `age`. */
+/** Hydrate a stored case: bring older records up to the current schema (in
+ *  memory only) and add the derived read-only fields (age, durations …). */
 function hydrate(record) {
   if (!record) return record;
-  return { ...record, age: computeAge(record.date_naissance) };
+  const c = normalizeCase(record);
+  return { ...c, ...computedValues(c) };
 }
 
 /** Strip computed / unknown fields before persisting. */
@@ -194,9 +196,11 @@ export class LocalStorageCaseRepository extends CaseRepository {
   }
 
   async list({ filter, sort, search } = {}) {
-    const all = this._readAll();
+    // Filter and sort on the hydrated view, so older values (e.g. a DIR from
+    // the first prototype) behave exactly as they are shown.
+    const all = this._readAll().map(hydrate);
     const filtered = all.filter((r) => matchesFilter(r, filter) && matchesSearch(r, search));
-    return sortRecords(filtered, sort).map(hydrate);
+    return sortRecords(filtered, sort);
   }
 
   async get(id) {
@@ -245,7 +249,50 @@ export class LocalStorageCaseRepository extends CaseRepository {
   }
 
   async count(filter = {}) {
-    return this._readAll().filter((r) => matchesFilter(r, filter)).length;
+    return this._readAll().map(hydrate).filter((r) => matchesFilter(r, filter)).length;
+  }
+
+  /** How often each stored value of a field occurs (as saved, before any
+   *  mapping on read) — used by Settings → Clean up. */
+  async rawValueCounts(fieldKey) {
+    const counts = new Map();
+    for (const r of this._readAll()) {
+      const v = r[fieldKey];
+      for (const x of Array.isArray(v) ? v : [v]) {
+        if (x === null || x === undefined || x === '') continue;
+        counts.set(x, (counts.get(x) || 0) + 1);
+      }
+    }
+    return [...counts.entries()].map(([value, n]) => ({ value, n })).sort((a, b) => b.n - a.n);
+  }
+
+  /**
+   * Replace one value of a field in every case (Settings → Clean up), e.g. an
+   * old DIR name or a misspelt school. Tag fields replace the matching tag.
+   * Returns the ids of the changed cases.
+   */
+  async replaceValue(fieldKey, from, to) {
+    const def = getField(fieldKey);
+    if (!def || def.type === 'computed') throw new Error(`Unknown field: ${fieldKey}`);
+    const all = this._readAll();
+    const changed = [];
+    for (const r of all) {
+      const v = r[fieldKey];
+      if (Array.isArray(v)) {
+        if (!v.includes(from)) continue;
+        const next = v.map((x) => (x === from ? to : x)).filter((x, i, a) => x !== '' && a.indexOf(x) === i);
+        r[fieldKey] = next;
+      } else if (v === from) {
+        r[fieldKey] = to;
+      } else continue;
+      r.updated_at = nowIso();
+      changed.push(r.id);
+    }
+    if (changed.length) {
+      this._writeAll(all);
+      this._bumpRevision();
+    }
+    return changed;
   }
 
   async exportAll() {
@@ -471,6 +518,38 @@ export class LocalStorageSavedQueryRepository extends SavedQueryRepository {
 }
 
 // ============================================================================
+// Lists — editable pick lists (Settings → Lists): schools, ateliers and
+// rééducation types. Suggestions only; free text stays possible in the form.
+// ============================================================================
+const LISTS_KEY = 'cdse_lists_v1';
+const LIST_KEYS = ['schools', 'ateliers', 'reeducation'];
+
+export class LocalStorageListsRepository {
+  constructor(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+    if (!storage) throw new Error('LocalStorageListsRepository: no storage');
+    this._storage = storage;
+  }
+  _read() {
+    const raw = this._storage.getItem(LISTS_KEY);
+    let data = {};
+    if (raw) { try { data = JSON.parse(raw) || {}; } catch { data = {}; } }
+    const out = {};
+    for (const k of LIST_KEYS) out[k] = Array.isArray(data[k]) ? data[k].filter((x) => typeof x === 'string' && x.trim()) : null;
+    return out;
+  }
+  /** Stored list, or null when the user has never edited it (→ defaults). */
+  get(key) { return this._read()[key] ?? null; }
+  all() { return this._read(); }
+  set(key, values) {
+    if (!LIST_KEYS.includes(key)) throw new Error(`Unknown list: ${key}`);
+    const data = this._read();
+    data[key] = [...new Set((values || []).map((v) => String(v).trim()).filter(Boolean))];
+    this._storage.setItem(LISTS_KEY, JSON.stringify(data));
+    return data[key];
+  }
+}
+
+// ============================================================================
 // Session user — the current operator's name, used only for the audit log
 // in this prototype. NOT auth. Real auth lands with the Node backend.
 // ============================================================================
@@ -504,3 +583,4 @@ export const audit         = hasLS ? new LocalStorageAuditRepository()        : 
 export const vocab         = hasLS ? new LocalStorageVocabularyRepository()   : null;
 export const savedQueries  = hasLS ? new LocalStorageSavedQueryRepository()   : null;
 export const sessionUser   = hasLS ? new LocalStorageSessionUserRepository()  : null;
+export const lists         = hasLS ? new LocalStorageListsRepository()        : null;

@@ -6,21 +6,26 @@
 // Operators are whitelisted by field type so the UI can never produce an
 // invalid query, and so a future SQL-backed implementation can mirror the
 // same operator set exactly.
+//
+// Records are expected in their hydrated form (see repository.js): computed
+// values such as `age`, `dur_isa` or `measures_all` are already present.
 // ----------------------------------------------------------------------------
 
-import { FIELD_DEFS, getField, computeAge } from './fields.js';
+import { FIELD_DEFS, getField, computeField } from './fields.js';
 
 // ----- field meta -----------------------------------------------------------
 
-/** Fields that can be the subject of a numeric aggregation.
- *  Beside the two schema-level numbers (IQ, Age) we expose the LENGTHS of the
- *  multi-tag fields as derived numeric variables. That lets users ask things
- *  like 'mean number of diagnoses per case' or 'max number of family measures
- *  per case in DIR Mersch'. The valueOf() function knows how to compute these
- *  from the array fields at query time. */
+/** Fields that can be the subject of a numeric aggregation. Besides IQ and
+ *  Age: the duration of each measure (months), the ELDiB stages (1–5) and the
+ *  LENGTHS of the multi-tag fields as derived per-case counts. */
 export const NUMERIC_FIELDS = [
   { key: 'iq',                 label: 'IQ' },
   { key: 'age',                label: 'Age', computed: true },
+  ...FIELD_DEFS.filter((f) => f.type === 'computed' && f.numeric && f.key !== 'age').map((f) => ({ key: f.key, label: f.label, computed: true })),
+  { key: 'eldib_v',            label: 'ELDiB stage — Behaviour (V)' },
+  { key: 'eldib_k',            label: 'ELDiB stage — Communication (K)' },
+  { key: 'eldib_soz',          label: 'ELDiB stage — Socialisation (SOZ)' },
+  { key: 'eldib_kog',          label: 'ELDiB stage — Cognition (KOG)' },
   { key: 'n_diagnostics',      label: 'Number of diagnoses (per case)',         computed: true },
   { key: 'n_verdachts',        label: 'Number of suspected diagnoses',           computed: true },
   { key: 'n_mesures_famille',  label: 'Number of family measures',               computed: true },
@@ -37,16 +42,18 @@ const ARRAY_LEN_NUMERICS = {
   n_tutelle:         'tutelle',
 };
 
-/** Fields a user can group results by. */
+const isListComputed = (f) => f.type === 'computed' && f.list;
+const isNumericComputed = (f) => f.type === 'computed' && f.numeric;
+
+/** Fields a user can group results by. Multi-value fields fan out. */
 export const GROUPABLE_FIELDS = FIELD_DEFS.filter((f) =>
-  ['select', 'text'].includes(f.type) || f.key === 'dir' || f.key === 'ecole_lycee',
+  !f.legacy && (['select', 'text', 'tags'].includes(f.type) || isListComputed(f) || f.key === 'age_band'),
 );
 
-/** Fields a user can filter on (anything except computed age, which is computed below). */
-export const FILTERABLE_FIELDS = [
-  ...FIELD_DEFS.filter((f) => f.type !== 'computed'),
-  { key: 'age', label: 'Age', type: 'number', category: 'demographics', computed: true },
-];
+/** Fields a user can filter on. */
+export const FILTERABLE_FIELDS = FIELD_DEFS.filter((f) =>
+  !f.legacy && (f.type !== 'computed' || f.numeric || f.list || f.key === 'age_band'),
+);
 
 /** Aggregation functions. `field: null` means counts the rows themselves. */
 export const AGGREGATIONS = [
@@ -59,19 +66,28 @@ export const AGGREGATIONS = [
   { key: 'stddev', label: 'Std. deviation',    needsNumeric: true  },
 ];
 
+/** How a field behaves in filters: text | select | number | date | tags. */
+export function filterTypeOf(fieldKey) {
+  const def = getField(fieldKey);
+  if (!def) return null;
+  if (def.type === 'computed') {
+    if (def.numeric) return 'number';
+    if (def.list) return 'tags';
+    return 'select';
+  }
+  return def.type;
+}
+
 /** Operators available per field type. Labels are intentionally written
  *  as natural English ("is" rather than "equals", "greater than" rather than
  *  ">") so the assembled query reads like a sentence in the preview. */
 export function operatorsFor(fieldKey) {
-  const def = fieldKey === 'age'
-    ? { type: 'number' }
-    : getField(fieldKey);
-  if (!def) return [];
-  switch (def.type) {
+  switch (filterTypeOf(fieldKey)) {
     case 'text':
       return [
         { key: 'eq',       label: 'is',               needsValue: true  },
         { key: 'neq',      label: 'is not',           needsValue: true  },
+        { key: 'in',       label: 'is one of',        needsValue: true, multi: true },
         { key: 'contains', label: 'contains',         needsValue: true  },
         { key: 'empty',    label: 'is empty',         needsValue: false },
         { key: 'notempty', label: 'is filled in',     needsValue: false },
@@ -79,7 +95,9 @@ export function operatorsFor(fieldKey) {
     case 'select':
       return [
         { key: 'eq',       label: 'is',               needsValue: true  },
+        { key: 'in',       label: 'is one of',        needsValue: true, multi: true },
         { key: 'neq',      label: 'is not',           needsValue: true  },
+        { key: 'notin',    label: 'is none of',       needsValue: true, multi: true },
         { key: 'empty',    label: 'is empty',         needsValue: false },
         { key: 'notempty', label: 'is filled in',     needsValue: false },
       ];
@@ -109,6 +127,7 @@ export function operatorsFor(fieldKey) {
     case 'tags':
       return [
         { key: 'has',      label: 'includes',                  needsValue: true  },
+        { key: 'hasany',   label: 'includes one of',           needsValue: true, multi: true },
         { key: 'hasnot',   label: 'does not include',          needsValue: true  },
         { key: 'empty',    label: 'none',                      needsValue: false },
         { key: 'notempty', label: 'at least one',              needsValue: false },
@@ -121,12 +140,13 @@ export function operatorsFor(fieldKey) {
 // ----- evaluation -----------------------------------------------------------
 
 function valueOf(record, fieldKey) {
-  if (fieldKey === 'age') return computeAge(record.date_naissance);
   // Derived per-case counters: length of a multi-tag array (or 0 when empty).
   if (Object.prototype.hasOwnProperty.call(ARRAY_LEN_NUMERICS, fieldKey)) {
     const src = record[ARRAY_LEN_NUMERICS[fieldKey]];
     return Array.isArray(src) ? src.length : 0;
   }
+  const def = getField(fieldKey);
+  if (def && def.type === 'computed' && !(fieldKey in record)) return computeField(record, fieldKey);
   return record[fieldKey];
 }
 
@@ -135,6 +155,12 @@ function isEmpty(v) {
   if (typeof v === 'string' && v.trim() === '') return true;
   if (Array.isArray(v) && v.length === 0) return true;
   return false;
+}
+
+function asList(value) {
+  if (Array.isArray(value)) return value.map(String);
+  if (value === null || value === undefined || value === '') return [];
+  return [String(value)];
 }
 
 function evaluateFilter(record, filter) {
@@ -146,6 +172,8 @@ function evaluateFilter(record, filter) {
     case 'notempty': return !isEmpty(v);
     case 'eq':       return String(v ?? '') === String(value ?? '');
     case 'neq':      return String(v ?? '') !== String(value ?? '');
+    case 'in':       return asList(value).includes(String(v ?? ''));
+    case 'notin':    return !asList(value).includes(String(v ?? ''));
     case 'contains': {
       // Polymorphic 'contains':
       //   strings → case-insensitive substring match (original behaviour)
@@ -159,21 +187,45 @@ function evaluateFilter(record, filter) {
       if (Array.isArray(v)) return v.some((x) => String(x ?? '').toLowerCase().includes(needle));
       return false;
     }
-    case 'gt':       return v != null && Number(v) > Number(value);
-    case 'gte':      return v != null && Number(v) >= Number(value);
-    case 'lt':       return v != null && Number(v) < Number(value);
-    case 'lte':      return v != null && Number(v) <= Number(value);
-    case 'between':  return v != null && Number(v) >= Number(value) && Number(v) <= Number(value2);
+    case 'gt':       return !isEmpty(v) && Number(v) > Number(value);
+    case 'gte':      return !isEmpty(v) && Number(v) >= Number(value);
+    case 'lt':       return !isEmpty(v) && Number(v) < Number(value);
+    case 'lte':      return !isEmpty(v) && Number(v) <= Number(value);
+    case 'between':  return !isEmpty(v) && Number(v) >= Number(value) && Number(v) <= Number(value2);
     case 'has':      return Array.isArray(v) && v.includes(value);
+    case 'hasany':   { const want = asList(value); return Array.isArray(v) && v.some((x) => want.includes(String(x))); }
     case 'hasnot':   return !Array.isArray(v) || !v.includes(value);
     default:         return true;
   }
 }
 
-/** Apply a list of filter rows to records (AND combine). Exported so the UI
- *  can show "matching cases" without duplicating the operator logic. */
-export function filterRecords(records, filters) {
-  return records.filter((r) => (filters || []).every((f) => evaluateFilter(r, f)));
+/** Dates compare as ISO strings, numbers as numbers. */
+function evaluateDateAware(record, filter) {
+  if (filterTypeOf(filter.field) !== 'date' || !['gt', 'gte', 'lt', 'lte', 'between'].includes(filter.op)) {
+    return evaluateFilter(record, filter);
+  }
+  const v = valueOf(record, filter.field);
+  if (isEmpty(v)) return false;
+  const a = String(filter.value ?? '');
+  const b = String(filter.value2 ?? '');
+  switch (filter.op) {
+    case 'gt':      return v > a;
+    case 'gte':     return v >= a;
+    case 'lt':      return v < a;
+    case 'lte':     return v <= a;
+    case 'between': return v >= a && v <= b;
+    default:        return true;
+  }
+}
+
+/** Apply filter rows to records. `match` = 'all' (AND, default) or 'any'
+ *  (OR). Exported so the UI can show "matching cases" without duplicating the
+ *  operator logic. */
+export function filterRecords(records, filters, match = 'all') {
+  const list = filters || [];
+  if (!list.length) return records.slice();
+  if (match === 'any') return records.filter((r) => list.some((f) => evaluateDateAware(r, f)));
+  return records.filter((r) => list.every((f) => evaluateDateAware(r, f)));
 }
 
 // ----- numeric helpers ------------------------------------------------------
@@ -213,6 +265,31 @@ function aggregate(items, agg) {
   }
 }
 
+/** Group keys of a record for a field — multi-value fields fan out. */
+function groupKeysOf(record, fieldKey) {
+  const v = valueOf(record, fieldKey);
+  if (Array.isArray(v)) return { keys: v.length ? v.map(formatGroupKey) : ['(empty)'], multi: v.length > 1 };
+  return { keys: [formatGroupKey(v)], multi: false };
+}
+
+/** Sort group keys: counts descending, "(empty)" last; ordered option lists
+ *  (DR 01…15, age groups, ELDiB stages) keep their natural order. */
+function orderKeys(keys, fieldKey, sizes) {
+  const def = getField(fieldKey);
+  const order = def?.options || (fieldKey === 'age_band' ? ['up to 9', '10–11', '12–13', '14–15', '16 and older'] : null);
+  const natural = order && (fieldKey === 'dir' || fieldKey === 'age_band' || /^eldib_/.test(fieldKey) || fieldKey === 'cdp_region');
+  return [...keys].sort((a, b) => {
+    if (a === '(empty)') return 1;
+    if (b === '(empty)') return -1;
+    if (natural) {
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      if (ia !== ib) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    }
+    return (sizes.get(b) || 0) - (sizes.get(a) || 0) || a.localeCompare(b, 'fr');
+  });
+}
+
 // ----- main entry -----------------------------------------------------------
 
 /**
@@ -220,62 +297,76 @@ function aggregate(items, agg) {
  *
  * query = {
  *   filters:      [{ field, op, value, value2? }, ...]
- *   aggregations: [{ field, fn }, ...]   // field ignored for fn=count
+ *   match:        'all' | 'any'                        // how filters combine
+ *   aggregations: [{ field, fn }, ...]                 // field ignored for fn=count
  *   groupBy:      'fieldKey' | null
+ *   groupBy2:     'fieldKey' | null                    // second variable → cross table
  * }
  *
  * Returns:
  *   {
- *     n: number,                                  // rows after filtering
- *     groupBy: string|null,
- *     groups: [
- *       { key, n, values: [number|null, ...] },
- *     ],
- *     // helpers for histogram view (single numeric agg, no group-by)
- *     rawValues?: number[],
+ *     n, groupBy, groupBy2,
+ *     groups: [{ key, n, values: [number|null, ...] }],
+ *     cross?: { rows: [..], cols: [..], cells: { [row]: { [col]: { n, values } } } },
+ *     rawValues?: number[],   // single numeric aggregation, no grouping → histogram
+ *     fannedOut?: boolean,
  *   }
  */
 export function runQuery(records, query) {
-  const filtered = records.filter((r) => (query.filters || []).every((f) => evaluateFilter(r, f)));
+  const filtered = filterRecords(records, query.filters, query.match);
 
   const aggs = query.aggregations || [];
+  const g1 = query.groupBy || null;
+  const g2 = g1 && query.groupBy2 && query.groupBy2 !== g1 ? query.groupBy2 : null;
   if (!aggs.length) {
-    return { n: filtered.length, groupBy: query.groupBy || null, groups: [] };
+    return { n: filtered.length, groupBy: g1, groupBy2: g2, groups: [] };
   }
 
-  if (query.groupBy) {
+  if (g1) {
     const buckets = new Map();
-    let fannedOut = false;  // true if at least one record had a multi-tag group key
+    let fannedOut = false;
     for (const r of filtered) {
-      const v = valueOf(r, query.groupBy);
-      // Tags fields fan out: a case tagged ['F90.0','F84.0'] contributes once
-      // to the F90.0 bucket and once to the F84.0 bucket. This is what users
-      // expect from a 'group by diagnosis' chart — otherwise the chart shows
-      // composite keys like 'F90.0, F84.0' which nobody can read.
-      let keys;
-      if (Array.isArray(v)) {
-        keys = v.length ? v.map(formatGroupKey) : ['(empty)'];
-        if (v.length > 1) fannedOut = true;
-      } else {
-        keys = [formatGroupKey(v)];
-      }
-      for (const k of keys) {
-        if (!buckets.has(k)) buckets.set(k, []);
-        buckets.get(k).push(r);
+      const k = groupKeysOf(r, g1);
+      if (k.multi) fannedOut = true;
+      for (const key of k.keys) {
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(r);
       }
     }
-    const groups = [...buckets.entries()]
-      .map(([key, items]) => ({
-        key,
-        n: items.length,
-        values: aggs.map((a) => aggregate(items, a)),
-      }))
-      .sort((a, b) => b.n - a.n);
-    return { n: filtered.length, groupBy: query.groupBy, groups, fannedOut };
+    const sizes = new Map([...buckets.entries()].map(([k, v]) => [k, v.length]));
+    const groups = orderKeys([...buckets.keys()], g1, sizes).map((key) => ({
+      key,
+      n: buckets.get(key).length,
+      values: aggs.map((a) => aggregate(buckets.get(key), a)),
+    }));
+    const out = { n: filtered.length, groupBy: g1, groupBy2: g2, groups, fannedOut };
+
+    if (g2) {
+      const colSizes = new Map();
+      const cells = {};
+      for (const [rowKey, items] of buckets.entries()) {
+        const sub = new Map();
+        for (const r of items) {
+          const k = groupKeysOf(r, g2);
+          if (k.multi) out.fannedOut = true;
+          for (const key of k.keys) {
+            if (!sub.has(key)) sub.set(key, []);
+            sub.get(key).push(r);
+            colSizes.set(key, (colSizes.get(key) || 0) + 1);
+          }
+        }
+        cells[rowKey] = {};
+        for (const [colKey, sItems] of sub.entries()) {
+          cells[rowKey][colKey] = { n: sItems.length, values: aggs.map((a) => aggregate(sItems, a)) };
+        }
+      }
+      out.cross = { rows: groups.map((g) => g.key), cols: orderKeys([...colSizes.keys()], g2, colSizes), cells };
+    }
+    return out;
   }
 
   const values = aggs.map((a) => aggregate(filtered, a));
-  const out = { n: filtered.length, groupBy: null, groups: [{ key: 'Total', n: filtered.length, values }] };
+  const out = { n: filtered.length, groupBy: null, groupBy2: null, groups: [{ key: 'Total', n: filtered.length, values }] };
 
   // If single numeric aggregation without group-by, include raw values for histogram
   if (aggs.length === 1 && aggs[0].fn !== 'count') {

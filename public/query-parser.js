@@ -72,15 +72,27 @@ const DIAGNOSIS_SHORTHANDS = [
   { search: 'GIP',     aliases: ['gifted', 'giftedness', 'hochbegabt'] },
 ];
 
+// CDSE measures by the words staff use.
+const MEASURE_WORDS = [
+  { key: 'DS',          aliases: ['ds', 'diagnostic', 'diagnostic spécialisé', 'diagnostic specialise'] },
+  { key: 'ISA',         aliases: ['isa'] },
+  { key: 'C&G',         aliases: ['c&g', 'cg', 'guidance', 'conseil et guidance'] },
+  { key: 'Atelier',     aliases: ['atelier', 'ateliers'] },
+  { key: 'Rééducation', aliases: ['rééducation', 'reeducation', 'rehabilitation'] },
+  { key: 'Annexe',      aliases: ['annexe'] },
+  { key: 'CST',         aliases: ['cst'] },
+  { key: 'CdP',         aliases: ['cdp', 'classe de participation'] },
+];
+
 // Pre-baked example questions surfaced as clickable chips in the UI.
 export const NATURAL_EXAMPLES = [
-  'count by DIR',
-  'average IQ of girls',
-  'how many boys with ADHD',
+  'count by DR',
+  'average ISA duration by profile',
+  'how many boys with ADHD in CST',
   'mean age by sex',
-  'count by diagnosis',
+  'count by measure',
   'girls aged 12 to 14',
-  'average IQ of boys with autism in DIR Esch',
+  'average IQ of boys with autism in DR Esch',
 ];
 
 // ----------------------------------------------------------------------------
@@ -157,6 +169,13 @@ function resolveGroupableField(fragment, groupableFields) {
     school: 'ecole_lycee', lycee: 'ecole_lycee', lycée: 'ecole_lycee',
     language: 'langue_1',
     guardian: 'tutelle', guardianship: 'tutelle',
+    dr: 'dir', direction: 'dir', region: 'dir', directorate: 'dir',
+    measure: 'measures_all', measures: 'measures_all', 'cdse measure': 'measures_all', 'cdse measures': 'measures_all',
+    'running measure': 'measures_running', 'running measures': 'measures_running',
+    'age group': 'age_band', 'age groups': 'age_band', 'age band': 'age_band',
+    profile: 'verdachtsdiagnosen_profil', profiles: 'verdachtsdiagnosen_profil',
+    'cst group': 'cst_groupe', atelier: 'atelier_type', ateliers: 'atelier_type',
+    'competence centre': 'autres_cc', 'competence centres': 'autres_cc', cc: 'autres_cc',
   };
   const direct = SYN[fragment.toLowerCase().trim()];
   if (direct) {
@@ -185,6 +204,17 @@ function resolveNumericVariable(fragment, numericFields) {
     'number of services': 'n_autres_services',
     'number of guardians':'n_tutelle',
     'guardianship holders': 'n_tutelle',
+    'isa duration': 'dur_isa', 'duration of isa': 'dur_isa', 'duration of the isa': 'dur_isa', 'isa length': 'dur_isa',
+    'c&g duration': 'dur_cg', 'cg duration': 'dur_cg', 'duration of c&g': 'dur_cg',
+    'atelier duration': 'dur_atelier', 'duration of atelier': 'dur_atelier',
+    'reeducation duration': 'dur_reeducation', 'rééducation duration': 'dur_reeducation',
+    'annexe duration': 'dur_annexe', 'duration of annexe': 'dur_annexe',
+    'cst duration': 'dur_cst', 'duration of cst': 'dur_cst',
+    'cdp duration': 'dur_cdp', 'duration of cdp': 'dur_cdp',
+    'time with the cdse': 'dur_total', 'time in cdse': 'dur_total', 'total duration': 'dur_total', 'duration': 'dur_total',
+    'number of measures': 'n_measures', 'measures count': 'n_measures',
+    'eldib stage behaviour': 'eldib_v', 'eldib stage communication': 'eldib_k',
+    'eldib stage socialisation': 'eldib_soz', 'eldib stage cognition': 'eldib_kog',
   };
   if (SYN[frag]) {
     const f = numericFields.find((x) => x.key === SYN[frag]);
@@ -249,7 +279,7 @@ export function parseQuestion(rawText, opts) {
     };
   }
 
-  const groupableFields = fieldDefs.filter(
+  const groupableFields = (opts && opts.groupableFields) || fieldDefs.filter(
     (f) => ['select', 'text', 'tags'].includes(f.type),
   );
 
@@ -361,10 +391,11 @@ export function parseQuestion(rawText, opts) {
   // Important: the optional second segment must only allow '/' and '-' (not
   // whitespace), otherwise greedy matching pulls trailing context like ' with
   // adhd' into the captured region name.
-  const dirMatch = text.match(/(?:^|\s)dir\s+([a-zà-ÿ]+(?:[/\-][a-zà-ÿ]+)*)/i)
+  const dirMatch = text.match(/(?:^|\s)(?:dir|dr|direction)\s+(\d{1,2}|[a-zà-ÿ]+(?:[/\-][a-zà-ÿ]+)*)/i)
                 || text.match(/(?:^|\s)in\s+([a-zà-ÿ]+)(?=\s|$)/i);
-  if (dirMatch && dirOptions.length) {
-    const found = resolveSelectValue(dirMatch[1], dirOptions);
+  if (dirMatch && dirOptions.length && !MEASURE_WORDS.some((m) => m.aliases.includes(dirMatch[1].toLowerCase()))) {
+    const frag = /^\d{1,2}$/.test(dirMatch[1]) ? dirMatch[1].padStart(2, '0') : dirMatch[1];
+    const found = resolveSelectValue(frag, dirOptions);
     if (found && !found.ambiguous) {
       filters.push({ field: 'dir', op: 'eq', value: found.value });
     } else if (found && found.ambiguous) {
@@ -382,6 +413,16 @@ export function parseQuestion(rawText, opts) {
       filters.push({ field: 'ecole_lycee', op: 'eq', value: found.value });
     } else if (found) {
       filters.push({ field: 'ecole_lycee', op: 'contains', value: schoolMatch[1] });
+    }
+  }
+
+  // CDSE measures ('with ISA', 'in CST', 'atelier') → measures of the case
+  for (const m of MEASURE_WORDS) {
+    if (m.aliases.some((a) => new RegExp(`(^|\\s)${escapeRe(a)}(?=\\s|$)`, 'i').test(text))) {
+      // not when the word only names the numeric variable ('isa duration')
+      if (numVar && numVar.key.startsWith('dur_') && m.aliases.some((a) => numVar.label.toLowerCase().startsWith(a))) continue;
+      if (groupBy && m.key === 'Atelier' && groupBy === 'atelier_type') continue;
+      filters.push({ field: 'measures_all', op: 'has', value: m.key });
     }
   }
 

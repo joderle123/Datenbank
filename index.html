@@ -4,39 +4,43 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>CDSE — Statistics</title>
+  <title>CDSE Stats</title>
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  />
+  <!-- Fonts: Inter (text) and Manrope (headings), the CDSE Hub's typefaces.
+       Served from public/vendor/fonts; build.js embeds them into cdse.html,
+       so nothing is loaded from the internet. -->
+  <style>
+    @font-face { font-family: 'Inter var'; font-style: normal; font-weight: 100 900; font-display: swap;
+      src: url('./public/vendor/fonts/inter-var.woff2') format('woff2'); }
+    @font-face { font-family: 'Manrope var'; font-style: normal; font-weight: 200 800; font-display: swap;
+      src: url('./public/vendor/fonts/manrope-var.woff2') format('woff2'); }
+  </style>
 
-  <!-- Tailwind (Play CDN) -->
+  <!-- Tailwind (Play CDN) — replaced by the compiled stylesheet in cdse.html.
+       Keep this config identical to tailwind.config.cjs. -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: "class",
       theme: {
         extend: {
+          // Colours come from CSS variables (see :root below), so light and
+          // dark mode switch in one place. `.dark` tokens point to the same
+          // variables — older markup with dark: variants keeps working.
           colors: {
-            // Dark-mode palette eased up per CDSE feedback ("darkmode weniger dark"):
-            // background lifted from very-dark warm to a softer warm-charcoal,
-            // line tokens follow suit so the separation against the new paper
-            // is preserved; muted text gets a small lift too for legibility.
-            paper: { DEFAULT: "#FAF8F4", dark: "#1E1C18" },
-            ink: { DEFAULT: "#1A1814", dark: "#E8E4DC" },
-            muted: { DEFAULT: "#6B6358", dark: "#A39B8F" },
-            line: { DEFAULT: "#E5DFD2", dark: "#332F2A" },
-            primary: { DEFAULT: "#0F3D3E", soft: "#143F40" },
-            accent: { DEFAULT: "#B85C38", soft: "#C16C48" },
+            canvas:  { DEFAULT: "rgb(var(--c-bg) / <alpha-value>)",      dark: "rgb(var(--c-bg) / <alpha-value>)" },
+            paper:   { DEFAULT: "rgb(var(--c-surface) / <alpha-value>)", dark: "rgb(var(--c-surface) / <alpha-value>)" },
+            ink:     { DEFAULT: "rgb(var(--c-ink) / <alpha-value>)",     dark: "rgb(var(--c-ink) / <alpha-value>)" },
+            muted:   { DEFAULT: "rgb(var(--c-muted) / <alpha-value>)",   dark: "rgb(var(--c-muted) / <alpha-value>)" },
+            line:    { DEFAULT: "rgb(var(--c-line) / <alpha-value>)",    dark: "rgb(var(--c-line) / <alpha-value>)" },
+            primary: { DEFAULT: "rgb(var(--c-primary) / <alpha-value>)", soft: "rgb(var(--c-primary-strong) / <alpha-value>)" },
+            accent:  { DEFAULT: "rgb(var(--c-accent) / <alpha-value>)",  soft: "rgb(var(--c-accent) / <alpha-value>)" },
           },
           fontFamily: {
-            serif: ['"Instrument Serif"', "ui-serif", "serif"],
-            sans: ['"Schibsted Grotesk"', "system-ui", "sans-serif"],
-            mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
+            sans: ['"Inter var"', "Inter", "system-ui", "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+            display: ['"Manrope var"', "Manrope", '"Inter var"', "system-ui", "sans-serif"],
+            mono: ['"Inter var"', "Inter", "system-ui", "sans-serif"],
+            serif: ['"Manrope var"', "Manrope", "system-ui", "sans-serif"],
           },
         },
       },
@@ -48,148 +52,194 @@
        DOM is parsed — equivalent to the original `defer` attribute. -->
 
   <style>
-    html, body {
-      background: #faf8f4;
-      color: #1a1814;
-      font-family: "Schibsted Grotesk", system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
+    /* ---- CDSE design tokens (same palette as the CDSE Hub, "Klar & präzise") ---- */
+    :root {
+      --c-bg: 243 245 248;          /* page        #F3F5F8 */
+      --c-surface: 255 255 255;     /* cards       #FFFFFF */
+      --c-surface-2: 248 250 252;   /*             #F8FAFC */
+      --c-line: 226 230 236;        /* borders     #E2E6EC */
+      --c-line-2: 207 214 224;      /*             #CFD6E0 */
+      --c-ink: 14 22 40;            /* text        #0E1628 */
+      --c-ink-2: 38 49 73;          /*             #263149 */
+      --c-muted: 88 98 119;         /* secondary   #586277 */
+      --c-faint: 140 150 168;       /*             #8C96A8 */
+      --c-primary: 46 58 156;       /* CDSE indigo #2E3A9C */
+      --c-primary-strong: 35 44 124;/*             #232C7C */
+      --c-primary-fill: 46 58 156;
+      --c-primary-soft: 236 238 250;/*             #ECEEFA */
+      --c-accent: 180 83 58;        /* terracotta  #B4533A */
+      --shadow-1: 0 1px 2px rgba(14,22,40,.05);
+      --shadow-2: 0 1px 2px rgba(14,22,40,.04), 0 10px 28px -10px rgba(14,22,40,.16);
+      --focus: 0 0 0 3px rgba(46,58,156,.22);
+      --font-ui: 'Inter var', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --font-display: 'Manrope var', Manrope, 'Inter var', system-ui, sans-serif;
     }
-    html.dark, html.dark body { background: #1E1C18; color: #e8e4dc; }
-    .font-serif-i { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; }
-    .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+    html.dark {
+      --c-bg: 14 19 31;             /* #0E131F */
+      --c-surface: 22 28 42;        /* #161C2A */
+      --c-surface-2: 27 34 51;      /* #1B2233 */
+      --c-line: 40 50 70;           /* #283246 */
+      --c-line-2: 55 67 92;         /* #37435C */
+      --c-ink: 222 227 236;         /* #DEE3EC */
+      --c-ink-2: 196 203 216;
+      --c-muted: 150 162 183;       /* #96A2B7 */
+      --c-faint: 110 122 143;
+      --c-primary: 170 180 255;     /* text-coloured indigo on dark */
+      --c-primary-strong: 196 203 255;
+      --c-primary-fill: 64 78 196;  /* filled buttons #404EC4 */
+      --c-primary-soft: 36 44 82;
+      --c-accent: 232 140 112;
+      --shadow-1: 0 1px 2px rgba(0,0,0,.25);
+      --shadow-2: 0 1px 2px rgba(0,0,0,.2), 0 12px 30px -12px rgba(0,0,0,.5);
+      --focus: 0 0 0 3px rgba(170,180,255,.28);
+    }
+
+    html, body {
+      background: rgb(var(--c-bg));
+      color: rgb(var(--c-ink));
+      font-family: var(--font-ui);
+      font-size: 14.5px;
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: 'cv11', 'ss01';
+    }
+    h1, h2, h3, .disp { font-family: var(--font-display); font-weight: 750; letter-spacing: -0.02em; }
+    /* Emphasis in headings ("New case", "Type a question") — CDSE indigo */
+    .font-serif-i { font-family: inherit; font-style: normal; font-weight: inherit; }
+    .font-serif-i:not([class*="text-"]) { color: rgb(var(--c-primary)); }
+    .tnum, .font-mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+    code, code.font-mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .88em;
+      background: rgb(var(--c-bg)); border-radius: 5px; padding: 1px 5px; }
     [x-cloak] { display: none !important; }
+    :focus-visible { outline: none; box-shadow: var(--focus); border-radius: 7px; }
 
     ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 999px; }
-    html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+    ::-webkit-scrollbar-thumb { background: rgba(14,22,40,0.14); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+    html.dark ::-webkit-scrollbar-thumb { background: rgba(222,227,236,0.16); background-clip: padding-box; }
 
-    /* Sidebar brand monogram — soft circular badge, ink-on-paper */
+    /* Every bordered box in the main area is a white card on the grey page */
+    main .rounded-lg.border, main .rounded-xl.border, main .rounded-md.border { background-color: rgb(var(--c-surface)); }
+    main .rounded-lg.border.border-dashed { background-color: transparent; }
+
+    /* ---- Sidebar ---- */
+    .side { background: rgb(var(--c-surface)); }
     .brand-mark {
-      width: 2.25rem; height: 2.25rem;
-      display: inline-flex; align-items: center; justify-content: center;
-      border-radius: 999px;
-      border: 1px solid #E5DFD2;
-      background: rgba(15,61,62,0.05);
-      color: #0F3D3E;
-      font-size: 1.45rem; line-height: 1;
-      padding-bottom: 0.15rem;  /* compensate serif descender for optical centring */
+      width: 38px; height: 38px; flex: 0 0 auto;
+      display: grid; place-items: center; border-radius: 11px;
+      background: rgb(var(--c-primary-fill)); color: #fff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 6px 14px -6px rgb(var(--c-primary-fill));
     }
-    html.dark .brand-mark {
-      border-color: #332F2A;
-      background: rgba(232,228,220,0.05);
-      color: #E8E4DC;
-    }
-
+    .brand-mark svg { width: 20px; height: 20px; }
+    .navlabel { font-size: 10.5px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: rgb(var(--c-faint)); padding: 10px 10px 6px; }
     .nav-btn {
-      display: flex; align-items: center; gap: 0.625rem;
-      width: 100%; padding: 0.5rem 0.75rem;
-      border-radius: 0.5rem; text-align: left;
-      color: #1a1814;
+      display: flex; align-items: center; gap: 0.7rem;
+      width: 100%; min-height: 38px; padding: 0.4rem 0.7rem;
+      border-radius: 10px; text-align: left; font-weight: 520;
+      color: rgb(var(--c-ink-2));
       transition: background 120ms ease, color 120ms ease;
     }
-    .nav-btn:hover { background: rgba(15,61,62,0.06); }
-    html.dark .nav-btn { color: #e8e4dc; }
-    html.dark .nav-btn:hover { background: rgba(232,228,220,0.06); }
-    .nav-btn.active {
-      background: rgba(15,61,62,0.1); color: #0f3d3e;
-    }
-    html.dark .nav-btn.active {
-      background: rgba(232,228,220,0.1); color: #e8e4dc;
-    }
+    .nav-btn svg { width: 18px; height: 18px; flex: 0 0 auto; opacity: .75; }
+    .nav-btn:hover { background: rgb(var(--c-bg)); }
+    .nav-btn.active { background: rgb(var(--c-primary-soft)); color: rgb(var(--c-primary)); font-weight: 620; }
+    .nav-btn.active svg { opacity: 1; }
+    .nav-count { margin-left: auto; font-size: 11px; color: rgb(var(--c-faint)); font-variant-numeric: tabular-nums; }
 
+    /* ---- Buttons ---- */
     .btn {
       display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.45rem 0.85rem; border-radius: 0.45rem;
-      font-size: 0.825rem; font-weight: 500;
-      transition: background 120ms ease, border-color 120ms ease;
+      padding: 0.46rem 0.9rem; border-radius: 9px;
+      font-size: 0.84rem; font-weight: 600;
+      transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
       border: 1px solid transparent;
       cursor: pointer;
     }
-    .btn-primary { background: #0F3D3E; color: #FAF8F4; }
-    .btn-primary:hover { background: #143F40; }
-    .btn-ghost { color: #1a1814; border-color: #E5DFD2; background: transparent; }
-    .btn-ghost:hover { background: rgba(15,61,62,0.05); }
-    html.dark .btn-ghost { color: #E8E4DC; border-color: #332F2A; }
-    html.dark .btn-ghost:hover { background: rgba(232,228,220,0.05); }
-    .btn-danger { color: #B85C38; border: 1px solid #B85C38; background: transparent; }
-    .btn-danger:hover { background: rgba(184,92,56,0.08); }
+    .btn-primary { background: rgb(var(--c-primary-fill)); color: #fff; box-shadow: 0 1px 2px rgba(14,22,40,.12); }
+    .btn-primary:hover { background: rgb(var(--c-primary-strong)); }
+    html.dark .btn-primary:hover { background: #4A58D0; }
+    .btn-ghost { color: rgb(var(--c-ink)); border-color: rgb(var(--c-line-2)); background: rgb(var(--c-surface)); }
+    .btn-ghost:hover { background: rgb(var(--c-surface-2)); border-color: rgb(var(--c-primary) / .5); }
+    .btn-danger { color: rgb(var(--c-accent)); border: 1px solid rgb(var(--c-accent) / .6); background: rgb(var(--c-surface)); }
+    .btn-danger:hover { background: rgb(var(--c-accent) / .08); }
+    .btn:disabled { cursor: not-allowed; }
 
+    /* ---- Form controls ---- */
     .field-input {
       width: 100%;
-      background: transparent;
-      border: 1px solid #E5DFD2;
-      border-radius: 0.4rem;
-      padding: 0.45rem 0.65rem;
+      background: rgb(var(--c-surface));
+      border: 1px solid rgb(var(--c-line-2));
+      border-radius: 9px;
+      padding: 0.46rem 0.7rem;
       font-size: 0.875rem;
       color: inherit;
-      transition: border-color 120ms ease;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
     }
-    .field-input:focus { outline: none; border-color: #0F3D3E; }
-    html.dark .field-input { border-color: #332F2A; }
-    html.dark .field-input:focus { border-color: #E8E4DC; }
-    .field-error { border-color: #B85C38 !important; }
+    .field-input:focus { outline: none; border-color: rgb(var(--c-primary)); box-shadow: var(--focus); }
+    .field-error { border-color: rgb(var(--c-accent)) !important; }
+    textarea.field-input { line-height: 1.45; }
 
     .chip {
       display: inline-flex; align-items: center; gap: 0.35rem;
-      background: rgba(15,61,62,0.08); color: #0F3D3E;
-      border-radius: 999px; padding: 0.2rem 0.55rem;
-      font-size: 0.75rem;
+      background: rgb(var(--c-primary-soft)); color: rgb(var(--c-primary));
+      border-radius: 999px; padding: 0.2rem 0.6rem;
+      font-size: 0.75rem; font-weight: 550;
     }
-    html.dark .chip { background: rgba(232,228,220,0.08); color: #E8E4DC; }
     .chip button { color: inherit; opacity: 0.6; }
     .chip button:hover { opacity: 1; }
 
     /* Clickable preset / select chip-toggle */
     .chip-toggle {
       display: inline-flex; align-items: center;
-      padding: 0.3rem 0.7rem;
-      border: 1px solid #E5DFD2;
+      padding: 0.32rem 0.72rem;
+      border: 1px solid rgb(var(--c-line-2));
       border-radius: 999px;
-      font-size: 0.75rem;
-      line-height: 1.1;
+      font-size: 0.76rem;
+      line-height: 1.15;
       color: inherit;
-      background: transparent;
+      background: rgb(var(--c-surface));
       cursor: pointer;
       transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
       max-width: 100%;
       white-space: normal;
       text-align: left;
     }
-    .chip-toggle:hover {
-      background: rgba(15,61,62,0.05);
-      border-color: #0F3D3E;
-    }
-    .chip-toggle-active {
-      background: #0F3D3E;
-      color: #FAF8F4;
-      border-color: #0F3D3E;
-    }
-    .chip-toggle-active:hover {
-      background: #143F40;
-      color: #FAF8F4;
-    }
-    .chip-toggle-err {
-      border-color: #B85C38;
-    }
-    html.dark .chip-toggle { border-color: #332F2A; }
-    html.dark .chip-toggle:hover { background: rgba(232,228,220,0.06); border-color: #E8E4DC; }
-    html.dark .chip-toggle-active { background: #E8E4DC; color: #1E1C18; border-color: #E8E4DC; }
-    html.dark .chip-toggle-active:hover { background: #FAF8F4; color: #1E1C18; }
+    .chip-toggle:hover { background: rgb(var(--c-primary-soft)); border-color: rgb(var(--c-primary) / .55); }
+    .chip-toggle-active, .chip-toggle-active:hover { background: rgb(var(--c-primary-fill)); color: #fff; border-color: rgb(var(--c-primary-fill)); }
+    .chip-toggle-err { border-color: rgb(var(--c-accent)); }
+    .chip-old { border-style: dashed; }
 
-    .table-row:hover { background: rgba(15,61,62,0.03); }
-    html.dark .table-row:hover { background: rgba(232,228,220,0.03); }
+    .table-row:hover { background: rgb(var(--c-primary-soft) / .45); }
+
+    /* ---- Cards, KPI tiles ---- */
+    .card { background: rgb(var(--c-surface)); border: 1px solid rgb(var(--c-line)); border-radius: 14px; box-shadow: var(--shadow-1); }
+    .card-title { font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--c-muted)); }
+    .card-sub { font-size: 11.5px; color: rgb(var(--c-faint)); margin-top: 2px; }
+    .kpi { position: relative; overflow: hidden; padding: 16px 18px 15px 20px; }
+    .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--kpi, rgb(var(--c-primary-fill))); }
+    .kpi-value { font-family: var(--font-display); font-weight: 780; letter-spacing: -0.03em; font-size: 34px; line-height: 1.05; margin-top: 10px; font-variant-numeric: tabular-nums; }
+    .kpi-sub { font-size: 11.5px; color: rgb(var(--c-muted)); margin-top: 4px; }
+    .kicker { font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: rgb(var(--c-muted)); }
 
     .toast {
       position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60;
-      padding: 0.7rem 1rem; border-radius: 0.5rem;
-      border: 1px solid #0F3D3E; background: #FAF8F4; color: #0F3D3E;
-      font-size: 0.875rem; box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+      padding: 0.75rem 1rem 0.75rem 1.1rem; border-radius: 12px;
+      border: 1px solid rgb(var(--c-line)); border-left: 4px solid rgb(var(--c-primary-fill));
+      background: rgb(var(--c-surface)); color: rgb(var(--c-ink));
+      font-size: 0.875rem; box-shadow: var(--shadow-2);
     }
-    .toast.err { border-color: #B85C38; color: #B85C38; }
-    html.dark .toast { background: #1F1D1A; }
+    .toast.err { border-left-color: rgb(var(--c-accent)); }
 
     details > summary { list-style: none; cursor: pointer; }
     details > summary::-webkit-details-marker { display: none; }
+
+    /* Multi-value picker in the query filters */
+    .pick-menu { position: absolute; z-index: 30; margin-top: 4px; min-width: 16rem; max-width: 26rem; max-height: 18rem; overflow: auto;
+      background: rgb(var(--c-surface)); border: 1px solid rgb(var(--c-line)); border-radius: 10px; box-shadow: var(--shadow-2); padding: 6px; }
+    .pick-menu label { display: flex; gap: .5rem; align-items: flex-start; padding: .3rem .45rem; border-radius: 7px; font-size: .82rem; cursor: pointer; }
+    .pick-menu label:hover { background: rgb(var(--c-primary-soft)); }
+
+    /* Cross table (two variables) */
+    .xt th, .xt td { padding: .45rem .6rem; border-top: 1px solid rgb(var(--c-line)); }
+    .xt td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .xt td.heat { position: relative; }
 
     /* -- Print stylesheet -- */
     @media print {
@@ -200,6 +250,7 @@
       body { padding: 0; }
       main { padding: 0 !important; }
       main > .px-10 { padding: 0 !important; }
+      main .rounded-lg.border { box-shadow: none !important; }
       #printArea {
         display: block !important;
         max-width: 100% !important;
@@ -207,7 +258,7 @@
         color: black !important;
       }
       #printArea .print-only { display: block !important; }
-      #printArea .print-header { display: block !important; border-bottom: 1px solid #999; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+      #printArea .print-header { display: block !important; border-bottom: 2px solid #2E3A9C; padding-bottom: 0.5rem; margin-bottom: 1rem; }
       #printArea h2 { font-size: 18pt; }
       #printArea .text-3xl, #printArea .text-2xl { font-size: 16pt; }
       #printArea dl { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; row-gap: 0.25rem; }
@@ -284,17 +335,15 @@
 
   <div class="flex min-h-screen">
     <!-- Sidebar -->
-    <aside class="w-60 shrink-0 border-r border-line dark:border-line-dark flex flex-col px-4 py-6 gap-6 bg-paper dark:bg-paper-dark">
-      <!-- Brand lockup: serif monogram + two-line name -->
-      <div class="px-2 flex items-start gap-3">
-        <div class="brand-mark shrink-0">
-          <span class="font-serif-i">C</span>
-        </div>
-        <div class="leading-tight pt-0.5">
-          <div class="text-2xl"><span class="font-serif-i">Statistics</span></div>
-          <div class="text-[10px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mt-1">
-            Centre pour le Développement<br/>Social et Éducatif
-          </div>
+    <aside class="side w-64 shrink-0 border-r border-line flex flex-col px-3 py-5 gap-5 sticky top-0 h-screen overflow-y-auto">
+      <!-- Brand -->
+      <div class="px-2 flex items-center gap-3">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+        </span>
+        <div class="leading-tight min-w-0">
+          <div class="disp text-[18px]">CDSE Stats</div>
+          <div class="text-[11px] text-muted font-medium mt-0.5 leading-snug">Centre pour le développement socio-émotionnel</div>
         </div>
       </div>
 
@@ -302,14 +351,14 @@
       <button
         x-show="hasUnsyncedChanges"
         @click="view = 'settings'"
-        class="px-2.5 py-2 -mt-2 rounded-lg border border-accent/40 bg-accent/[0.05] text-left flex items-start gap-2"
+        class="mx-1 px-3 py-2 rounded-xl border border-accent/40 bg-accent/[0.06] text-left flex items-start gap-2"
         style="display:none"
         :title="'Click to open Settings → Sync (' + unsyncedCount + ' unsynced change' + (unsyncedCount === 1 ? '' : 's') + ')'"
       >
-        <span class="text-accent text-xs">●</span>
+        <span class="text-accent text-xs mt-0.5">●</span>
         <span class="text-xs leading-snug">
           <span class="font-mono tnum" x-text="unsyncedCount"></span> unsynced change(s)
-          <span class="block text-[10px] text-muted dark:text-muted-dark mt-0.5">Click to sync</span>
+          <span class="block text-[11px] text-muted mt-0.5">Click to sync</span>
         </span>
       </button>
 
@@ -317,58 +366,60 @@
       <button
         x-show="backupReminderVisible && !hasUnsyncedChanges"
         @click="downloadExcelBackup()"
-        class="px-2.5 py-2 -mt-2 rounded-lg border border-line dark:border-line-dark text-left flex items-start gap-2 hover:bg-paper dark:hover:bg-paper-dark"
+        class="mx-1 px-3 py-2 rounded-xl border border-line text-left flex items-start gap-2 hover:bg-canvas"
         style="display:none"
         title="No Excel backup recently — click to download one now"
       >
-        <span class="text-muted dark:text-muted-dark text-xs">●</span>
+        <span class="text-muted text-xs mt-0.5">●</span>
         <span class="text-xs leading-snug">
           Backup overdue
-          <span class="block text-[10px] text-muted dark:text-muted-dark mt-0.5">Last: <span x-text="lastBackupDisplay()"></span></span>
+          <span class="block text-[11px] text-muted mt-0.5">Last: <span x-text="lastBackupDisplay()"></span></span>
         </span>
       </button>
 
       <nav class="flex flex-col gap-0.5">
         <template x-for="item in nav" :key="item.id">
-          <button class="nav-btn text-sm" :class="{ active: view === item.id || (item.id === 'cases' && (view === 'form' || view === 'detail')) }" @click="view = item.id">
-            <span class="w-1.5 h-1.5 rounded-full bg-current opacity-40"></span>
-            <span x-text="item.label"></span>
-          </button>
+          <div>
+            <div class="navlabel" x-show="item.section" x-text="item.section"></div>
+            <button class="nav-btn text-sm" :class="{ active: view === item.id || (item.id === 'cases' && (view === 'form' || view === 'detail')) }" @click="view = item.id">
+              <span x-html="navIcon(item.id)" class="contents"></span>
+              <span x-text="item.label"></span>
+              <span class="nav-count" x-show="item.id === 'cases' && allCases.length" x-text="allCases.length"></span>
+            </button>
+          </div>
         </template>
       </nav>
 
-      <div class="mt-auto flex flex-col gap-2 px-2">
-        <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Session</div>
-        <div class="text-sm" x-text="user || '—'"></div>
-        <button @click="toggleTheme()" class="text-xs text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark text-left">
-          <span x-show="theme === 'light'">→ Dark mode</span>
-          <span x-show="theme === 'dark'">→ Light mode</span>
+      <div class="mt-auto flex flex-col gap-1.5 px-2 pt-4 border-t border-line">
+        <div class="text-[10.5px] uppercase tracking-widest text-muted font-semibold">Signed in as</div>
+        <div class="text-sm font-medium" x-text="user || '—'"></div>
+        <button @click="toggleTheme()" class="text-xs text-muted hover:text-ink text-left mt-1">
+          <span x-show="theme === 'light'">Dark mode</span>
+          <span x-show="theme === 'dark'">Light mode</span>
         </button>
-        <div class="text-[10px] tracking-wide text-muted dark:text-muted-dark font-mono">v0.4 · prototype</div>
-        <div class="text-[10px] tracking-wide text-muted dark:text-muted-dark mt-1" x-text="'build ' + buildTag"></div>
+        <div class="text-[10.5px] text-muted mt-2" x-text="'Version 0.5 · build ' + buildTag"></div>
+        <div class="text-[10.5px] text-muted">Data stays in this browser.</div>
       </div>
     </aside>
 
     <!-- Main -->
     <main class="flex-1 min-w-0">
-      <header class="border-b border-line dark:border-line-dark px-10 py-6 flex items-baseline justify-between gap-6">
+      <header class="border-b border-line bg-paper px-10 py-5 flex items-center justify-between gap-6 sticky top-0 z-20">
         <div>
-          <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark" x-text="currentNav?.kicker || ''"></div>
-          <h1 class="mt-1 text-3xl">
-            <span x-text="currentNav?.title || ''"></span>
-            <span class="font-serif-i text-accent" x-text="currentNav?.accent || ''"></span>
-          </h1>
+          <div class="kicker" x-text="currentNav?.kicker || ''"></div>
+          <h1 class="mt-0.5 text-[26px] leading-tight" x-text="currentNav?.label || ''"></h1>
         </div>
         <div class="flex items-center gap-3 ml-auto">
           <button
             @click="openSpotlight()"
-            class="flex items-center gap-2 px-3 py-1.5 border border-line dark:border-line-dark rounded-md text-sm text-muted dark:text-muted-dark hover:border-primary dark:hover:border-ink-dark min-w-[16rem]"
+            class="flex items-center gap-2 px-3 py-2 border border-line bg-paper rounded-lg text-sm text-muted hover:border-primary min-w-[17rem]"
             title="Global search (Ctrl/⌘ + K)"
           >
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
             <span>Search a case…</span>
-            <span class="ml-auto text-[10px] font-mono tnum bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">⌘K</span>
+            <span class="ml-auto text-[10px] tnum bg-canvas px-1.5 py-0.5 rounded">Ctrl K</span>
           </button>
-          <div class="text-xs tnum text-muted dark:text-muted-dark font-mono" x-text="now"></div>
+          <div class="text-xs tnum text-muted" x-text="now"></div>
           <button class="btn btn-primary" @click="startCreate()" x-show="view === 'cases' || view === 'dashboard'">+ New case</button>
         </div>
       </header>
@@ -379,95 +430,144 @@
         <!-- DASHBOARD                                                    -->
         <!-- ============================================================ -->
         <section x-show="view === 'dashboard'" style="display:none">
+          <!-- What's new (dismissable) -->
+          <template x-if="!whatsNewHidden">
+            <div class="card p-5 mb-6 flex gap-5 items-start">
+              <div class="brand-mark shrink-0" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="kicker">New in version 0.5</div>
+                <h2 class="text-lg mt-0.5">Updated after the Responsables’ feedback</h2>
+                <ul class="mt-2 text-sm text-muted grid grid-cols-2 gap-x-8 gap-y-1 list-disc pl-5">
+                  <li><span class="text-ink">Official Directions de région</span> DR 01–15 and full school names</li>
+                  <li><span class="text-ink">Annexe, CST and CdP</span> are separate measures now</li>
+                  <li><span class="text-ink">Atelier and Rééducation</span> added — say which one</li>
+                  <li><span class="text-ink">ISA</span> = Intervention spécialisée ambulatoire</li>
+                  <li><span class="text-ink">“Other”</span> opens a field to say what it is</li>
+                  <li><span class="text-ink">Other CC</span> picked from the list · <span class="text-ink">ELDiB</span> stages</li>
+                  <li><span class="text-ink">Durations</span> of every measure, per pupil, profile or school</li>
+                  <li><span class="text-ink">Queries</span> with many variables (and/or, “is one of”, two groupings)</li>
+                  <li><span class="text-ink">Excel import</span> — read in this browser, no upload, no AI</li>
+                  <li>Older entries stay readable; <span class="text-ink">Settings → Clean up</span> tidies them</li>
+                </ul>
+              </div>
+              <button class="text-xs text-muted hover:text-ink underline shrink-0" @click="hideWhatsNew()">Hide</button>
+            </div>
+          </template>
+
           <template x-if="allCases.length === 0">
-            <div class="border border-dashed border-line dark:border-line-dark rounded-lg p-10 text-center">
-              <p class="font-serif-i text-2xl">No cases yet.</p>
-              <p class="mt-2 text-sm text-muted dark:text-muted-dark">Create a case, import a file, or load fictional data from settings.</p>
+            <div class="border border-dashed border-line rounded-lg p-10 text-center">
+              <p class="disp text-2xl">No cases yet.</p>
+              <p class="mt-2 text-sm text-muted">Create a case, import an Excel sheet, or load fictional demo cases from Settings.</p>
               <div class="mt-6 flex gap-2 justify-center">
                 <button class="btn btn-primary" @click="startCreate()">New case</button>
-                <button class="btn btn-ghost" @click="view = 'io'">Import</button>
+                <button class="btn btn-ghost" @click="view = 'io'">Import Excel / CSV</button>
                 <button class="btn btn-ghost" @click="view = 'settings'">Demo data</button>
               </div>
             </div>
           </template>
 
           <template x-if="allCases.length > 0">
-            <div class="space-y-8">
+            <div class="space-y-5">
               <!-- KPI tiles -->
-              <div class="grid grid-cols-4 gap-4">
-                <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Active cases</div>
-                  <div class="mt-3 text-4xl tnum font-mono" x-text="kpi.n"></div>
+              <div class="grid grid-cols-5 gap-4">
+                <div class="card kpi">
+                  <div class="card-title">Cases</div>
+                  <div class="kpi-value" x-text="kpi.n"></div>
+                  <div class="kpi-sub"><span class="tnum" x-text="kpi.nWithMeasure"></span> with a CDSE measure</div>
                 </div>
-                <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Average age</div>
-                  <div class="mt-3 text-4xl tnum font-mono">
-                    <span x-text="fmt(kpi.avgAge, 1)"></span>
-                  </div>
-                  <div class="text-[11px] text-muted dark:text-muted-dark mt-1 tnum font-mono">n = <span x-text="kpi.nAge"></span></div>
+                <div class="card kpi" style="--kpi:#1F6B6F">
+                  <div class="card-title">Running today</div>
+                  <div class="kpi-value" x-text="kpi.nRunning"></div>
+                  <div class="kpi-sub">cases with a measure in progress</div>
                 </div>
-                <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Average IQ</div>
-                  <div class="mt-3 text-4xl tnum font-mono">
-                    <span x-text="fmt(kpi.avgIq, 1)"></span>
-                  </div>
-                  <div class="text-[11px] text-muted dark:text-muted-dark mt-1 tnum font-mono">n = <span x-text="kpi.nIq"></span></div>
+                <div class="card kpi" style="--kpi:#6E4A7E">
+                  <div class="card-title">Time with the CDSE</div>
+                  <div class="kpi-value"><span x-text="fmt(kpi.avgDurTotal, 1)"></span><span class="text-base font-semibold text-muted ml-1">mo.</span></div>
+                  <div class="kpi-sub">average · n = <span class="tnum" x-text="kpi.nDurTotal"></span></div>
                 </div>
-                <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark">Girls / Boys</div>
-                  <div class="mt-3 text-4xl tnum font-mono">
-                    <span x-text="(kpi.sexe.find(s=>s[0]==='F')?.[1] ?? 0)"></span>
-                    <span class="text-muted dark:text-muted-dark mx-1 text-2xl">/</span>
-                    <span x-text="(kpi.sexe.find(s=>s[0]==='M')?.[1] ?? 0)"></span>
+                <div class="card kpi" style="--kpi:#8A6414">
+                  <div class="card-title">Average age</div>
+                  <div class="kpi-value" x-text="fmt(kpi.avgAge, 1)"></div>
+                  <div class="kpi-sub">years · n = <span class="tnum" x-text="kpi.nAge"></span></div>
+                </div>
+                <div class="card kpi" style="--kpi:#B4533A">
+                  <div class="card-title">Girls / Boys</div>
+                  <div class="kpi-value">
+                    <span x-text="(kpi.sexe.find(s=>s[0]==='F')?.[1] ?? 0)"></span><span class="text-muted mx-1 text-2xl font-semibold">/</span><span x-text="(kpi.sexe.find(s=>s[0]==='M')?.[1] ?? 0)"></span>
                   </div>
+                  <div class="kpi-sub" x-show="kpi.sexe.find(s=>s[0]==='D')"><span x-text="kpi.sexe.find(s=>s[0]==='D')?.[1]"></span> diverse</div>
                 </div>
               </div>
 
               <!-- Chart-library-not-loaded fallback -->
               <template x-if="chartLibError">
-                <div class="border border-accent rounded-lg p-4 text-sm text-accent mb-4">
+                <div class="border border-accent rounded-lg p-4 text-sm text-accent">
                   The charts require Chart.js, which could not be loaded. If you are using the <code>cdse.html</code> build, Chart.js is embedded in it — make sure you are opening the latest version (build shown bottom-left).
                 </div>
               </template>
 
-              <!-- Chart row 1 — distributions -->
+              <!-- Row 1 — who and what -->
               <div class="grid grid-cols-3 gap-4">
-                <div class="border border-line dark:border-line-dark rounded-lg p-5 flex flex-col items-center">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3 self-start">Distribution by sex</div>
-                  <div class="relative" style="width: 240px; height: 240px;"><canvas id="dashSexe"></canvas></div>
+                <div class="card p-5 flex flex-col">
+                  <div class="card-title">Distribution by sex</div>
+                  <div class="relative mt-3" style="height: 230px;"><canvas id="dashSexe"></canvas></div>
                 </div>
-                <div class="border border-line dark:border-line-dark rounded-lg p-5 flex flex-col items-center">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3 self-start">CDSE Measures (cumulative)</div>
-                  <div class="relative" style="width: 240px; height: 240px;"><canvas id="dashMesures"></canvas></div>
+                <div class="card p-5 flex flex-col">
+                  <div class="card-title">CDSE measures</div>
+                  <div class="card-sub">Every measure of every case</div>
+                  <div class="relative mt-2" style="height: 230px;"><canvas id="dashMesures"></canvas></div>
                 </div>
-                <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Age distribution</div>
-                  <div style="height: 240px; position: relative;"><canvas id="dashAge"></canvas></div>
+                <div class="card p-5">
+                  <div class="card-title">Age distribution</div>
+                  <div class="card-sub">Years</div>
+                  <div class="mt-2" style="height: 230px; position: relative;"><canvas id="dashAge"></canvas></div>
                 </div>
               </div>
 
-              <!-- Chart row 2 — rankings & IQ -->
+              <!-- Row 2 — where and how long -->
               <div class="grid grid-cols-3 gap-4">
-                <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Top schools</div>
-                  <div class="text-[10px] text-muted dark:text-muted-dark mb-2 italic">Short codes — hover for the full name.</div>
-                  <div style="height: 260px; position: relative;"><canvas id="dashSchools"></canvas></div>
+                <div class="card p-5">
+                  <div class="card-title">Cases by Direction de région</div>
+                  <div class="card-sub">DR 01–15 · secondary pupils have no DR</div>
+                  <div class="mt-2" style="height: 290px; position: relative;"><canvas id="dashDr"></canvas></div>
                 </div>
-                <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">Frequent diagnoses</div>
-                  <div class="text-[10px] text-muted dark:text-muted-dark mb-2 italic">ICD-10 codes — hover for the description.</div>
-                  <div style="height: 260px; position: relative;"><canvas id="dashDiag"></canvas></div>
+                <div class="card p-5">
+                  <div class="card-title">Measures running today</div>
+                  <div class="card-sub">Started, not yet ended</div>
+                  <div class="mt-2" style="height: 290px; position: relative;"><canvas id="dashRunning"></canvas></div>
                 </div>
-                <div class="border border-line dark:border-line-dark rounded-lg p-5">
-                  <div class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mb-3">IQ distribution</div>
-                  <div style="height: 260px; position: relative;"><canvas id="dashIq"></canvas></div>
+                <div class="card p-5">
+                  <div class="card-title">Average duration per measure</div>
+                  <div class="card-sub">Months · a running measure counts until today</div>
+                  <div class="mt-2" style="height: 290px; position: relative;"><canvas id="dashDur"></canvas></div>
                 </div>
               </div>
 
-              <p class="text-xs text-muted dark:text-muted-dark italic max-w-2xl">
-                For more specific questions — e.g. "average IQ of girls at Lycée Junglinster" —
-                open <button class="underline" @click="view='query'">Queries</button>,
-                where each of the 38 variables can be combined as a filter.
+              <!-- Row 3 — schools, diagnoses, IQ -->
+              <div class="grid grid-cols-3 gap-4">
+                <div class="card p-5">
+                  <div class="card-title">Top schools</div>
+                  <div class="card-sub">Full names — hover a bar to read long ones</div>
+                  <div class="mt-2" style="height: 270px; position: relative;"><canvas id="dashSchools"></canvas></div>
+                </div>
+                <div class="card p-5">
+                  <div class="card-title">Frequent diagnoses</div>
+                  <div class="card-sub">ICD-10 codes — hover for the description</div>
+                  <div class="mt-2" style="height: 270px; position: relative;"><canvas id="dashDiag"></canvas></div>
+                </div>
+                <div class="card p-5">
+                  <div class="card-title">IQ distribution</div>
+                  <div class="card-sub">n = <span class="tnum" x-text="kpi.nIq"></span> · average <span class="tnum" x-text="fmt(kpi.avgIq, 1)"></span></div>
+                  <div class="mt-2" style="height: 270px; position: relative;"><canvas id="dashIq"></canvas></div>
+                </div>
+              </div>
+
+              <p class="text-xs text-muted max-w-3xl">
+                For more specific questions — e.g. “average ISA duration of girls in DR 06 Esch/Alzette” —
+                open <button class="underline text-primary" @click="view='query'">Queries</button>:
+                every variable can be used as a filter, and results can be split by two variables at once.
               </p>
             </div>
           </template>
@@ -496,10 +596,11 @@
                   <div class="text-xs uppercase tracking-widest text-muted dark:text-muted-dark">Visible columns</div>
                   <button class="text-xs underline" @click="resetColumns()">reset</button>
                 </div>
-                <template x-for="f in FIELD_DEFS.filter(x => x.type !== 'computed' || x.key === 'age')" :key="f.key">
+                <template x-for="f in columnChoices" :key="f.key">
                   <label class="flex items-center gap-2 py-1 text-sm cursor-pointer">
                     <input type="checkbox" :checked="visibleColumns.includes(f.key)" @change="toggleColumn(f.key)" />
                     <span x-text="f.label"></span>
+                    <span x-show="f.type === 'computed'" class="text-[10px] text-muted ml-auto">calculated</span>
                   </label>
                 </template>
               </div>
@@ -509,15 +610,15 @@
           <!-- Quick filters -->
           <div class="flex flex-wrap gap-2 mb-4">
             <template x-for="(opts, key) in distinctValues" :key="key">
-              <div class="flex items-center gap-1">
-                <span class="text-xs text-muted dark:text-muted-dark uppercase tracking-widest" x-text="labelOf(key)"></span>
-                <select x-model="quickFilters[key]" class="field-input text-xs py-1">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] text-muted uppercase tracking-wider font-semibold" x-text="quickFilterLabel(key)"></span>
+                <select x-model="quickFilters[key]" class="field-input text-xs py-1" :style="key === 'ecole_lycee' ? 'max-width: 16rem' : 'max-width: 12rem'">
                   <option value="">all</option>
-                  <template x-for="o in opts" :key="o"><option :value="o" x-text="o"></option></template>
+                  <template x-for="o in opts" :key="o"><option :value="o" x-text="o" :selected="o === quickFilters[key]"></option></template>
                 </select>
               </div>
             </template>
-            <button class="btn btn-ghost text-xs" @click="search=''; quickFilters={ dir:'', sexe:'', mesure_cdse_1:'', ecole_lycee:'' }">reset</button>
+            <button class="btn btn-ghost text-xs" @click="resetQuickFilters()">reset</button>
           </div>
 
           <!-- Empty -->
@@ -549,13 +650,13 @@
                     <template x-for="c in filteredCases" :key="c.id">
                       <tr class="table-row border-t border-line dark:border-line-dark">
                         <template x-for="col in visibleColumns" :key="col">
-                          <td class="px-3 py-2.5 whitespace-nowrap" :class="fieldByKey(col)?.type === 'number' || col === 'age' ? 'font-mono tnum' : ''" x-text="cellValue(c, col)"></td>
+                          <td class="px-3 py-2.5 whitespace-nowrap" :class="fieldByKey(col)?.type === 'number' || fieldByKey(col)?.numeric ? 'tnum text-right' : ''" x-text="cellValue(c, col)"></td>
                         </template>
                         <td class="px-3 py-2.5 whitespace-nowrap">
                           <div class="flex gap-1 flex-wrap">
                             <template x-for="m in measuresOf(c).filter(m => ['active','ending','open'].includes(m.status))" :key="m.key">
-                              <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="measureBadgeClass(m.status)" :title="measureStatusLabel(m.status)">
-                                <span x-text="m.label"></span>
+                              <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="measureBadgeClass(m.status)" :title="m.label + ' — ' + measureStatusLabel(m.status)">
+                                <span x-text="m.key === 'Other' ? 'Other' : m.key"></span>
                                 <span x-show="m.status === 'ending'" class="ml-1">⚠</span>
                               </span>
                             </template>
@@ -582,7 +683,7 @@
           <template x-if="detailCase">
             <div id="printArea">
               <div class="print-header hidden mb-6">
-                <div class="text-[10px] uppercase tracking-widest">CDSE Luxembourg · Centre for Social and Educational Development</div>
+                <div class="text-[10px] uppercase tracking-widest">CDSE · Centre pour le développement socio-émotionnel · Luxembourg</div>
                 <div class="text-[10px] mt-1">Printed on <span x-text="formatTs(new Date().toISOString())"></span> by <span x-text="user || '—'"></span></div>
               </div>
 
@@ -638,8 +739,8 @@
                   <div class="border border-line dark:border-line-dark rounded-lg p-5">
                     <div class="space-y-2" x-data="{ tl: timelineFor(detailCase) }">
                       <template x-for="lane in tl.lanes" :key="lane.key">
-                        <div class="grid grid-cols-[7rem_1fr_auto] gap-3 items-center text-xs">
-                          <div class="font-medium" x-text="lane.label"></div>
+                        <div class="grid grid-cols-[11rem_1fr_auto] gap-3 items-center text-xs">
+                          <div class="font-medium truncate" :title="lane.label" x-text="lane.label"></div>
                           <div class="relative h-6 bg-black/[0.03] dark:bg-white/[0.03] rounded">
                             <!-- year ticks -->
                             <template x-for="y in tl.years" :key="y.label">
@@ -662,7 +763,7 @@
                           </div>
                         </div>
                       </template>
-                      <div class="grid grid-cols-[7rem_1fr_auto] gap-3 mt-2">
+                      <div class="grid grid-cols-[11rem_1fr_auto] gap-3 mt-2">
                         <div></div>
                         <div class="relative h-4">
                           <template x-for="y in tl.years" :key="y.label">
@@ -679,20 +780,22 @@
                 </div>
               </template>
 
-              <template x-for="cat in CATEGORIES" :key="cat.key">
-                <div class="mb-6">
-                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2" x-text="cat.label"></div>
-                  <dl class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                    <template x-for="f in fieldsOf(cat.key)" :key="f.key">
-                      <div class="flex justify-between gap-4 border-b border-line dark:border-line-dark py-1.5">
-                        <dt class="text-muted dark:text-muted-dark" x-text="f.label"></dt>
-                        <dd class="text-right" :class="f.type === 'number' || f.key === 'age' ? 'font-mono tnum' : ''"
-                            x-text="cellValue(detailCase, f.key)"></dd>
-                      </div>
-                    </template>
-                  </dl>
-                </div>
-              </template>
+              <div class="grid grid-cols-2 gap-4">
+                <template x-for="sec in detailSections(detailCase)" :key="sec.key">
+                  <div class="rounded-lg border border-line p-4" :class="sec.fields.length > 6 ? 'col-span-2' : ''">
+                    <div class="card-title mb-2" x-text="sec.label"></div>
+                    <dl class="grid gap-x-8 text-sm" :class="sec.fields.length > 6 ? 'grid-cols-2' : 'grid-cols-1'">
+                      <template x-for="f in sec.fields" :key="f.key">
+                        <div class="flex justify-between gap-4 border-b border-line py-1.5">
+                          <dt class="text-muted" x-text="f.label"></dt>
+                          <dd class="text-right" :class="f.type === 'number' || f.numeric ? 'tnum' : ''"
+                              x-text="displayValue(detailCase, f.key)"></dd>
+                        </div>
+                      </template>
+                    </dl>
+                  </div>
+                </template>
+              </div>
             </div>
           </template>
         </section>
@@ -741,28 +844,23 @@
           </div>
 
           <template x-for="cat in formSections" :key="cat.key">
-            <details class="mb-3 border border-line dark:border-line-dark rounded-lg" :open="formCategoryOpen[cat.key]">
+            <details class="mb-3 border border-line rounded-lg" :open="formCategoryOpen[cat.key]">
               <summary class="px-4 py-3 flex items-center justify-between"
                        @click.prevent="formCategoryOpen[cat.key] = !formCategoryOpen[cat.key]">
-                <span class="text-sm font-medium" x-text="cat.label"></span>
-                <span class="text-xs text-muted dark:text-muted-dark" x-text="formCategoryOpen[cat.key] ? '−' : '+'"></span>
+                <span class="text-sm font-semibold" x-text="cat.label"></span>
+                <span class="text-sm text-muted" x-text="formCategoryOpen[cat.key] ? '−' : '+'"></span>
               </summary>
               <div x-show="formCategoryOpen[cat.key]" class="px-4 pb-4 grid grid-cols-2 gap-4" style="display:none">
                 <template x-for="f in cat._fields" :key="f.key">
-                  <div>
-                    <label class="block text-xs uppercase tracking-widest text-muted dark:text-muted-dark mb-1">
+                  <div :class="f.measureSlot ? 'col-span-2' : ''">
+                    <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted mb-1">
                       <span x-text="f.label"></span>
                       <span x-show="f.required" class="text-accent">*</span>
-                      <span
-                        x-show="f.helpText"
-                        :title="f.helpText"
-                        class="ml-1 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] font-mono text-muted dark:text-muted-dark border border-line dark:border-line-dark cursor-help align-baseline"
-                      >?</span>
                     </label>
 
                     <!-- computed -->
                     <template x-if="f.type === 'computed'">
-                      <div class="font-mono tnum text-sm py-1.5" x-text="f.key === 'age' ? (formAgePreview() ?? '—') : '—'"></div>
+                      <div class="tnum text-sm py-1.5" x-text="f.key === 'age' ? (formAgePreview() ?? '—') : '—'"></div>
                     </template>
 
                     <!-- text / number / date (with optional preset chips on top) -->
@@ -771,13 +869,8 @@
                         <template x-if="presetsFor(f.key).length">
                           <div class="flex flex-wrap gap-1.5 mb-2">
                             <template x-for="p in presetsFor(f.key)" :key="p">
-                              <button
-                                type="button"
-                                @click="pickPreset(f.key, p)"
-                                class="chip-toggle"
-                                :class="isPresetActive(f.key, p) ? 'chip-toggle-active' : ''"
-                                x-text="p"
-                              ></button>
+                              <button type="button" @click="pickPreset(f.key, p)" class="chip-toggle"
+                                      :class="isPresetActive(f.key, p) ? 'chip-toggle-active' : ''" x-text="p"></button>
                             </template>
                           </div>
                         </template>
@@ -786,14 +879,14 @@
                           :min="f.min"
                           :max="f.max"
                           x-model="formData[f.key]"
-                          :list="(vocabFor(f.key).length || presetsFor(f.key).length) ? 'autolist-' + f.key : null"
+                          :list="suggestionsFor(f.key).length ? 'autolist-' + f.key : null"
                           class="field-input"
                           :class="formErrors[f.key] ? 'field-error' : ''"
-                          :placeholder="presetsFor(f.key).length ? 'Or type another value…' : ''"
+                          :placeholder="suggestionsFor(f.key).length ? 'Pick from the list or type…' : ''"
                         />
-                        <template x-if="vocabFor(f.key).length || presetsFor(f.key).length">
+                        <template x-if="suggestionsFor(f.key).length">
                           <datalist :id="'autolist-' + f.key">
-                            <template x-for="v in [...vocabFor(f.key), ...presetsFor(f.key)]" :key="v"><option :value="v"></option></template>
+                            <template x-for="v in suggestionsFor(f.key)" :key="v"><option :value="v"></option></template>
                           </datalist>
                         </template>
                       </div>
@@ -805,29 +898,62 @@
                         <!-- chip-toggle for small option sets -->
                         <template x-if="useChipsForSelect(f)">
                           <div class="flex flex-wrap gap-1.5">
-                            <template x-for="o in f.options" :key="o">
+                            <template x-for="o in formOptionsOf(f)" :key="o">
                               <button
                                 type="button"
                                 @click="formData[f.key] = (formData[f.key] === o ? '' : o)"
                                 class="chip-toggle"
-                                :class="formData[f.key] === o ? 'chip-toggle-active' : (formErrors[f.key] ? 'chip-toggle-err' : '')"
-                                x-text="o"
+                                :class="[formData[f.key] === o ? 'chip-toggle-active' : (formErrors[f.key] ? 'chip-toggle-err' : ''), isOldValue(f, o) ? 'chip-old' : '']"
+                                x-text="optionLabel(f, o)"
                               ></button>
                             </template>
                             <button
                               type="button"
                               x-show="formData[f.key]"
                               @click="formData[f.key] = ''"
-                              class="text-[11px] text-muted dark:text-muted-dark underline ml-1 self-center"
-                            >effacer</button>
+                              class="text-[11px] text-muted underline ml-1 self-center"
+                            >clear</button>
                           </div>
                         </template>
-                        <!-- fallback dropdown for large option sets -->
+                        <!-- dropdown for larger option sets -->
                         <template x-if="!useChipsForSelect(f)">
-                          <select x-model="formData[f.key]" class="field-input" :class="formErrors[f.key] ? 'field-error' : ''">
+                          <select x-model="formData[f.key]" class="field-input" :class="[formErrors[f.key] ? 'field-error' : '', f.measureSlot ? 'max-w-md' : '']">
                             <option value="">—</option>
-                            <template x-for="o in f.options" :key="o"><option :value="o" x-text="o"></option></template>
+                            <template x-for="o in formOptionsOf(f)" :key="o"><option :value="o" x-text="optionLabel(f, o)" :selected="o === formData[f.key]"></option></template>
                           </select>
+                        </template>
+
+                        <!-- The chosen measure's own fields: which one, dates, staff -->
+                        <template x-if="f.measureSlot && slotFields(f.key).length">
+                          <div class="mt-3 pl-4 border-l-2 border-primary/40 grid grid-cols-4 gap-3">
+                            <template x-for="sf in slotFields(f.key)" :key="sf.key">
+                              <div :class="sf.type === 'text' && sf.key !== 'autre_mesure' && !sf.listKey ? '' : (sf.type === 'text' || sf.type === 'select' ? 'col-span-2' : '')">
+                                <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted mb-1" x-text="sf.label"></label>
+                                <template x-if="sf.type === 'select'">
+                                  <select x-model="formData[sf.key]" class="field-input" :class="formErrors[sf.key] ? 'field-error' : ''">
+                                    <option value="">—</option>
+                                    <template x-for="o in formOptionsOf(sf)" :key="o"><option :value="o" x-text="optionLabel(sf, o)" :selected="o === formData[sf.key]"></option></template>
+                                  </select>
+                                </template>
+                                <template x-if="sf.type === 'date'">
+                                  <input type="date" x-model="formData[sf.key]" class="field-input" :class="formErrors[sf.key] ? 'field-error' : ''" />
+                                </template>
+                                <template x-if="sf.type === 'text'">
+                                  <div>
+                                    <input type="text" x-model="formData[sf.key]" class="field-input" :class="formErrors[sf.key] ? 'field-error' : ''"
+                                           :list="suggestionsFor(sf.key).length ? 'slotlist-' + sf.key : null"
+                                           :placeholder="sf.key === 'autre_mesure' ? 'Say what the measure is' : (suggestionsFor(sf.key).length ? 'Pick from the list or type…' : '')" />
+                                    <template x-if="suggestionsFor(sf.key).length">
+                                      <datalist :id="'slotlist-' + sf.key">
+                                        <template x-for="v in suggestionsFor(sf.key)" :key="v"><option :value="v"></option></template>
+                                      </datalist>
+                                    </template>
+                                  </div>
+                                </template>
+                                <p class="mt-1 text-xs text-accent" x-show="formErrors[sf.key]" x-text="formErrors[sf.key]"></p>
+                              </div>
+                            </template>
+                          </div>
                         </template>
                       </div>
                     </template>
@@ -840,7 +966,7 @@
                           <template x-for="(tag, idx) in (formData[f.key] || [])" :key="tag + idx">
                             <span class="chip">
                               <span x-text="tag"></span>
-                              <button type="button" @click="removeTag(f.key, idx)">×</button>
+                              <button type="button" @click="removeTag(f.key, idx)" title="Remove">×</button>
                             </span>
                           </template>
                         </div>
@@ -848,13 +974,8 @@
                         <template x-if="presetsFor(f.key).length">
                           <div class="flex flex-wrap gap-1.5 mb-2">
                             <template x-for="p in presetsFor(f.key)" :key="p">
-                              <button
-                                type="button"
-                                @click="pickPreset(f.key, p)"
-                                class="chip-toggle"
-                                :class="isPresetActive(f.key, p) ? 'chip-toggle-active' : ''"
-                                x-text="p"
-                              ></button>
+                              <button type="button" @click="pickPreset(f.key, p)" class="chip-toggle"
+                                      :class="isPresetActive(f.key, p) ? 'chip-toggle-active' : ''" x-text="p"></button>
                             </template>
                           </div>
                         </template>
@@ -863,18 +984,18 @@
                           x-model="tagDraft[f.key]"
                           @keydown.enter.prevent="addTag(f.key)"
                           :list="(vocabFor(f.key).length || presetsFor(f.key).length) ? 'autolist-' + f.key : null"
-                          :placeholder="presetsFor(f.key).length ? 'Or add another value…' : 'Type then Enter to add'"
+                          :placeholder="presetsFor(f.key).length ? 'Or add another value, then Enter…' : 'Type, then Enter to add'"
                           class="field-input"
                         />
                         <template x-if="vocabFor(f.key).length || presetsFor(f.key).length">
                           <datalist :id="'autolist-' + f.key">
-                            <template x-for="v in [...vocabFor(f.key), ...presetsFor(f.key)]" :key="v"><option :value="v"></option></template>
+                            <template x-for="v in [...new Set([...vocabFor(f.key), ...presetsFor(f.key)])]" :key="v"><option :value="v"></option></template>
                           </datalist>
                         </template>
                       </div>
                     </template>
 
-                    <p class="mt-1 text-xs text-muted dark:text-muted-dark" x-show="f.helpText && !formErrors[f.key]" x-text="f.helpText"></p>
+                    <p class="mt-1 text-xs text-muted" x-show="f.helpText && !formErrors[f.key]" x-text="f.helpText"></p>
                     <p class="mt-1 text-xs text-accent" x-show="formErrors[f.key]" x-text="formErrors[f.key]"></p>
                   </div>
                 </template>
@@ -882,10 +1003,20 @@
             </details>
           </template>
 
+          <!-- A case can have more measures than the three slots: open their sections here -->
+          <template x-if="showAdvanced && hiddenMeasureSections.length">
+            <div class="mb-3 flex flex-wrap items-center gap-1.5">
+              <span class="text-[11px] uppercase tracking-wider font-semibold text-muted mr-1">Add dates of another measure</span>
+              <template x-for="m in hiddenMeasureSections" :key="m.key">
+                <button type="button" class="chip-toggle" @click="openMeasureSection(m.key)" x-text="'+ ' + m.label"></button>
+              </template>
+            </div>
+          </template>
+
           <!-- Progressive disclosure: hide the 30 optional fields behind a single toggle -->
           <button
             type="button"
-            @click="showAdvanced = !showAdvanced"
+            @click="toggleAdvanced()"
             class="btn btn-ghost w-full justify-center mt-2 mb-2"
           >
             <span x-show="!showAdvanced">
@@ -909,17 +1040,14 @@
         <!-- ============================================================ -->
         <section x-show="view === 'query'" style="display:none">
 
-          <!-- Natural-language query bar — top-billed feature.
-               Pure pattern matching, no LLM, no network. -->
-          <div class="mb-10">
-            <div class="flex items-baseline justify-between mb-3">
+          <!-- Natural-language query bar — pure pattern matching, no AI, no network. -->
+          <div class="card p-6 mb-8">
+            <div class="flex items-baseline justify-between mb-3 gap-4">
               <div>
-                <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Ask in plain English</div>
+                <div class="kicker">Ask in plain English</div>
                 <h2 class="mt-1 text-xl"><span class="font-serif-i">Type</span> a question</h2>
               </div>
-              <div class="text-xs text-muted dark:text-muted-dark italic">
-                Everything stays in this browser. Nothing is sent to a server.
-              </div>
+              <div class="text-xs text-muted">Everything stays in this browser. Nothing is sent anywhere.</div>
             </div>
 
             <div class="relative">
@@ -927,8 +1055,8 @@
                 type="text"
                 x-model="naturalQuestion"
                 @keydown.enter="runNaturalQuery()"
-                placeholder="e.g. average IQ of girls with ADHD in DIR Esch"
-                class="w-full bg-paper dark:bg-paper-dark border border-line dark:border-line-dark rounded-lg pl-4 pr-32 py-3.5 text-base outline-none focus:border-primary dark:focus:border-ink-dark transition"
+                placeholder="e.g. average ISA duration by profile · how many girls in DR 06"
+                class="field-input !text-base !py-3.5 !pl-4 !pr-32"
               />
               <button
                 @click="runNaturalQuery()"
@@ -940,62 +1068,59 @@
 
             <!-- Live interpretation -->
             <div x-show="naturalQuestion.trim()" class="mt-2 px-1 text-xs flex items-start gap-2" style="display:none">
-              <span class="text-muted dark:text-muted-dark italic">I understand:</span>
-              <span
-                x-text="naturalParse.sentence"
-                :class="{
-                  'text-ink dark:text-ink-dark': naturalParse.confidence === 'high',
-                  'text-muted dark:text-muted-dark': naturalParse.confidence !== 'high',
-                }"
-              ></span>
-              <span x-show="naturalParse.confidence === 'high'"  class="text-primary dark:text-ink-dark text-[10px] uppercase tracking-widest ml-auto pl-2">match</span>
-              <span x-show="naturalParse.confidence === 'medium'" class="text-muted dark:text-muted-dark text-[10px] uppercase tracking-widest ml-auto pl-2">partial</span>
-              <span x-show="naturalParse.confidence === 'low' || naturalParse.confidence === 'none'" class="text-accent text-[10px] uppercase tracking-widest ml-auto pl-2">unsure</span>
+              <span class="text-muted">I understand:</span>
+              <span x-text="naturalParse.sentence" :class="naturalParse.confidence === 'high' ? 'text-ink' : 'text-muted'"></span>
+              <span x-show="naturalParse.confidence === 'high'"  class="text-primary text-[10px] uppercase tracking-widest font-semibold ml-auto pl-2">match</span>
+              <span x-show="naturalParse.confidence === 'medium'" class="text-muted text-[10px] uppercase tracking-widest font-semibold ml-auto pl-2">partial</span>
+              <span x-show="naturalParse.confidence === 'low' || naturalParse.confidence === 'none'" class="text-accent text-[10px] uppercase tracking-widest font-semibold ml-auto pl-2">unsure</span>
             </div>
 
             <!-- Example chips -->
             <div class="mt-3 flex flex-wrap gap-1.5 items-center">
-              <span class="text-[10px] uppercase tracking-widest text-muted dark:text-muted-dark mr-1">try</span>
+              <span class="text-[10.5px] uppercase tracking-widest font-semibold text-muted mr-1">Try</span>
               <template x-for="ex in NATURAL_EXAMPLES" :key="ex">
-                <button
-                  @click="setNaturalExample(ex)"
-                  class="chip-toggle text-[11px]"
-                  x-text="ex"
-                ></button>
+                <button @click="setNaturalExample(ex)" class="chip-toggle text-[11px]" x-text="ex"></button>
               </template>
             </div>
           </div>
 
-          <!-- Presets — typical state-asked questions -->
-          <div class="mb-10">
+          <!-- Presets — typical questions, grouped -->
+          <div class="mb-8">
             <div class="flex items-baseline justify-between mb-3">
               <div>
-                <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Common statistics</div>
+                <div class="kicker">Common statistics</div>
                 <h2 class="mt-1 text-xl"><span class="font-serif-i">Answers</span> in one click</h2>
               </div>
-              <div class="text-xs text-muted dark:text-muted-dark italic">Click — the query loads below, refine if needed.</div>
+              <div class="text-xs text-muted">Click — the query loads below; change anything you like.</div>
             </div>
-            <div class="grid grid-cols-4 gap-3">
-              <template x-for="p in QUERY_PRESETS" :key="p.id">
-                <button
-                  @click="runPreset(p.id)"
-                  class="text-left border border-line dark:border-line-dark rounded-lg p-3 transition hover:border-primary dark:hover:border-ink-dark hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-                >
-                  <div class="text-sm font-medium" x-text="p.label"></div>
-                  <div class="text-xs text-muted dark:text-muted-dark mt-1 leading-snug" x-text="p.description"></div>
-                </button>
+            <div class="space-y-4">
+              <template x-for="g in presetGroups" :key="g.name">
+                <div>
+                  <div class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2" x-text="g.name"></div>
+                  <div class="grid grid-cols-4 gap-3">
+                    <template x-for="p in g.items" :key="p.id">
+                      <button
+                        @click="runPreset(p.id)"
+                        class="text-left rounded-lg border border-line p-3 transition hover:border-primary hover:shadow-sm"
+                      >
+                        <div class="text-sm font-semibold" x-text="p.label"></div>
+                        <div class="text-xs text-muted mt-1 leading-snug" x-text="p.description"></div>
+                      </button>
+                    </template>
+                  </div>
+                </div>
               </template>
             </div>
           </div>
 
           <!-- Saved queries (if any) -->
           <template x-if="savedQueriesList.length > 0">
-            <div class="mb-10">
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Your saved queries</div>
+            <div class="mb-8">
+              <div class="kicker mb-2">Your saved queries</div>
               <div class="flex flex-wrap gap-2">
                 <template x-for="sq in savedQueriesList" :key="sq.id">
-                  <div class="flex items-center gap-1 border border-line dark:border-line-dark rounded-md">
-                    <button class="px-3 py-1.5 text-sm" @click="loadSavedQuery(sq.id)" x-text="sq.name"></button>
+                  <div class="flex items-center gap-1 border border-line rounded-md">
+                    <button class="px-3 py-1.5 text-sm font-medium" @click="loadSavedQuery(sq.id)" x-text="sq.name"></button>
                     <button class="px-2 py-1.5 text-xs text-accent" @click="deleteSavedQuery(sq.id)" title="Delete">×</button>
                   </div>
                 </template>
@@ -1003,193 +1128,284 @@
             </div>
           </template>
 
-          <div id="queryResultAnchor"></div>
+          <div id="queryResultAnchor" class="scroll-mt-28"></div>
 
-          <div class="mb-6">
-            <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Free build</div>
-            <h2 class="mt-1 text-xl"><span class="font-serif-i">Compose</span> your question</h2>
-          </div>
-
-          <!-- Natural-language preview -->
-          <div class="mb-6 border border-line dark:border-line-dark rounded-lg p-5 bg-black/[0.02] dark:bg-white/[0.02]">
-            <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Your question</div>
-            <p class="text-lg leading-snug">
-              <span class="font-serif-i text-muted dark:text-muted-dark">You are asking for</span>
-              <span x-text="questionPreview"></span>
-            </p>
-          </div>
-
-          <!-- Builder rows (vertical flow) -->
-          <div class="space-y-5 mb-8">
-            <!-- Row 1: aggregations -->
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">What do you want to measure?</div>
-              <div class="flex flex-wrap gap-2 items-center">
-                <template x-for="(a, i) in query.aggregations" :key="i">
-                  <div class="inline-flex items-center gap-1 border border-line dark:border-line-dark rounded-md bg-paper dark:bg-paper-dark">
-                    <select x-model="a.fn" @change="onAggFieldChange(i)" class="bg-transparent border-0 text-sm py-1.5 pl-2 pr-1 outline-none">
-                      <template x-for="agg in AGGREGATIONS" :key="agg.key">
-                        <option :value="agg.key" x-text="agg.label"></option>
-                      </template>
-                    </select>
-                    <template x-if="a.fn !== 'count'">
-                      <select x-model="a.field" class="bg-transparent border-0 text-sm py-1.5 pl-1 pr-1 outline-none border-l border-line dark:border-line-dark">
-                        <option value="">— pick a numeric variable —</option>
-                        <template x-for="nf in NUMERIC_FIELDS" :key="nf.key">
-                          <option :value="nf.key" x-text="nf.label"></option>
-                        </template>
-                      </select>
-                    </template>
-                    <button class="px-2 py-1.5 text-xs text-muted dark:text-muted-dark hover:text-accent" @click="removeAggregation(i)">×</button>
-                  </div>
-                </template>
-                <button class="text-xs underline text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark" @click="addAggregation()">+ add a measure</button>
+          <div class="card p-6 mb-6">
+            <div class="flex items-baseline justify-between gap-4 mb-4">
+              <div>
+                <div class="kicker">Free build</div>
+                <h2 class="mt-1 text-xl"><span class="font-serif-i">Compose</span> your question</h2>
               </div>
-              <p class="text-xs text-muted dark:text-muted-dark mt-2 italic leading-snug">
-                Mean / median / sum need a numeric variable (IQ, Age, or counts like "number of diagnoses per case").
-                For categorical variables (Diagnoses, Schools, Languages …) use <span class="font-medium">Count of cases</span> and then pick the variable in <span class="font-medium">Group By</span> below.
+              <button class="btn btn-ghost text-xs" @click="newQuery()">Start over</button>
+            </div>
+
+            <!-- Natural-language preview -->
+            <div class="mb-6 rounded-xl p-4 bg-primary/[0.06] border border-primary/20">
+              <div class="text-[11px] uppercase tracking-wider font-semibold text-primary mb-1">Your question</div>
+              <p class="text-[15px] leading-snug">
+                <span class="text-muted">You are asking for</span>
+                <span x-text="questionPreview"></span>
               </p>
             </div>
 
-            <!-- Row 2: filters -->
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">
-                For which cases <span class="normal-case text-muted dark:text-muted-dark italic">(filters, combined with AND)</span>
-              </div>
-              <template x-if="query.filters.length === 0">
-                <div class="text-xs text-muted dark:text-muted-dark mb-2 italic">No filter — the measure covers all cases.</div>
-              </template>
-              <div class="flex flex-col gap-2">
-                <template x-for="(f, i) in query.filters" :key="i">
-                  <div class="inline-flex items-center gap-1 border border-line dark:border-line-dark rounded-md bg-paper dark:bg-paper-dark px-1 self-start max-w-full flex-wrap">
-                    <select x-model="f.field" @change="onFilterFieldChange(i)" class="bg-transparent border-0 text-sm py-1.5 pl-2 pr-1 outline-none">
-                      <template x-for="cat in filterableByCategory" :key="cat.key">
-                        <optgroup :label="cat.label">
-                          <template x-for="ff in cat.fields" :key="ff.key">
-                            <option :value="ff.key" x-text="ff.label"></option>
+            <div class="space-y-6">
+              <!-- Row 1: aggregations -->
+              <div>
+                <div class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">1 · What do you want to measure?</div>
+                <div class="flex flex-wrap gap-2 items-center">
+                  <template x-for="(a, i) in query.aggregations" :key="i">
+                    <div class="inline-flex items-center gap-1 border border-line rounded-md">
+                      <select x-model="a.fn" @change="onAggFieldChange(i)" class="bg-transparent border-0 text-sm py-1.5 pl-2 pr-1 outline-none font-medium">
+                        <template x-for="agg in AGGREGATIONS" :key="agg.key">
+                          <option :value="agg.key" x-text="agg.key === 'count' ? 'Number of cases' : agg.label" :selected="agg.key === a.fn"></option>
+                        </template>
+                      </select>
+                      <template x-if="a.fn !== 'count'">
+                        <select x-model="a.field" class="bg-transparent border-0 text-sm py-1.5 pl-1 pr-1 outline-none border-l border-line">
+                          <option value="">— pick a number —</option>
+                          <template x-for="nf in NUMERIC_FIELDS" :key="nf.key">
+                            <option :value="nf.key" x-text="nf.label" :selected="nf.key === a.field"></option>
                           </template>
-                        </optgroup>
+                        </select>
                       </template>
-                    </select>
-                    <select x-model="f.op" class="bg-transparent border-0 text-sm py-1.5 pl-1 pr-1 outline-none border-l border-line dark:border-line-dark">
-                      <template x-for="op in operatorsForField(f.field)" :key="op.key">
-                        <option :value="op.key" x-text="op.label"></option>
-                      </template>
-                    </select>
-                    <template x-if="operatorsForField(f.field).find(o => o.key === f.op)?.needsValue">
-                      <div class="flex items-center gap-1 border-l border-line dark:border-line-dark pl-2">
-                        <template x-if="fieldByKey(f.field)?.type === 'select'">
-                          <select x-model="f.value" class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none">
-                            <option value="">…</option>
-                            <template x-for="o in optionsOf(f.field)" :key="o"><option :value="o" x-text="o"></option></template>
-                          </select>
-                        </template>
-                        <template x-if="!fieldByKey(f.field) || fieldByKey(f.field)?.type !== 'select'">
-                          <input
-                            :type="(['number'].includes(fieldByKey(f.field)?.type) || f.field === 'age') ? 'number' : fieldByKey(f.field)?.type === 'date' ? 'date' : 'text'"
-                            x-model="f.value"
-                            placeholder="value"
-                            class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none w-36"
-                          />
-                        </template>
-                        <template x-if="operatorsForField(f.field).find(o => o.key === f.op)?.needsValue2">
-                          <span class="contents">
-                            <span class="text-sm text-muted dark:text-muted-dark">and</span>
-                            <input
-                              :type="(['number'].includes(fieldByKey(f.field)?.type) || f.field === 'age') ? 'number' : fieldByKey(f.field)?.type === 'date' ? 'date' : 'text'"
-                              x-model="f.value2"
-                              class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none w-36"
-                            />
-                          </span>
-                        </template>
-                      </div>
-                    </template>
-                    <button class="px-2 py-1.5 text-xs text-muted dark:text-muted-dark hover:text-accent ml-auto" @click="removeFilter(i)">×</button>
-                  </div>
-                </template>
-              </div>
-              <button class="mt-2 text-xs underline text-muted dark:text-muted-dark hover:text-ink dark:hover:text-ink-dark" @click="addFilter()">+ add a filter</button>
-            </div>
-
-            <!-- Row 3: group-by -->
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Group the result by…</div>
-              <div class="flex items-center gap-2 flex-wrap">
-                <select x-model="query.groupBy" class="field-input text-sm" style="max-width: 22rem;">
-                  <option value="">— no grouping —</option>
-                  <template x-for="cat in groupableByCategory" :key="cat.key">
-                    <optgroup :label="cat.label">
-                      <template x-for="ff in cat.fields" :key="ff.key">
-                        <option :value="ff.key" x-text="ff.label"></option>
-                      </template>
-                    </optgroup>
+                      <button class="px-2 py-1.5 text-xs text-muted hover:text-accent" @click="removeAggregation(i)" title="Remove">×</button>
+                    </div>
                   </template>
-                </select>
-                <button x-show="query.groupBy" class="text-xs underline text-muted dark:text-muted-dark hover:text-accent" @click="query.groupBy = ''">remove</button>
+                  <button class="text-xs underline text-muted hover:text-ink" @click="addAggregation()">+ add another</button>
+                </div>
+                <p class="text-xs text-muted mt-2 leading-snug">
+                  Average, median … need a number: IQ, age, the duration of a measure in months, an ELDiB stage.
+                  For categories (schools, diagnoses, measures …) use <span class="font-medium text-ink">Number of cases</span> and pick the category in step 3.
+                </p>
+              </div>
+
+              <!-- Row 2: filters -->
+              <div>
+                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                  <div class="text-[11px] uppercase tracking-wider font-semibold text-muted">2 · For which cases?</div>
+                  <template x-if="query.filters.length > 1">
+                    <div class="inline-flex rounded-lg border border-line overflow-hidden text-xs">
+                      <button class="px-2.5 py-1" :class="query.match !== 'any' ? 'bg-primary text-white dark:text-[#0E131F]' : ''" @click="query.match = 'all'">all conditions (and)</button>
+                      <button class="px-2.5 py-1 border-l border-line" :class="query.match === 'any' ? 'bg-primary text-white dark:text-[#0E131F]' : ''" @click="query.match = 'any'">at least one (or)</button>
+                    </div>
+                  </template>
+                </div>
+                <template x-if="query.filters.length === 0">
+                  <div class="text-xs text-muted mb-2">No condition — the result covers all cases.</div>
+                </template>
+                <div class="flex flex-col gap-2">
+                  <template x-for="(f, i) in query.filters" :key="f._id">
+                    <div class="flex items-center gap-2">
+                      <span class="text-[11px] text-muted w-10 text-right shrink-0" x-text="i === 0 ? 'where' : (query.match === 'any' ? 'or' : 'and')"></span>
+                      <div class="inline-flex items-center gap-1 border border-line rounded-md px-1 max-w-full flex-wrap relative">
+                        <select x-model="f.field" @change="onFilterFieldChange(i)" class="bg-transparent border-0 text-sm py-1.5 pl-2 pr-1 outline-none font-medium max-w-[16rem]">
+                          <template x-for="cat in filterableByCategory" :key="cat.key">
+                            <optgroup :label="cat.label">
+                              <template x-for="ff in cat.fields" :key="ff.key">
+                                <option :value="ff.key" x-text="ff.label" :selected="ff.key === f.field"></option>
+                              </template>
+                            </optgroup>
+                          </template>
+                        </select>
+                        <select x-model="f.op" @change="onFilterOpChange(i)" class="bg-transparent border-0 text-sm py-1.5 pl-1 pr-1 outline-none border-l border-line">
+                          <template x-for="op in operatorsForField(f.field)" :key="op.key">
+                            <option :value="op.key" x-text="op.label" :selected="op.key === f.op"></option>
+                          </template>
+                        </select>
+                        <template x-if="opOf(f)?.needsValue">
+                          <div class="flex items-center gap-1 border-l border-line pl-2">
+                            <!-- several values: checkbox list -->
+                            <template x-if="opOf(f)?.multi">
+                              <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                                <button type="button" class="text-sm py-1.5 px-1 flex items-center gap-1" @click="open = !open">
+                                  <span x-text="filterValueSummary(f)" :class="(f.value || []).length ? '' : 'text-muted'"></span>
+                                  <span class="text-muted text-xs">▾</span>
+                                </button>
+                                <div class="pick-menu" x-show="open" style="display:none">
+                                  <template x-for="o in optionsOf(f.field)" :key="o">
+                                    <label>
+                                      <input type="checkbox" :checked="(f.value || []).includes(o)" @change="toggleFilterValue(i, o)" class="mt-0.5" />
+                                      <span x-text="o"></span>
+                                    </label>
+                                  </template>
+                                  <div x-show="!optionsOf(f.field).length" class="text-xs text-muted p-2">No values in the data yet.</div>
+                                </div>
+                              </div>
+                            </template>
+                            <!-- one value from a list -->
+                            <template x-if="!opOf(f)?.multi && ['select', 'tags'].includes(filterType(f.field))">
+                              <select x-model="f.value" class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none max-w-[18rem]">
+                                <option value="">…</option>
+                                <template x-for="o in optionsOf(f.field)" :key="o"><option :value="o" x-text="o" :selected="o === f.value"></option></template>
+                              </select>
+                            </template>
+                            <!-- typed value (number, date, text with suggestions) -->
+                            <template x-if="!opOf(f)?.multi && !['select', 'tags'].includes(filterType(f.field))">
+                              <span class="contents">
+                                <input
+                                  :type="filterType(f.field) === 'number' ? 'number' : filterType(f.field) === 'date' ? 'date' : 'text'"
+                                  x-model="f.value"
+                                  :list="filterType(f.field) === 'text' ? 'fl-' + f._id : null"
+                                  placeholder="value"
+                                  class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none w-40"
+                                />
+                                <template x-if="filterType(f.field) === 'text'">
+                                  <datalist :id="'fl-' + f._id">
+                                    <template x-for="o in optionsOf(f.field)" :key="o"><option :value="o"></option></template>
+                                  </datalist>
+                                </template>
+                              </span>
+                            </template>
+                            <template x-if="opOf(f)?.needsValue2">
+                              <span class="contents">
+                                <span class="text-sm text-muted">and</span>
+                                <input
+                                  :type="filterType(f.field) === 'number' ? 'number' : filterType(f.field) === 'date' ? 'date' : 'text'"
+                                  x-model="f.value2"
+                                  class="bg-transparent border-0 text-sm py-1.5 px-1 outline-none w-40"
+                                />
+                              </span>
+                            </template>
+                          </div>
+                        </template>
+                        <button class="px-2 py-1.5 text-xs text-muted hover:text-accent ml-auto" @click="removeFilter(i)" title="Remove">×</button>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+                <button class="mt-2 text-xs underline text-muted hover:text-ink" @click="addFilter()">+ add a condition</button>
+              </div>
+
+              <!-- Row 3: group-by (one or two variables) -->
+              <div>
+                <div class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">3 · Split the result by…</div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <select x-model="query.groupBy" class="field-input text-sm" style="max-width: 20rem;">
+                    <option value="">— no split: one number —</option>
+                    <template x-for="cat in groupableByCategory" :key="cat.key">
+                      <optgroup :label="cat.label">
+                        <template x-for="ff in cat.fields" :key="ff.key">
+                          <option :value="ff.key" x-text="ff.label" :selected="ff.key === query.groupBy"></option>
+                        </template>
+                      </optgroup>
+                    </template>
+                  </select>
+                  <template x-if="query.groupBy">
+                    <span class="contents">
+                      <span class="text-sm text-muted">and by</span>
+                      <select x-model="query.groupBy2" class="field-input text-sm" style="max-width: 20rem;">
+                        <option value="">— nothing else —</option>
+                        <template x-for="cat in groupableByCategory" :key="cat.key">
+                          <optgroup :label="cat.label">
+                            <template x-for="ff in cat.fields.filter(x => x.key !== query.groupBy)" :key="ff.key">
+                              <option :value="ff.key" x-text="ff.label" :selected="ff.key === query.groupBy2"></option>
+                            </template>
+                          </optgroup>
+                        </template>
+                      </select>
+                      <button class="text-xs underline text-muted hover:text-accent" @click="query.groupBy = ''; query.groupBy2 = ''">remove</button>
+                    </span>
+                  </template>
+                </div>
+                <p class="text-xs text-muted mt-2">With a second variable you get a table: e.g. Direction de région × measure, or age group × sex.</p>
               </div>
             </div>
-          </div>
 
-          <!-- Action row -->
-          <div class="flex items-center gap-2 mb-6 flex-wrap border-t border-line dark:border-line-dark pt-4">
-            <button class="btn btn-ghost text-xs" @click="newQuery()">Start over</button>
-            <div class="ml-auto flex items-center gap-2 flex-wrap">
-              <input type="text" x-model="saveQueryName" placeholder="Name this question…" class="field-input text-sm w-64" />
+            <!-- Action row -->
+            <div class="flex items-center gap-2 mt-6 flex-wrap border-t border-line pt-4">
+              <input type="text" x-model="saveQueryName" placeholder="Name this question to save it…" class="field-input text-sm w-72" />
               <button class="btn btn-ghost" @click="saveCurrentQuery()">Save</button>
-              <button class="btn btn-ghost" @click="exportQueryCSV()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''">Export CSV</button>
-              <button class="btn btn-ghost" @click="exportQueryPDF()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''" title="Print-ready PDF with the chart and the data table">Export PDF</button>
+              <div class="ml-auto flex items-center gap-2 flex-wrap">
+                <button class="btn btn-ghost" @click="exportQueryCSV()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''">Export CSV</button>
+                <button class="btn btn-ghost" @click="exportQueryPDF()" :disabled="!queryResult" :class="!queryResult ? 'opacity-50' : ''" title="Print-ready PDF with the chart and the table">Export PDF</button>
+              </div>
             </div>
           </div>
 
           <template x-if="queryResult">
-            <div>
-              <div class="flex items-baseline justify-between mb-3">
+            <div class="card p-6">
+              <div class="flex items-baseline justify-between mb-4 gap-4 flex-wrap">
                 <div>
-                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Result</div>
-                  <div class="text-xs text-muted dark:text-muted-dark mt-1">
-                    On <span class="font-mono tnum" x-text="queryResult.n"></span> matching case(s)
-                    <button class="ml-2 underline hover:text-ink dark:hover:text-ink-dark" @click="showMatchingCases()">view them</button>
+                  <div class="kicker">Result</div>
+                  <div class="text-sm text-muted mt-1">
+                    <span class="font-semibold text-ink tnum" x-text="queryResult?.n"></span> matching case(s)
+                    <button class="ml-2 underline text-primary" @click="showMatchingCases()">show them</button>
                   </div>
-                  <div x-show="queryResult.fannedOut" class="text-xs text-muted dark:text-muted-dark italic mt-1">
-                    Multi-value field — a case with several tags is counted in each bucket, so the bucket totals can exceed the case count.
+                  <div x-show="queryResult?.fannedOut" class="text-xs text-muted mt-1">
+                    Multi-value variable — a case with several values is counted once for each, so the totals can exceed the number of cases.
                   </div>
                 </div>
+                <template x-if="queryResult?.cross && query.aggregations.length > 1">
+                  <label class="text-xs text-muted flex items-center gap-2">Table shows
+                    <select x-model.number="crossAggIdx" class="field-input text-xs py-1 w-auto">
+                      <template x-for="(a, i) in query.aggregations" :key="i"><option :value="i" x-text="aggLabel(a)" :selected="i === crossAggIdx"></option></template>
+                    </select>
+                  </label>
+                </template>
               </div>
 
               <!-- Single metric (no group) -->
-              <template x-if="!queryResult.groupBy">
-                <div class="mb-6">
-                  <div class="flex flex-wrap gap-8">
-                    <template x-for="(a, i) in (query.aggregations.length ? query.aggregations : [{ fn: 'count', field: null }])" :key="i">
-                      <div>
-                        <div class="text-xs text-muted dark:text-muted-dark" x-text="aggLabel(a)"></div>
-                        <div class="text-5xl tnum font-mono mt-1" x-text="fmt(queryResult.groups[0]?.values?.[i], 1)"></div>
-                      </div>
-                    </template>
-                  </div>
+              <template x-if="queryResult && !queryResult.groupBy">
+                <div class="mb-6 flex flex-wrap gap-4">
+                  <template x-for="(a, i) in (query.aggregations.length ? query.aggregations : [{ fn: 'count', field: null }])" :key="i">
+                    <div class="rounded-xl border border-line px-5 py-4 min-w-[12rem]">
+                      <div class="text-xs text-muted font-medium" x-text="aggLabel(a)"></div>
+                      <div class="kpi-value !mt-1" x-text="fmt(queryResult?.groups?.[0]?.values?.[i], 1)"></div>
+                    </div>
+                  </template>
                 </div>
               </template>
 
-              <!-- Grouped table -->
-              <template x-if="queryResult.groupBy">
-                <div class="border border-line dark:border-line-dark rounded-lg overflow-hidden mb-6">
-                  <table class="w-full text-sm">
-                    <thead class="bg-black/[0.03] dark:bg-white/[0.03]">
+              <!-- Two variables: cross table -->
+              <template x-if="queryResult?.cross">
+                <div class="rounded-lg border border-line overflow-auto mb-6">
+                  <table class="xt w-full text-sm">
+                    <thead class="bg-canvas">
                       <tr>
-                        <th class="text-left px-3 py-2.5 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark" x-text="labelOf(queryResult.groupBy)"></th>
-                        <th class="text-right px-3 py-2.5 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark">n</th>
+                        <th class="text-left text-[11px] uppercase tracking-wider text-muted font-semibold whitespace-nowrap">
+                          <span x-text="labelOf(queryResult?.groupBy)"></span> ↓ · <span x-text="labelOf(queryResult?.groupBy2)"></span> →
+                        </th>
+                        <template x-for="col in (queryResult?.cross?.cols || [])" :key="col">
+                          <th class="text-right text-[11px] font-semibold text-muted whitespace-nowrap" x-text="col"></th>
+                        </template>
+                        <th class="text-right text-[11px] font-semibold text-ink whitespace-nowrap">All</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="row in (queryResult?.cross?.rows || [])" :key="row">
+                        <tr>
+                          <td class="whitespace-nowrap font-medium" x-text="row"></td>
+                          <template x-for="col in (queryResult?.cross?.cols || [])" :key="col">
+                            <td class="num" :style="crossCellStyle(row, col)" x-text="crossCell(row, col)"></td>
+                          </template>
+                          <td class="num font-semibold" x-text="fmt(queryResult?.groups?.find(g => g.key === row)?.values[crossAggIdx] ?? null, 1)"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
+
+              <!-- Grouped table (one variable) -->
+              <template x-if="queryResult?.groupBy && !queryResult?.cross">
+                <div class="rounded-lg border border-line overflow-hidden mb-6">
+                  <table class="w-full text-sm">
+                    <thead class="bg-canvas">
+                      <tr>
+                        <th class="text-left px-3 py-2.5 text-[11px] uppercase tracking-wider font-semibold text-muted" x-text="labelOf(queryResult?.groupBy)"></th>
+                        <th class="text-right px-3 py-2.5 text-[11px] uppercase tracking-wider font-semibold text-muted">Cases</th>
                         <template x-for="(a, i) in query.aggregations" :key="i">
-                          <th class="text-right px-3 py-2.5 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark" x-text="aggLabel(a)"></th>
+                          <th class="text-right px-3 py-2.5 text-[11px] uppercase tracking-wider font-semibold text-muted" x-text="aggLabel(a)"></th>
                         </template>
                       </tr>
                     </thead>
                     <tbody>
-                      <template x-for="g in queryResult.groups" :key="g.key">
-                        <tr class="border-t border-line dark:border-line-dark">
+                      <template x-for="g in (queryResult?.groups || [])" :key="g.key">
+                        <tr class="border-t border-line">
                           <td class="px-3 py-2 whitespace-nowrap" x-text="g.key"></td>
-                          <td class="px-3 py-2 text-right font-mono tnum" x-text="g.n"></td>
+                          <td class="px-3 py-2 text-right tnum" x-text="g.n"></td>
                           <template x-for="(v, i) in g.values" :key="i">
-                            <td class="px-3 py-2 text-right font-mono tnum" x-text="fmt(v, 1)"></td>
+                            <td class="px-3 py-2 text-right tnum" x-text="fmt(v, 1)"></td>
                           </template>
                         </tr>
                       </template>
@@ -1198,9 +1414,9 @@
                 </div>
               </template>
 
-              <div class="border border-line dark:border-line-dark rounded-lg p-4">
-                <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-2">Visualization</div>
-                <div style="height: 320px; position: relative;">
+              <div class="rounded-lg border border-line p-4">
+                <div class="card-title mb-2">Chart</div>
+                <div style="height: 340px; position: relative;">
                   <canvas id="queryChart"></canvas>
                 </div>
               </div>
@@ -1209,36 +1425,39 @@
 
           <!-- Matching cases drilldown -->
           <template x-if="queryMatches">
-            <div class="mt-8 border border-line dark:border-line-dark rounded-lg">
-              <div class="px-4 py-3 flex items-center justify-between border-b border-line dark:border-line-dark">
+            <div class="mt-6 card">
+              <div class="px-4 py-3 flex items-center justify-between border-b border-line gap-3">
                 <div>
-                  <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark">Matching cases</div>
-                  <div class="text-sm mt-1 tnum font-mono"><span x-text="queryMatches.length"></span> / <span x-text="allCases.length"></span></div>
+                  <div class="kicker">Matching cases</div>
+                  <div class="text-sm mt-1 tnum"><span x-text="queryMatches?.length"></span> of <span x-text="allCases.length"></span></div>
                 </div>
-                <button class="btn btn-ghost text-xs" @click="hideMatchingCases()">Hide</button>
+                <div class="flex gap-2">
+                  <button class="btn btn-ghost text-xs" @click="exportMatchesCSV()" :disabled="!queryMatches?.length">Export CSV</button>
+                  <button class="btn btn-ghost text-xs" @click="hideMatchingCases()">Hide</button>
+                </div>
               </div>
-              <template x-if="queryMatches.length === 0">
-                <div class="p-6 text-center text-muted dark:text-muted-dark text-sm">No case matches these filters.</div>
+              <template x-if="queryMatches && queryMatches.length === 0">
+                <div class="p-6 text-center text-muted text-sm">No case matches these conditions.</div>
               </template>
-              <template x-if="queryMatches.length > 0">
-                <div class="overflow-auto" style="max-height: 420px;">
+              <template x-if="queryMatches && queryMatches.length > 0">
+                <div class="overflow-auto" style="max-height: 460px;">
                   <table class="w-full text-sm">
-                    <thead class="bg-black/[0.03] dark:bg-white/[0.03] sticky top-0">
+                    <thead class="bg-canvas sticky top-0">
                       <tr>
-                        <template x-for="col in visibleColumns" :key="col">
-                          <th class="text-left px-3 py-2 text-[11px] uppercase tracking-widest text-muted dark:text-muted-dark whitespace-nowrap" x-text="labelOf(col)"></th>
+                        <template x-for="col in matchTableColumns" :key="col">
+                          <th class="text-left px-3 py-2 text-[11px] uppercase tracking-wider font-semibold text-muted whitespace-nowrap" x-text="labelOf(col)"></th>
                         </template>
                         <th class="px-3 py-2"></th>
                       </tr>
                     </thead>
                     <tbody>
-                      <template x-for="c in queryMatches" :key="c.id">
-                        <tr class="table-row border-t border-line dark:border-line-dark">
-                          <template x-for="col in visibleColumns" :key="col">
-                            <td class="px-3 py-2 whitespace-nowrap" :class="fieldByKey(col)?.type === 'number' || col === 'age' ? 'font-mono tnum' : ''" x-text="cellValue(c, col)"></td>
+                      <template x-for="c in (queryMatches || [])" :key="c.id">
+                        <tr class="table-row border-t border-line">
+                          <template x-for="col in matchTableColumns" :key="col">
+                            <td class="px-3 py-2 whitespace-nowrap" :class="fieldByKey(col)?.type === 'number' || fieldByKey(col)?.numeric ? 'tnum text-right' : ''" x-text="cellValue(c, col)"></td>
                           </template>
                           <td class="px-3 py-2 whitespace-nowrap text-right">
-                            <button class="text-xs underline" @click="showDetail(c.id)">view</button>
+                            <button class="text-xs underline text-primary" @click="showDetail(c.id)">view</button>
                           </td>
                         </tr>
                       </template>
@@ -1254,53 +1473,157 @@
         <!-- IMPORT / EXPORT                                              -->
         <!-- ============================================================ -->
         <section x-show="view === 'io'" style="display:none">
-          <div class="grid grid-cols-2 gap-8">
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Export</div>
-              <p class="text-sm text-muted dark:text-muted-dark mb-4">
-                Local backup or sharing of all cases.
+          <div class="grid grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
+            <!-- Import -->
+            <div class="card p-6">
+              <div class="kicker">Import</div>
+              <h2 class="mt-1 text-xl"><span class="font-serif-i">Excel</span>, CSV or JSON</h2>
+              <p class="text-sm text-muted mt-2 leading-relaxed max-w-2xl">
+                Pick your Excel sheet (.xlsx). You then say which column holds what — name, sex,
+                date of birth, school, Direction de région, measures … — and check the result
+                before anything is saved.
               </p>
-              <div class="flex flex-col gap-2 max-w-xs">
-                <button class="btn btn-primary" @click="exportAllJSON()">Export all as JSON</button>
-                <button class="btn btn-ghost" @click="exportAllCSV()">Export all as CSV</button>
+              <div class="mt-3 rounded-lg px-3 py-2 text-xs bg-primary/[0.06] border border-primary/20 text-ink max-w-2xl">
+                The file is read <span class="font-semibold">in this browser only</span>. Nothing is uploaded and no AI is involved — the pupils’ data never leaves this computer.
               </div>
-            </div>
 
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Import</div>
-              <p class="text-sm text-muted dark:text-muted-dark mb-4">
-                JSON file (previous export) or CSV with headers matching the schema keys.
-              </p>
-              <div class="flex flex-col gap-2 max-w-md">
-                <label class="text-xs text-muted dark:text-muted-dark">Mode</label>
-                <select x-model="importMode" class="field-input text-sm">
-                  <option value="merge">Merge — does not overwrite existing cases (by ID)</option>
-                  <option value="update">Update — updates if ID known, otherwise adds</option>
-                  <option value="replace">Replace — deletes everything then loads the file</option>
-                </select>
-                <input type="file" accept=".json,.csv,text/csv,application/json" @change="onImportFile($event)" class="text-sm mt-2" />
+              <div class="mt-5 flex items-end gap-4 flex-wrap">
+                <label class="btn btn-primary cursor-pointer">
+                  Choose a file…
+                  <input type="file" accept=".xlsx,.xlsm,.csv,.txt,.json,text/csv,application/json" @change="onImportFile($event)" class="hidden" />
+                </label>
+                <span class="text-xs text-muted">.xlsx · .csv · .json (export of this tool). Old .xls: save as .xlsx first.</span>
+                <span x-show="importBusy" class="text-xs text-primary" style="display:none">Reading the file…</span>
               </div>
 
               <template x-if="importError">
-                <div class="mt-3 border border-accent rounded p-2 text-sm text-accent" x-text="importError"></div>
+                <div class="mt-4 border border-accent/60 rounded-lg p-3 text-sm text-accent" x-text="importError"></div>
               </template>
 
-              <template x-if="importPreview">
-                <div class="mt-4 border border-line dark:border-line-dark rounded-lg p-4">
-                  <div class="text-sm">
-                    <span class="font-mono" x-text="importPreview.fileName"></span>
-                    · <span class="tnum font-mono" x-text="importPreview.records.length"></span> row(s)
+              <!-- Step 2: which column is what -->
+              <template x-if="importStep === 'map' && importSheet">
+                <div class="mt-6">
+                  <div class="flex items-center gap-3 flex-wrap mb-3">
+                    <div class="text-sm font-semibold" x-text="importSheet.fileName"></div>
+                    <template x-if="importSheet.sheets.length > 1">
+                      <label class="text-xs text-muted flex items-center gap-2">Sheet
+                        <select x-model.number="importSheet.sheetIdx" @change="onImportSheetChange()" class="field-input text-xs py-1 w-auto">
+                          <template x-for="(sh, i) in importSheet.sheets" :key="i"><option :value="i" x-text="sh.name + ' (' + sh.rows.length + ' rows)'" :selected="i === importSheet.sheetIdx"></option></template>
+                        </select>
+                      </label>
+                    </template>
+                    <span class="text-xs text-muted"><span class="tnum" x-text="importCurrentSheet?.rows.length"></span> rows · <span class="tnum" x-text="importMappedCount"></span> of <span class="tnum" x-text="importCurrentSheet?.headers.length"></span> columns assigned</span>
                   </div>
-                  <div class="text-xs text-muted dark:text-muted-dark mt-1">
-                    New: <span class="tnum font-mono" x-text="importPreview.willAdd"></span> ·
-                    Existing IDs: <span class="tnum font-mono" x-text="importPreview.willConflict"></span>
+                  <div class="rounded-lg border border-line overflow-auto" style="max-height: 460px;">
+                    <table class="w-full text-sm">
+                      <thead class="bg-canvas sticky top-0 z-10">
+                        <tr>
+                          <th class="text-left px-3 py-2 text-[11px] uppercase tracking-wider font-semibold text-muted">Column in the file</th>
+                          <th class="text-left px-3 py-2 text-[11px] uppercase tracking-wider font-semibold text-muted">Examples</th>
+                          <th class="text-left px-3 py-2 text-[11px] uppercase tracking-wider font-semibold text-muted">Goes into</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="(h, col) in importCurrentSheet?.headers || []" :key="col">
+                          <tr class="border-t border-line" :class="importSheet.mapping[col] ? '' : 'opacity-70'">
+                            <td class="px-3 py-2 font-medium whitespace-nowrap" x-text="h || ('Column ' + (col + 1))"></td>
+                            <td class="px-3 py-2 text-xs text-muted" x-text="importExamples(col)"></td>
+                            <td class="px-3 py-2">
+                              <select x-model="importSheet.mapping[col]" class="field-input text-sm py-1" :class="importDuplicate(col) ? 'field-error' : ''">
+                                <option value="">— skip this column —</option>
+                                <template x-for="cat in importTargetsByCategory" :key="cat.key">
+                                  <optgroup :label="cat.label">
+                                    <template x-for="ff in cat.fields" :key="ff.key">
+                                      <option :value="ff.key" x-text="ff.label" :selected="ff.key === importSheet.mapping[col]"></option>
+                                    </template>
+                                  </optgroup>
+                                </template>
+                              </select>
+                              <div x-show="importDuplicate(col)" class="text-[11px] text-accent mt-1">Already used for another column — this one will be skipped.</div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
                   </div>
-                  <div class="flex gap-2 mt-3">
-                    <button class="btn btn-primary" @click="runImport()">Confirm import</button>
+                  <p class="text-xs text-muted mt-2">Several columns can go into a multi-value field (e.g. “Diagnosis 1” and “Diagnosis 2” → Diagnoses). Dates may be Excel dates or dd.mm.yyyy; sex as M/F, garçon/fille …; the Direction de région as a number (6) or a place (Esch).</p>
+                  <div class="flex gap-2 mt-4">
+                    <button class="btn btn-primary" @click="confirmImportMapping()">Check the data</button>
                     <button class="btn btn-ghost" @click="cancelImport()">Cancel</button>
                   </div>
                 </div>
               </template>
+
+              <!-- Step 3: preview and confirm -->
+              <template x-if="importStep === 'preview' && importPreview">
+                <div class="mt-6">
+                  <div class="text-sm font-semibold" x-text="importPreview.fileName"></div>
+                  <div class="grid grid-cols-4 gap-3 mt-3">
+                    <div class="rounded-xl border border-line p-3"><div class="text-xs text-muted">Pupils found</div><div class="text-2xl disp tnum" x-text="importPreview.records.length"></div></div>
+                    <div class="rounded-xl border border-line p-3"><div class="text-xs text-muted">New cases</div><div class="text-2xl disp tnum" x-text="importPreview.willAdd"></div></div>
+                    <div class="rounded-xl border border-line p-3"><div class="text-xs text-muted">Already in the database</div><div class="text-2xl disp tnum" x-text="importPreview.willConflict"></div></div>
+                    <div class="rounded-xl border border-line p-3"><div class="text-xs text-muted">Values not understood</div><div class="text-2xl disp tnum" :class="importPreview.problems.length ? 'text-accent' : ''" x-text="importPreview.problems.length"></div></div>
+                  </div>
+                  <div class="mt-3 space-y-1 text-xs">
+                    <div x-show="importPreview.noId" class="text-accent"><span class="tnum" x-text="importPreview.noId"></span> new row(s) without National ID — they are imported; add the ID later (a case is recognised again by name + date of birth).</div>
+                    <div x-show="importPreview.noName" class="text-accent"><span class="tnum" x-text="importPreview.noName"></span> row(s) without last or first name.</div>
+                    <div x-show="importPreview.mergedRows" class="text-muted"><span class="tnum" x-text="importPreview.mergedRows"></span> row(s) belong to a pupil already listed above (same ID, or same name and date of birth) — merged into one case.</div>
+                    <div x-show="importPreview.skipped" class="text-muted"><span class="tnum" x-text="importPreview.skipped"></span> empty row(s) skipped.</div>
+                  </div>
+                  <template x-if="importPreview.problems.length">
+                    <details class="mt-3 rounded-lg border border-line p-3">
+                      <summary class="text-sm font-medium">Values that could not be read <span class="text-muted">(left empty — fix them in the case afterwards)</span></summary>
+                      <ul class="mt-2 text-xs space-y-0.5 max-h-48 overflow-auto">
+                        <template x-for="(pr, k) in importPreview.problems.slice(0, 60)" :key="k">
+                          <li>Row <span class="tnum" x-text="pr.row"></span> · <span x-text="labelOf(pr.field)"></span>: <span x-text="pr.message"></span></li>
+                        </template>
+                        <li x-show="importPreview.problems.length > 60" class="text-muted">… and <span x-text="importPreview.problems.length - 60"></span> more</li>
+                      </ul>
+                    </details>
+                  </template>
+                  <div class="mt-4 rounded-lg border border-line overflow-auto">
+                    <table class="w-full text-xs">
+                      <thead class="bg-canvas"><tr>
+                        <template x-for="k in importPreview.columns" :key="k"><th class="text-left px-2.5 py-2 font-semibold text-muted whitespace-nowrap" x-text="labelOf(k)"></th></template>
+                      </tr></thead>
+                      <tbody>
+                        <template x-for="(r, k) in importPreview.sample" :key="k">
+                          <tr class="border-t border-line">
+                            <template x-for="c in importPreview.columns" :key="c"><td class="px-2.5 py-1.5 whitespace-nowrap" x-text="cellValue(r, c)"></td></template>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                    <div class="px-2.5 py-1.5 text-[11px] text-muted border-t border-line" x-show="importPreview.records.length > importPreview.sample.length">First <span x-text="importPreview.sample.length"></span> rows shown.</div>
+                  </div>
+                  <div class="mt-4 flex items-center gap-3 flex-wrap">
+                    <label class="text-xs text-muted">Cases already in the database</label>
+                    <select x-model="importMode" class="field-input text-sm w-auto">
+                      <option value="merge">keep them as they are (add only new cases)</option>
+                      <option value="update">update them with the values from the file</option>
+                      <option value="replace">delete everything, then load the file</option>
+                    </select>
+                  </div>
+                  <div class="flex gap-2 mt-4">
+                    <button class="btn btn-primary" @click="runImport()">Import</button>
+                    <button class="btn btn-ghost" x-show="importPreview?.fromSheet" @click="backToImportMapping()">Back to the columns</button>
+                    <button class="btn btn-ghost" @click="cancelImport()">Cancel</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Export -->
+            <div class="card p-6">
+              <div class="kicker">Export</div>
+              <h2 class="mt-1 text-xl">All cases</h2>
+              <p class="text-sm text-muted mt-2 mb-4">A backup, or data for another tool.</p>
+              <div class="flex flex-col gap-2">
+                <button class="btn btn-primary justify-center" @click="downloadExcelBackup()">Excel file (CSV)</button>
+                <button class="btn btn-ghost justify-center" @click="exportAllJSON()">JSON (full backup)</button>
+                <button class="btn btn-ghost justify-center" @click="exportAllCSV()">CSV with field keys</button>
+              </div>
+              <p class="text-xs text-muted mt-3 leading-relaxed">Exports contain personal data of minors. Save them only on the CDSE drive and delete copies you no longer need.</p>
             </div>
           </div>
         </section>
@@ -1318,6 +1641,7 @@
               <option value="delete">delete</option>
               <option value="import">import</option>
               <option value="export">export</option>
+              <option value="settings">settings</option>
             </select>
             <div class="text-xs text-muted dark:text-muted-dark tnum font-mono">
               <span x-text="filteredAudit.length"></span> entry/entries
@@ -1362,9 +1686,9 @@
         <!-- SETTINGS                                                     -->
         <!-- ============================================================ -->
         <section x-show="view === 'settings'" style="display:none">
-          <div class="max-w-2xl space-y-8">
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Session</div>
+          <div class="max-w-3xl space-y-5">
+            <div class="card p-5">
+              <div class="kicker mb-3">Session</div>
               <div class="flex items-center gap-3">
                 <div class="text-sm">
                   Current user: <span class="font-mono" x-text="user || '—'"></span>
@@ -1373,18 +1697,100 @@
               </div>
             </div>
 
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Appearance</div>
+            <div class="card p-5">
+              <div class="kicker mb-3">Appearance</div>
               <button class="btn btn-ghost" @click="toggleTheme()">
                 <span x-show="theme === 'light'">Switch to dark mode</span>
                 <span x-show="theme === 'dark'">Switch to light mode</span>
               </button>
             </div>
 
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Demo data</div>
+            <!-- Lists: schools, ateliers, rééducation types -->
+            <div class="card p-5">
+              <div class="kicker mb-1">Lists</div>
+              <p class="text-sm text-muted mb-4">Suggestions offered in the form. One entry per line. Free text stays possible, so nothing is lost if a name is missing here.</p>
+              <div class="space-y-5">
+                <template x-for="m in LIST_META" :key="m.key">
+                  <div>
+                    <div class="flex items-baseline justify-between gap-3">
+                      <div class="text-sm font-semibold"><span x-text="m.label"></span> <span class="text-xs text-muted font-normal tnum">(<span x-text="listDraftCount(m.key)"></span>)</span></div>
+                      <div class="flex gap-3 text-xs">
+                        <button class="underline text-muted hover:text-ink" @click="addUsedValuesToList(m.key)">+ add names used in the cases</button>
+                        <button class="underline text-muted hover:text-ink" x-show="m.key === 'schools'" @click="resetListDraft(m.key)">default list</button>
+                      </div>
+                    </div>
+                    <p class="text-xs text-muted mt-0.5 mb-1.5" x-text="m.help"></p>
+                    <textarea x-model="listDraft[m.key]" rows="5" class="field-input text-sm" :placeholder="m.key === 'ateliers' ? 'One atelier per line' : (m.key === 'reeducation' ? 'One kind of rééducation per line' : 'One school per line')"></textarea>
+                    <div class="flex items-center gap-3 mt-2">
+                      <button class="btn btn-primary text-xs" @click="saveList(m.key)" :disabled="!listChanged(m.key)" :class="!listChanged(m.key) ? 'opacity-50' : ''">Save list</button>
+                      <span x-show="listChanged(m.key)" class="text-xs text-accent">not saved yet</span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Clean up: older or misspelt values -->
+            <div class="card p-5" x-init="$watch('view', (v) => { if (v === 'settings' && !cleanupLoaded) loadCleanup(); })">
+              <div class="kicker mb-1">Clean up values</div>
+              <p class="text-sm text-muted mb-4">Replace an older or misspelt value in every case at once — e.g. an old DIR name, a school typed in two ways. Each change is written to the audit log.</p>
+              <div class="flex items-center gap-2 mb-3">
+                <select x-model="cleanupField" @change="loadCleanup()" class="field-input text-sm w-auto">
+                  <template x-for="k in CLEANUP_FIELDS" :key="k"><option :value="k" x-text="labelOf(k)" :selected="k === cleanupField"></option></template>
+                </select>
+                <button class="btn btn-ghost text-xs" @click="loadCleanup()">Refresh</button>
+              </div>
+              <template x-if="cleanupLoaded && !cleanupValues.length">
+                <div class="text-sm text-muted">No case has a value here yet.</div>
+              </template>
+              <template x-if="cleanupValues.length">
+                <div class="rounded-lg border border-line overflow-auto" style="max-height: 420px;">
+                  <table class="w-full text-sm">
+                    <thead class="bg-canvas sticky top-0"><tr>
+                      <th class="text-left px-3 py-2 text-[11px] uppercase tracking-wider font-semibold text-muted">Value as stored</th>
+                      <th class="text-right px-3 py-2 text-[11px] uppercase tracking-wider font-semibold text-muted">Cases</th>
+                      <th class="text-left px-3 py-2 text-[11px] uppercase tracking-wider font-semibold text-muted">Replace with</th>
+                      <th></th>
+                    </tr></thead>
+                    <tbody>
+                      <template x-for="r in cleanupValues" :key="r.value">
+                        <tr class="border-t border-line align-top">
+                          <td class="px-3 py-2">
+                            <div x-text="r.value" :class="r.known ? '' : 'font-medium'"></div>
+                            <div class="text-[11px] text-accent" x-show="cleanupNote(r)" x-text="cleanupNote(r)"></div>
+                          </td>
+                          <td class="px-3 py-2 text-right tnum" x-text="r.n"></td>
+                          <td class="px-3 py-2">
+                            <template x-if="cleanupFieldDef?.type === 'select'">
+                              <select x-model="cleanupTargets[r.value]" class="field-input text-sm py-1">
+                                <option value="">—</option>
+                                <template x-for="o in cleanupFieldDef.options" :key="o"><option :value="o" x-text="optionLabel(cleanupFieldDef, o)" :selected="o === cleanupTargets[r.value]"></option></template>
+                              </select>
+                            </template>
+                            <template x-if="cleanupFieldDef?.type !== 'select'">
+                              <div>
+                                <input type="text" x-model="cleanupTargets[r.value]" :list="'cl-' + cleanupField" class="field-input text-sm py-1" placeholder="new value (empty = remove)" />
+                                <datalist :id="'cl-' + cleanupField">
+                                  <template x-for="o in cleanupChoices()" :key="o"><option :value="o"></option></template>
+                                </datalist>
+                              </div>
+                            </template>
+                          </td>
+                          <td class="px-3 py-2 text-right">
+                            <button class="btn btn-ghost text-xs" @click="applyCleanup(r.value)" :disabled="(cleanupTargets[r.value] ?? '') === r.value">Replace</button>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
+            </div>
+
+            <div class="card p-5">
+              <div class="kicker mb-3">Demo data</div>
               <p class="text-sm text-muted dark:text-muted-dark mb-3">
-                20 fictional cases to explore all features. Independent of your real data.
+                20 fictional cases (“Test A, Pupil 1” …) to explore every feature. Independent of your real data.
               </p>
               <div class="flex gap-2 flex-wrap">
                 <button class="btn btn-primary" @click="loadSample()" :disabled="hasDemoData" :class="hasDemoData ? 'opacity-50 cursor-not-allowed' : ''">
@@ -1399,8 +1805,8 @@
               </p>
             </div>
 
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">How saving works</div>
+            <div class="card p-5">
+              <div class="kicker mb-3">How saving works</div>
               <div class="text-sm text-muted dark:text-muted-dark mb-4 space-y-2 leading-relaxed">
                 <p>
                   <span class="text-ink dark:text-ink-dark">Local saves are automatic.</span>
@@ -1418,7 +1824,7 @@
                 </p>
                 <p>
                   <span class="text-ink dark:text-ink-dark">What the JSON file contains.</span>
-                  Every case, all 38 fields, plus a revision number and the name of who saved last.
+                  Every case with every field, plus a revision number and the name of who saved last.
                   No medical opinion, no machine learning, no cloud — just a structured snapshot
                   of the database that any future tool (the planned Node + SQLite backend, an Excel
                   export, a backup) can read. Each export overwrites the previous file.
@@ -1430,7 +1836,7 @@
                   yours and apply the remote one. No silent data loss.
                 </p>
               </div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Shared sync</div>
+              <div class="kicker mb-3">Shared sync</div>
 
               <div class="border border-line dark:border-line-dark rounded-lg p-4 mb-3">
                 <div class="flex items-center justify-between gap-4 flex-wrap">
@@ -1477,8 +1883,8 @@
               </details>
             </div>
 
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Excel backup</div>
+            <div class="card p-5">
+              <div class="kicker mb-3">Excel backup</div>
               <p class="text-sm text-muted dark:text-muted-dark mb-3 leading-relaxed">
                 A timestamped <code class="font-mono text-xs">cdse-backup-YYYY-MM-DD-HHMM.csv</code>
                 snapshot that opens directly in Excel on double-click. Generated automatically every
@@ -1501,8 +1907,8 @@
               </div>
             </div>
 
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Real data</div>
+            <div class="card p-5">
+              <div class="kicker mb-3">Real data</div>
               <p class="text-sm text-muted dark:text-muted-dark mb-3">
                 Prototype data is stored in this browser's localStorage.
                 Export a JSON backup regularly.
@@ -1512,16 +1918,16 @@
               </div>
             </div>
 
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">Shortcuts</div>
+            <div class="card p-5">
+              <div class="kicker mb-3">Shortcuts</div>
               <ul class="text-sm space-y-1">
                 <li><span class="font-mono tnum text-xs bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">Ctrl/⌘ + K</span> — search cases</li>
                 <li><span class="font-mono tnum text-xs bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">Ctrl/⌘ + N</span> — new case</li>
               </ul>
             </div>
 
-            <div>
-              <div class="text-[11px] uppercase tracking-[0.18em] text-muted dark:text-muted-dark mb-3">About</div>
+            <div class="card p-5">
+              <div class="kicker mb-3">About</div>
               <p class="text-sm text-muted dark:text-muted-dark leading-relaxed">
                 HTML prototype — pure frontend, in-browser persistence via the
                 <code class="font-mono">LocalStorageCaseRepository</code> class. The
@@ -1552,12 +1958,6 @@
     <span x-text="toast.message"></span>
   </div>
 
-  <!-- Scripts at the end of body so they execute AFTER the DOM is parsed.
-       Order matters: Chart.js + app.js define globals; Alpine reads them. -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
-  <script type="module" src="./public/app.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
-
   <!-- Spotlight (global search) -->
   <div x-show="spotlight.open" @click.self="closeSpotlight()"
        class="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-[12vh] px-4"
@@ -1580,8 +1980,8 @@
       <div class="max-h-[55vh] overflow-auto">
         <template x-if="spotlight.results.length === 0">
           <div class="px-4 py-8 text-center text-muted dark:text-muted-dark text-sm">
-            <template x-if="!spotlight.query">No cases in the database. Create one or load fictional data.</template>
-            <template x-if="spotlight.query">No results for "<span x-text="spotlight.query"></span>".</template>
+            <template x-if="!spotlight.query"><span>No cases in the database. Create one or load fictional data.</span></template>
+            <template x-if="spotlight.query"><span>No results for “<span x-text="spotlight.query"></span>”.</span></template>
           </div>
         </template>
         <template x-for="(c, i) in spotlight.results" :key="c.id">
@@ -1616,6 +2016,12 @@
       </div>
     </div>
   </div>
+
+  <!-- Scripts at the end of body so they execute AFTER the DOM is parsed.
+       Order matters: Chart.js + app.js define globals; Alpine reads them. -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
+  <script type="module" src="./public/app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 
 </body>
 </html>
